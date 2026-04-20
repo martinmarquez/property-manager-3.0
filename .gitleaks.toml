@@ -1,0 +1,83 @@
+title = "Corredor gitleaks configuration"
+
+[extend]
+# Extend the default ruleset (covers AWS keys, GitHub tokens, generic secrets, etc.)
+useDefault = true
+
+# ── Custom rules ──────────────────────────────────────────────────────────
+
+[[rules]]
+description = "Neon Postgres connection string"
+id = "neon-connection-string"
+regex = '''postgres://[^:]+:[^@]+@[^/]+\.neon\.tech'''
+tags = ["database", "neon"]
+
+[[rules]]
+description = "Fly.io auth token"
+id = "fly-api-token"
+regex = '''FoA[a-zA-Z0-9_-]{80,}'''
+tags = ["fly", "token"]
+
+[[rules]]
+description = "Upstash Redis URL with password"
+id = "upstash-redis-url"
+regex = '''rediss?://:[^@]+@[^/]+\.upstash\.io'''
+tags = ["redis", "upstash"]
+
+[[rules]]
+description = "Doppler token"
+id = "doppler-token"
+regex = '''dp\.pt\.[a-zA-Z0-9]{40,}'''
+tags = ["doppler", "token"]
+
+[[rules]]
+description = "Anthropic API key"
+id = "anthropic-api-key"
+regex = '''sk-ant-[a-zA-Z0-9_-]{40,}'''
+tags = ["anthropic", "ai"]
+
+[[rules]]
+description = "Mercado Pago access token"
+id = "mercado-pago-token"
+regex = '''APP_USR-[0-9]+-[0-9]+-[0-9A-F]+-[0-9]+'''
+tags = ["mercado-pago", "payment"]
+
+[[rules]]
+description = "Cloudflare R2 / API token"
+id = "cloudflare-token"
+regex = '''[a-zA-Z0-9_-]{37}[a-zA-Z0-9]''' # Matches CF token length/format
+tags = ["cloudflare"]
+# Note: This is broad; tune with path filters if too noisy
+
+# ── Allowlist ──────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Known safe patterns and test fixtures"
+
+# Files that intentionally document secret patterns (this file, docs)
+paths = [
+  '''.gitleaks.toml''',
+  '''docs/runbooks/secrets.md''',
+  '''docs/compliance/.*\.md''',
+  '''\.gitleaksignore''',
+]
+
+# Placeholder patterns used in documentation/examples
+regexes = [
+  '''REPLACE_ME''',
+  '''<new-value>''',
+  '''your-secret-here''',
+  '''example-key''',
+  '''sk-ant-XXXX''',
+  '''postgres://user:password@''',
+  '''postgres://\[username\]''',
+  # Test fixture patterns
+  '''test[_-]?secret''',
+  '''fake[_-]?key''',
+]
+
+# ── Scan configuration ─────────────────────────────────────────────────────
+
+[allowlist.commits]
+# Add specific commit SHAs here if historical commits contain false positives
+# Format: "sha256-of-secret:file:line" goes in .gitleaksignore instead
