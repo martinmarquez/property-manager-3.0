@@ -1,5 +1,4 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
-import { crypto } from "hono/utils/crypto";
 
 /**
  * Options for the security headers middleware.
@@ -167,7 +166,7 @@ export function securityHeaders(
     // Content-Security-Policy
     if (cspOverride !== false) {
       const cspValue =
-        cspOverride ?? buildCSP({ apiMode, nonce });
+        cspOverride ?? buildCSP({ apiMode, ...(nonce !== undefined ? { nonce } : {}) });
       c.res.headers.set("Content-Security-Policy", cspValue);
     }
 

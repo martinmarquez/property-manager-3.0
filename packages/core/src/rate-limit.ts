@@ -199,7 +199,7 @@ export function rateLimiter(
       );
     }
 
-    await next();
+    return next();
   };
 }
 
