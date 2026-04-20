@@ -1,0 +1,44 @@
+name: Nightly Regression
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  regression:
+    name: Full E2E Regression (production)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @corredor/web exec playwright install chromium --with-deps
+
+      - name: Run full Playwright suite
+        run: pnpm --filter @corredor/web test:e2e
+        env:
+          BASE_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-playwright-report-${{ github.run_id }}
+          path: apps/web/playwright-report/
+          retention-days: 30

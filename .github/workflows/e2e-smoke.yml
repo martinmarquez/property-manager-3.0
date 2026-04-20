@@ -1,0 +1,51 @@
+name: E2E Smoke
+
+on:
+  workflow_run:
+    workflows: ["Preview Deploy"]
+    types: [completed]
+
+concurrency:
+  group: e2e-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright Smoke Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @corredor/web exec playwright install chromium --with-deps
+
+      - name: Run E2E smoke tests
+        run: pnpm --filter @corredor/web test:e2e
+        env:
+          BASE_URL: https://corredor-web-pr-${{ github.event.workflow_run.pull_requests[0].number }}.fly.dev
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.event.workflow_run.head_sha }}
+          path: apps/web/playwright-report/
+          retention-days: 7
