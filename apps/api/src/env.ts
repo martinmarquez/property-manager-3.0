@@ -18,6 +18,16 @@ const envSchema = z.object({
   // App metadata
   APP_VERSION: z.string().default('0.1.0'),
   FLY_APP_NAME: z.string().optional(),
+
+  // Auth
+  /** 32+ char key used for AES-256-GCM TOTP secret encryption. */
+  AUTH_ENCRYPTION_KEY: z.string().min(32),
+  /** WebAuthn RP ID — must match the app domain (e.g. "app.corredor.ar"). */
+  WEBAUTHN_RP_ID: z.string().min(1).default('localhost'),
+  /** WebAuthn RP name shown in authenticator UIs. */
+  WEBAUTHN_RP_NAME: z.string().min(1).default('Corredor'),
+  /** Full origin for WebAuthn verification. Defaults to https://{WEBAUTHN_RP_ID}. */
+  WEBAUTHN_ORIGIN: z.string().optional(),
 });
 
 function parseEnv() {

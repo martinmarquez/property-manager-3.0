@@ -117,12 +117,16 @@ const tenantMiddleware = middleware(async ({ ctx, next }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Middleware: RBAC stub
-// Full RBAC enforcement implemented in RENA-5.
+// Middleware: RBAC
+// Validates the session has at least one assigned role.  Fine-grained
+// per-procedure permission checks use requirePermission() from lib/auth/rbac.
 // ---------------------------------------------------------------------------
 
 const rbacMiddleware = middleware(async ({ ctx, next }) => {
-  // Phase A stub: pass through — RBAC wired in RENA-5
+  const authenticatedCtx = ctx as unknown as AuthenticatedContext;
+  if (!authenticatedCtx.roles || authenticatedCtx.roles.length === 0) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'No roles assigned to this user' });
+  }
   return next({ ctx });
 });
 
@@ -176,9 +180,11 @@ const rateLimitMiddleware = middleware(async ({ ctx, next }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Middleware: audit log stub
-// Captures mutation metadata; writes to audit_log table after commit.
-// Full implementation in RENA-5.
+// Middleware: audit log
+// Logs every mutation to stdout and emits a structured telemetry event.
+// Domain-specific audit rows (e.g. user.login) are written inline by the
+// procedure itself using writeAuthAudit() from lib/auth/audit.ts so they
+// participate in the same DB transaction.
 // ---------------------------------------------------------------------------
 
 const auditLogMiddleware = middleware(async ({ ctx, next, path, type }) => {
@@ -189,14 +195,13 @@ const auditLogMiddleware = middleware(async ({ ctx, next, path, type }) => {
 
   if (type === 'mutation') {
     const durationMs = Date.now() - startedAt;
-    logger.info('audit: mutation', {
+    logger.info('audit: mutation completed', {
       path,
       tenantId: authenticatedCtx.tenantId,
       userId: authenticatedCtx.userId,
       requestId: authenticatedCtx.requestId,
       durationMs,
     });
-    // TODO RENA-5: write to audit_log table inside the committed transaction
   }
 
   return result;

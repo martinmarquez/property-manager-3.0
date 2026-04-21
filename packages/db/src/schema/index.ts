@@ -1,5 +1,6 @@
 // Phase A: Tenancy + Auth
 export * from './tenancy.js';
+export * from './auth.js';
 
 // Phases B–G entity groups added as they are implemented:
 // export * from './contacts.js';
