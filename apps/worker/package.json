@@ -1,0 +1,30 @@
+{
+  "name": "@corredor/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.30.0",
+    "ioredis": "^5.4.0",
+    "@sentry/node": "^8.0.0"
+  },
+  "devDependencies": {
+    "@corredor/config": "workspace:*",
+    "@corredor/core": "workspace:*",
+    "@corredor/db": "workspace:*",
+    "@corredor/portals": "workspace:*",
+    "@corredor/ai": "workspace:*",
+    "@corredor/telemetry": "workspace:*",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}

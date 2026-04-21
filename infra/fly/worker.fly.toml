@@ -1,0 +1,12 @@
+app = "corredor-worker-prod"
+primary_region = "gru"
+
+[build]
+  dockerfile = "apps/worker/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

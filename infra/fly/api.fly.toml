@@ -1,0 +1,35 @@
+app = "corredor-api-prod"
+primary_region = "gru"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [services.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[services.tcp_checks]]
+    interval = "10s"
+    timeout = "2s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "512mb"

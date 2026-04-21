@@ -1,0 +1,45 @@
+# Fly.io config for apps/web (Vite static + nginx)
+app = "corredor-web"
+primary_region = "gru"  # São Paulo
+
+[build]
+  dockerfile = "apps/web/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 400
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[[regions]]
+  gru = 1  # São Paulo
+  scl = 1  # Santiago
+
+[deploy]
+  strategy = "rolling"
+  wait_timeout = "3m"
+
+[checks]
+  [checks.health]
+    grace_period = "5s"
+    interval = "15s"
+    method = "GET"
+    path = "/"
+    port = 80
+    timeout = "3s"
+    type = "http"

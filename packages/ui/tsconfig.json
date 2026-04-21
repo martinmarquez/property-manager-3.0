@@ -1,0 +1,12 @@
+{
+  "extends": "@corredor/config/tsconfig/web.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    // React optional prop patterns (boolean | undefined) conflict with exactOptionalPropertyTypes.
+    // Disabled here only; all other packages keep the strict setting.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

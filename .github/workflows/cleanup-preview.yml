@@ -1,0 +1,58 @@
+name: Cleanup Preview
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Destroy preview API app
+        run: |
+          APP_NAME="corredor-api-pr-${{ github.event.pull_request.number }}"
+          if flyctl status --app "$APP_NAME" > /dev/null 2>&1; then
+            flyctl apps destroy "$APP_NAME" --yes
+            echo "Destroyed $APP_NAME"
+          else
+            echo "$APP_NAME not found, skipping"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Destroy preview Web app
+        run: |
+          APP_NAME="corredor-web-pr-${{ github.event.pull_request.number }}"
+          if flyctl status --app "$APP_NAME" > /dev/null 2>&1; then
+            flyctl apps destroy "$APP_NAME" --yes
+            echo "Destroyed $APP_NAME"
+          else
+            echo "$APP_NAME not found, skipping"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Delete Neon preview branch
+        run: |
+          BRANCH_NAME="pr-${{ github.event.pull_request.number }}"
+          BRANCH_ID=$(curl -s \
+            -H "Authorization: Bearer $NEON_API_KEY" \
+            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches" \
+            | jq -r ".branches[] | select(.name == \"$BRANCH_NAME\") | .id")
+
+          if [ -n "$BRANCH_ID" ] && [ "$BRANCH_ID" != "null" ]; then
+            curl -s -X DELETE \
+              -H "Authorization: Bearer $NEON_API_KEY" \
+              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$BRANCH_ID"
+            echo "Deleted Neon branch $BRANCH_NAME ($BRANCH_ID)"
+          else
+            echo "Neon branch $BRANCH_NAME not found, skipping"
+          fi
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}

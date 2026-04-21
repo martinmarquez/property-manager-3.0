@@ -1,0 +1,12 @@
+{
+  "extends": "@corredor/config/tsconfig/web.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    // React component prop patterns and @corredor/ui source imports conflict with
+    // exactOptionalPropertyTypes. Disabled here; pure Node apps keep the strict setting.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

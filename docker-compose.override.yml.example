@@ -1,0 +1,38 @@
+# docker-compose.override.yml — developer-specific local overrides
+#
+# Copy this file to docker-compose.override.yml (already gitignored):
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#
+# docker-compose.override.yml is loaded automatically by Docker Compose.
+# Use it to override port mappings, add bind mounts, or expose extra services
+# for your local setup without touching the committed docker-compose.yml.
+
+services:
+  # Example: expose Postgres on a non-standard port to avoid conflicts
+  # postgres:
+  #   ports:
+  #     - "5433:5432"
+
+  # Example: bind-mount a custom postgresql.conf
+  # postgres:
+  #   volumes:
+  #     - ./docker/postgres/postgresql.local.conf:/etc/postgresql/postgresql.conf:ro
+
+  # Example: enable Jaeger tracing locally (uses the "observability" profile in docker-compose.yml)
+  # Run with: docker compose --profile observability up -d
+  # Or uncomment the jaeger service here to always start it:
+  # jaeger:
+  #   profiles: []  # remove profile guard so it always starts
+
+  # Example: use a fixed Redis password locally
+  # redis:
+  #   command: redis-server --appendonly yes --requirepass mysecretpassword
+
+  # Example: add a pgAdmin container for visual DB access
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   ports:
+  #     - "5050:80"
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: dev@corredor.local
+  #     PGADMIN_DEFAULT_PASSWORD: admin

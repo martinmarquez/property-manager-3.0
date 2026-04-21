@@ -1,0 +1,8 @@
+{
+  // Cloudflare config for R2 buckets and Pages projects
+  // See ADR-002 for topology decisions
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "corredor-media-prod" },
+    { "binding": "DOCS", "bucket_name": "corredor-docs-prod" }
+  ]
+}
