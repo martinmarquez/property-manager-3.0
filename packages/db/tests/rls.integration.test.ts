@@ -16,8 +16,8 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { eq, and } from 'drizzle-orm';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq, and, sql as sqlTag } from 'drizzle-orm';
 import * as schema from '../src/schema/index.js';
 
 // ---------------------------------------------------------------------------
@@ -32,19 +32,25 @@ if (!TEST_DB_URL) {
   throw new Error('TEST_DATABASE_URL is required for integration tests');
 }
 
-// Use a non-pooled connection so SET LOCAL survives across statements in a session
-const sql = postgres(TEST_DB_URL, { max: 3 });
+// max: 1 ensures set_config and subsequent queries share the same connection so
+// RLS session vars are visible to the queries that follow in the same withTenant block.
+const sql = postgres(TEST_DB_URL, { max: 1 });
 const db = drizzle(sql, { schema });
 
 // UUIDs of rows we create so we can clean up in afterAll
 const createdTenantIds: string[] = [];
 
-// Helper: set RLS context for the current session
-async function withTenant(tenantId: string, fn: () => Promise<void>) {
-  await sql`SELECT set_config('app.tenant_id', ${tenantId}, false)`;
-  await fn();
-  // Reset so next query isn't accidentally scoped
-  await sql`SELECT set_config('app.tenant_id', '', false)`;
+// Helper: run fn as app_user inside a transaction so RLS is enforced.
+// neondb_owner has rolbypassrls=true and never sees RLS filters; app_user does not.
+// Using SET LOCAL ROLE scopes the role switch to the transaction only.
+// set_config with true (local) scopes the tenant setting to the transaction too.
+type TxDb = PostgresJsDatabase<typeof schema>;
+async function withTenant(tenantId: string, fn: (tx: TxDb) => Promise<void>) {
+  await db.transaction(async (tx) => {
+    await tx.execute(sqlTag`SET LOCAL ROLE app_user`);
+    await tx.execute(sqlTag`SELECT set_config('app.tenant_id', ${tenantId}, true)`);
+    await fn(tx);
+  });
 }
 
 // Helper: reset RLS context (for superuser queries that bypass RLS)
@@ -110,8 +116,9 @@ afterAll(async () => {
     await db.delete(schema.webhook).where(eq(schema.webhook.tenantId, tid));
     await db.delete(schema.tenantDomain).where(eq(schema.tenantDomain.tenantId, tid));
     await db.delete(schema.branch).where(eq(schema.branch.tenantId, tid));
-    await db.delete(schema.user).where(eq(schema.user.tenantId, tid));
+    // audit_log.user_id FK must be cleared before user rows are deleted
     await db.delete(schema.auditLog).where(eq(schema.auditLog.tenantId, tid));
+    await db.delete(schema.user).where(eq(schema.user.tenantId, tid));
     await db.delete(schema.tenant).where(eq(schema.tenant.id, tid));
   }
   await sql.end();
@@ -122,8 +129,8 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 describe('RLS isolation', () => {
   it('tenant A sees only its own users', async () => {
-    await withTenant(tenantAId, async () => {
-      const rows = await db.select().from(schema.user);
+    await withTenant(tenantAId, async (tx) => {
+      const rows = await tx.select().from(schema.user);
       expect(rows.every((r) => r.tenantId === tenantAId)).toBe(true);
       expect(rows.some((r) => r.id === userAId)).toBe(true);
       expect(rows.some((r) => r.id === userBId)).toBe(false);
@@ -131,8 +138,8 @@ describe('RLS isolation', () => {
   });
 
   it('tenant B sees only its own users', async () => {
-    await withTenant(tenantBId, async () => {
-      const rows = await db.select().from(schema.user);
+    await withTenant(tenantBId, async (tx) => {
+      const rows = await tx.select().from(schema.user);
       expect(rows.every((r) => r.tenantId === tenantBId)).toBe(true);
       expect(rows.some((r) => r.id === userBId)).toBe(true);
       expect(rows.some((r) => r.id === userAId)).toBe(false);
@@ -140,19 +147,22 @@ describe('RLS isolation', () => {
   });
 
   it('tenant A cannot insert a user belonging to tenant B', async () => {
-    await withTenant(tenantAId, async () => {
-      await expect(
-        db
-          .insert(schema.user)
-          .values({ tenantId: tenantBId, email: 'evil@cross.test' })
-      ).rejects.toThrow();
-    });
+    // The INSERT aborts the transaction; expect the whole transaction to reject
+    // (consuming the error inside withTenant and then catching the commit error
+    //  would leak the aborted-transaction state, so we test at the tx boundary).
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.execute(sqlTag`SET LOCAL ROLE app_user`);
+        await tx.execute(sqlTag`SELECT set_config('app.tenant_id', ${tenantAId}, true)`);
+        await tx.insert(schema.user).values({ tenantId: tenantBId, email: 'evil@cross.test' });
+      })
+    ).rejects.toThrow();
   });
 
   it('tenant A role rows are invisible to tenant B', async () => {
     // Insert a role as tenant A
-    await withTenant(tenantAId, async () => {
-      await db.insert(schema.role).values({
+    await withTenant(tenantAId, async (tx) => {
+      await tx.insert(schema.role).values({
         tenantId: tenantAId,
         name: 'RLS Test Role',
         slug: `rls-test-${Date.now()}`,
@@ -162,16 +172,16 @@ describe('RLS isolation', () => {
     });
 
     // Tenant B should not see it
-    await withTenant(tenantBId, async () => {
-      const rows = await db.select().from(schema.role);
+    await withTenant(tenantBId, async (tx) => {
+      const rows = await tx.select().from(schema.role);
       expect(rows.every((r) => r.tenantId === tenantBId)).toBe(true);
     });
   });
 
   it('feature_flag RLS: tenant A cannot read tenant B flags', async () => {
     // Create a flag for tenant B
-    await withTenant(tenantBId, async () => {
-      await db.insert(schema.featureFlag).values({
+    await withTenant(tenantBId, async (tx) => {
+      await tx.insert(schema.featureFlag).values({
         tenantId: tenantBId,
         key: `secret-flag-${Date.now()}`,
         enabled: true,
@@ -181,8 +191,8 @@ describe('RLS isolation', () => {
     });
 
     // Tenant A should see zero flags (none created for A yet)
-    await withTenant(tenantAId, async () => {
-      const rows = await db.select().from(schema.featureFlag);
+    await withTenant(tenantAId, async (tx) => {
+      const rows = await tx.select().from(schema.featureFlag);
       expect(rows.every((r) => r.tenantId === tenantAId)).toBe(true);
     });
   });

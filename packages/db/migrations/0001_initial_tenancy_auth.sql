@@ -423,3 +423,21 @@ CREATE TRIGGER bump_version BEFORE UPDATE ON feature_flag
 
 CREATE TRIGGER bump_version BEFORE UPDATE ON tenant_domain
   FOR EACH ROW EXECUTE FUNCTION bump_version();
+
+-- ---------------------------------------------------------------------------
+-- Application role (not table owner, subject to RLS)
+-- Used in integration tests and for least-privilege app connections.
+-- neondb_owner has rolbypassrls=true; app_user does not.
+-- ---------------------------------------------------------------------------
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
+    CREATE ROLE app_user NOINHERIT NOLOGIN;
+  END IF;
+END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO app_user;
+
+-- Allow neondb_owner to impersonate app_user (needed for SET LOCAL ROLE in tests)
+GRANT app_user TO neondb_owner;
