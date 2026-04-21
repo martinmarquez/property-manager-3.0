@@ -4,21 +4,117 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Create Neon branch
-        run: ./infra/neon/branch.sh ${{ github.event.pull_request.number }}
+        id: neon-branch
+        run: |
+          OUTPUT=$(./infra/neon/branch.sh ${{ github.event.pull_request.number }})
+          echo "$OUTPUT"
+          # branch.sh exports DB_URL and DB_URL_POOLED to $GITHUB_OUTPUT
         env:
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
 
-      - name: Deploy to Fly preview
-        run: echo "fly deploy --app corredor-api-pr-${{ github.event.pull_request.number }}"
+      - name: Run Drizzle migrations on preview branch
+        run: pnpm --filter @corredor/db migrate
+        env:
+          DATABASE_URL: ${{ steps.neon-branch.outputs.db_url_pooled }}
+          DIRECT_DATABASE_URL: ${{ steps.neon-branch.outputs.db_url }}
+
+      - name: Set up Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy API to Fly.io (preview)
+        run: |
+          APP_NAME="corredor-api-pr-${{ github.event.pull_request.number }}"
+          flyctl deploy \
+            --config infra/fly/api.fly.toml \
+            --app "$APP_NAME" \
+            --remote-only \
+            --wait-timeout 180 \
+            --env DATABASE_URL="${{ steps.neon-branch.outputs.db_url_pooled }}" \
+            --env DIRECT_DATABASE_URL="${{ steps.neon-branch.outputs.db_url }}" \
+            --env NODE_ENV=preview \
+            --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy Web to Cloudflare Pages (preview)
+        id: cf-pages
+        run: |
+          pnpm --filter @corredor/web build
+          pnpm dlx wrangler pages deploy apps/web/dist \
+            --project-name corredor-web \
+            --branch pr-${{ github.event.pull_request.number }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_API_URL: "https://corredor-api-pr-${{ github.event.pull_request.number }}.fly.dev"
+
+      - name: Comment preview URLs on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.issue.number;
+            const apiUrl = `https://corredor-api-pr-${pr}.fly.dev`;
+            const body = [
+              '## Preview Environment',
+              '',
+              `| Service | URL |`,
+              `|---------|-----|`,
+              `| Web App | (see Cloudflare Pages deployment) |`,
+              `| API     | ${apiUrl} |`,
+              '',
+              `> Neon branch: \`pr-${pr}\``,
+              `> Updated: ${new Date().toISOString()}`,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## Preview Environment')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              });
+            }

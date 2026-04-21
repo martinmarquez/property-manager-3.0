@@ -25,17 +25,9 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Destroy preview Web app
-        run: |
-          APP_NAME="corredor-web-pr-${{ github.event.pull_request.number }}"
-          if flyctl status --app "$APP_NAME" > /dev/null 2>&1; then
-            flyctl apps destroy "$APP_NAME" --yes
-            echo "Destroyed $APP_NAME"
-          else
-            echo "$APP_NAME not found, skipping"
-          fi
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      # Web deploys to Cloudflare Pages — preview branches are cleaned up
+      # automatically by Cloudflare when the branch is no longer active.
+      # No explicit teardown needed for CF Pages preview deployments.
 
       - name: Delete Neon preview branch
         run: |
