@@ -16,7 +16,8 @@ export class LoginPage {
   constructor(page: Page) {
     this.page = page;
     this.emailInput = page.getByLabel('Email');
-    this.passwordInput = page.getByLabel('Contraseña');
+    // exact: true avoids matching the show-password toggle whose aria-label is "Mostrar contraseña"
+    this.passwordInput = page.getByLabel('Contraseña', { exact: true });
     this.submitButton = page.getByRole('button', { name: 'Ingresar' });
     this.errorMessage = page.getByRole('alert');
   }

@@ -23,11 +23,11 @@ test.describe('Registro — Phase A smoke', () => {
     await expect(page.getByText('Tu agencia')).toBeVisible();
     await registerPage.agencyNameInput.fill('Agencia Test SA');
     await registerPage.cuitInput.fill('30-71234567-8');
-    await registerPage.provinciaSelect.selectOption('Buenos Aires (CABA)');
+    await registerPage.provinciaSelect.selectOption('Ciudad Autónoma de Buenos Aires');
     await registerPage.continueButton.click();
 
-    // Step 2 — Equipo
-    await expect(page.getByText('Equipo')).toBeVisible();
+    // Step 2 — Equipo (exact: true avoids matching body text containing "equipo")
+    await expect(page.getByText('Equipo', { exact: true })).toBeVisible();
     await registerPage.createAccountButton.click();
 
     // After submit, the app navigates away from /register.
@@ -60,7 +60,7 @@ test.describe('Registro — Phase A smoke', () => {
     // Step 1
     await registerPage.agencyNameInput.fill('Agencia Invite SA');
     await registerPage.cuitInput.fill('30-71234567-8');
-    await registerPage.provinciaSelect.selectOption('Buenos Aires (CABA)');
+    await registerPage.provinciaSelect.selectOption('Ciudad Autónoma de Buenos Aires');
     await registerPage.continueButton.click();
 
     // Step 2 — fill invite

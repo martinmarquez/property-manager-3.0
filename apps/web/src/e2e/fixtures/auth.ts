@@ -30,7 +30,7 @@ export async function createTenant(page: Page, opts: TenantOptions): Promise<voi
     password: opts.password,
     agencyName: opts.agencyName ?? 'Test Agency',
     cuit: opts.cuit ?? '30-12345678-9',
-    provincia: opts.provincia ?? 'Buenos Aires (CABA)',
+    provincia: opts.provincia ?? 'Ciudad Autónoma de Buenos Aires',
   });
 }
 
@@ -41,7 +41,7 @@ export async function createTenant(page: Page, opts: TenantOptions): Promise<voi
 export async function loginAs(page: Page, creds: UserCredentials): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(creds.email);
-  await page.getByLabel('Contraseña').fill(creds.password);
+  await page.getByLabel('Contraseña', { exact: true }).fill(creds.password);
   await page.getByRole('button', { name: 'Ingresar' }).click();
   // In Phase B (real auth): wait for redirect to /dashboard.
   // Until then, the stub navigates to / which redirects to /dashboard.

@@ -35,17 +35,19 @@ export class RegisterPage {
   constructor(page: Page) {
     this.page = page;
 
-    // Step 0
-    this.nombreInput = page.getByLabel('Nombre', { exact: true });
-    this.apellidoInput = page.getByLabel('Apellido');
-    this.emailInput = page.getByLabel('Email');
-    this.passwordInput = page.getByLabel('Contraseña', { exact: true });
-    this.confirmPasswordInput = page.getByLabel('Confirmar contraseña');
+    // Step 0 — Field component does not use htmlFor so getByLabel won't resolve.
+    // Use placeholder values which are stable and unique (except the two password
+    // fields which share "••••••••" — disambiguated by first/last).
+    this.nombreInput = page.getByPlaceholder('Martín');
+    this.apellidoInput = page.getByPlaceholder('García');
+    this.emailInput = page.getByPlaceholder('nombre@inmobiliaria.com');
+    this.passwordInput = page.getByPlaceholder('••••••••').first();
+    this.confirmPasswordInput = page.getByPlaceholder('••••••••').last();
 
     // Step 1
-    this.agencyNameInput = page.getByLabel('Nombre de la inmobiliaria / agencia');
-    this.cuitInput = page.getByLabel('CUIT');
-    this.provinciaSelect = page.getByLabel('Provincia');
+    this.agencyNameInput = page.getByPlaceholder('Inmobiliaria San Telmo');
+    this.cuitInput = page.getByPlaceholder('30-71234567-8');
+    this.provinciaSelect = page.locator('select').first();
 
     // Step 2
     this.inviteEmailInput = page.getByPlaceholder('colega@inmobiliaria.com');
@@ -88,8 +90,10 @@ export class RegisterPage {
     await this.createAccountButton.click();
   }
 
-  /** Add an invite email on step 2. Assumes step 2 is active. */
+  /** Add an invite email on step 2. Assumes step 2 is active.
+   *  The invite input only appears after clicking "Agregar otro email". */
   async inviteTeamMember(email: string): Promise<void> {
+    await this.inviteButton.click();
     await this.inviteEmailInput.fill(email);
   }
 }
