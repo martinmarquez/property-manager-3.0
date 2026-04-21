@@ -1,7 +1,10 @@
 import { initSentryBrowser, initPostHog } from '@corredor/telemetry/browser';
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-router';
+import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect, notFound } from '@tanstack/react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { trpc, queryClient, makeTRPCReactClient } from './trpc.js';
 
 // Design system tokens (Google Fonts + CSS custom properties)
 import '@corredor/ui/styles/tokens.css';
@@ -233,6 +236,33 @@ const organizationSettingsRoute = createRoute({
   },
 });
 
+// 404 catch-all
+const notFoundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '*',
+  component: function NotFoundRoute() {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#070D1A',
+        color: '#EFF4FF',
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        gap: '1rem',
+      }}>
+        <span style={{ fontSize: '4rem', fontWeight: 700, fontFamily: "'Syne', system-ui, sans-serif" }}>404</span>
+        <p style={{ color: '#8DA0C0', margin: 0 }}>Página no encontrada</p>
+        <a href="/" style={{ color: '#4669ff', textDecoration: 'none', fontSize: '0.875rem' }}>
+          Volver al inicio
+        </a>
+      </div>
+    );
+  },
+});
+
 // ─── Router tree ─────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -251,6 +281,7 @@ const routeTree = rootRoute.addChildren([
       organizationSettingsRoute,
     ]),
   ]),
+  notFoundRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -261,9 +292,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// ─── Root with providers ──────────────────────────────────────────────────────
+function App() {
+  const [trpcReactClient] = useState(() => makeTRPCReactClient());
+  return (
+    <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
+}
+
 // ─── Mount ───────────────────────────────────────────────────────────────────
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <App />
   </React.StrictMode>,
 );

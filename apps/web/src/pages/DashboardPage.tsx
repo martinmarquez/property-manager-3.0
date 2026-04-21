@@ -1,6 +1,7 @@
 import React from 'react';
 import { OnboardingChecklist } from '@corredor/ui';
 import type { ChecklistItem } from '@corredor/ui';
+import { trpc } from '../trpc.js';
 
 /* ─────────────────────────────────────────────────────────
    Dashboard Page — Phase A empty shell
@@ -69,6 +70,12 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
   const [items, setItems] = React.useState(ONBOARDING_ITEMS);
   const [checklistDismissed, setChecklistDismissed] = React.useState(false);
 
+  // Verify tRPC connectivity — system.health probe
+  const { data: health, isError: healthError } = trpc.system.health.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const handleItemClick = (id: string) => {
     // Mark as done optimistically (real impl: navigate to href)
     setItems(prev => prev.map(item => item.id === id ? { ...item, done: true } : item));
@@ -98,6 +105,30 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
           Aquí está el resumen de tu agencia.
         </p>
       </div>
+
+      {/* API health indicator (dev helper — shows tRPC system.health result) */}
+      {(health ?? healthError) ? (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          marginBottom: 20,
+          padding: '4px 10px',
+          borderRadius: 6,
+          border: `1px solid ${healthError ? C.border : '#1A4D30'}`,
+          background: healthError ? C.bgRaised : '#0A2217',
+          fontSize: '0.75rem',
+          color: healthError ? '#E83B3B' : '#18A659',
+          fontFamily: "'DM Mono', monospace",
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: healthError ? '#E83B3B' : '#18A659',
+            flexShrink: 0,
+          }} />
+          {healthError
+            ? 'API no disponible'
+            : `API ${health?.status ?? 'ok'} · v${health?.version ?? '—'}`}
+        </div>
+      ) : null}
 
       {/* Stat cards — skeleton/empty state */}
       <div style={{

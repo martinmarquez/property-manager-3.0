@@ -40,3 +40,73 @@ export {
   SkeletonStatCard,
   DashboardSkeleton,
 } from './components/common/Skeleton.js';
+
+// ── Primitives (shadcn/ui style) ─────────────────────────
+export { Button, buttonVariants } from './components/primitives/button.js';
+export type { ButtonProps } from './components/primitives/button.js';
+
+export { Input } from './components/primitives/input.js';
+export type { InputProps } from './components/primitives/input.js';
+
+export { Label } from './components/primitives/label.js';
+
+export { Badge, badgeVariants } from './components/primitives/badge.js';
+export type { BadgeProps } from './components/primitives/badge.js';
+
+export { Avatar, AvatarImage, AvatarFallback } from './components/primitives/avatar.js';
+
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/primitives/tabs.js';
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from './components/primitives/dialog.js';
+
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from './components/primitives/dropdown-menu.js';
+
+export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from './components/primitives/sheet.js';
+
+export {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+} from './components/primitives/form.js';
