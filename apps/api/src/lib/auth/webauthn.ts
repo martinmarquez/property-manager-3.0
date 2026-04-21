@@ -125,7 +125,7 @@ export async function verifyWebAuthnRegistration(
     expectedChallenge,
     expectedRPID: opts.rpId,
     expectedOrigin: opts.expectedOrigin,
-    requireUserVerification: false,
+    requireUserVerification: true,
   });
 
   if (!verification.verified || !verification.registrationInfo) {
@@ -197,7 +197,7 @@ export async function verifyWebAuthnAuthentication(
       counter: opts.credential.counter,
       transports: opts.credential.transports,
     },
-    requireUserVerification: false,
+    requireUserVerification: true,
   });
 
   if (!verification.verified) {

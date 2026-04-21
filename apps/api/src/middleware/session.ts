@@ -3,7 +3,8 @@ import type { Context } from 'hono';
 import type { Redis } from 'ioredis';
 
 const SESSION_COOKIE = 'session';
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+export const SESSION_TTL_SECONDS = 24 * 60 * 60; // 24 hours — ASVS V3.3.3
+export const IDLE_TIMEOUT_SECONDS = 30 * 60; // 30 minutes — ASVS V3.3.2
 const SESSION_KEY_PREFIX = 'sess:';
 
 export interface SessionData {
@@ -91,7 +92,7 @@ export function setSessionCookie(c: Context, sessionId: string, isSecure: boolea
   const secure = isSecure ? '; Secure' : '';
   c.header(
     'Set-Cookie',
-    `${SESSION_COOKIE}=${sessionId}; HttpOnly${secure}; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}; Path=/`,
+    `${SESSION_COOKIE}=${sessionId}; HttpOnly${secure}; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}; Path=/`,
   );
 }
 
@@ -99,6 +100,6 @@ export function setSessionCookie(c: Context, sessionId: string, isSecure: boolea
 export function clearSessionCookie(c: Context): void {
   c.header(
     'Set-Cookie',
-    `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`,
+    `${SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/`,
   );
 }

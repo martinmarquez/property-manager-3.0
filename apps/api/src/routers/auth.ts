@@ -42,6 +42,7 @@ import {
   destroySession,
   setSessionCookie,
   clearSessionCookie,
+  SESSION_TTL_SECONDS,
 } from '../middleware/session.js';
 import { hashPassword, verifyPassword } from '../lib/auth/password.js';
 import {
@@ -102,7 +103,7 @@ function getWebAuthnOrigin(): string {
 
 const RegisterInput = z.object({
   email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  password: z.string().min(12, 'Password must be at least 12 characters').max(128),
   fullName: z.string().min(1).max(255).optional(),
   tenantSlug: z.string().min(1).max(63),
 });
@@ -126,7 +127,7 @@ const PasswordResetRequestInput = z.object({
 
 const PasswordResetConfirmInput = z.object({
   token: z.string().min(1),
-  newPassword: z.string().min(8).max(128),
+  newPassword: z.string().min(12).max(128),
 });
 
 const TotpConfirmInput = z.object({ code: z.string().length(6) });
@@ -168,7 +169,7 @@ async function buildSessionAndCookie(
     roles: opts.roles,
   });
 
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
 
   await db.insert(sessionTable).values({
     id: sessionId,
@@ -260,6 +261,7 @@ export const authRouter = router({
       userId: newUser.id,
       tokenHash,
       expiresAt: tokenExpiresAt,
+      purpose: 'email_verification',
     });
 
     await writeAuthAudit({
@@ -287,7 +289,7 @@ export const authRouter = router({
 
     const tokenRow = await db.query.passwordResetToken.findFirst({
       where: (t, { and: aand, eq: teq, isNull }) =>
-        aand(teq(t.tokenHash, tokenHash), isNull(t.usedAt)),
+        aand(teq(t.tokenHash, tokenHash), teq(t.purpose, 'email_verification'), isNull(t.usedAt)),
       columns: { id: true, userId: true, tenantId: true, expiresAt: true },
     });
 
@@ -465,6 +467,7 @@ export const authRouter = router({
 
         await db.insert(passwordResetToken).values({
           tenantId: tenantRow.id, userId: userRow.id, tokenHash, expiresAt,
+          purpose: 'password_reset',
         });
 
         await writeAuthAudit({
@@ -491,7 +494,7 @@ export const authRouter = router({
 
       const tokenRow = await db.query.passwordResetToken.findFirst({
         where: (t, { and: aand, eq: teq, isNull }) =>
-          aand(teq(t.tokenHash, tokenHash), isNull(t.usedAt)),
+          aand(teq(t.tokenHash, tokenHash), teq(t.purpose, 'password_reset'), isNull(t.usedAt)),
         columns: { id: true, userId: true, tenantId: true, expiresAt: true },
       });
 

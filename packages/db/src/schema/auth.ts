@@ -78,6 +78,8 @@ export const passwordResetToken = pgTable('password_reset_token', {
   // SHA-256 hex digest of the raw token sent to the user's email.
   // Never store plaintext.
   tokenHash: text('token_hash').notNull().unique(),
+  // 'email_verification' | 'password_reset' — prevents cross-purpose token reuse (ASVS V3.5.2).
+  purpose: text('purpose').notNull().default('password_reset'),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -100,7 +102,7 @@ export const totpCredential = pgTable('totp_credential', {
     .references(() => user.id),
   // AES-256-GCM encrypted TOTP secret.  Key = env.AUTH_ENCRYPTION_KEY.
   encryptedSecret: text('encrypted_secret').notNull(),
-  // Array of bcrypt-hashed backup codes (8 × 10-char codes).
+  // Array of argon2id-hashed backup codes (8 × 10-char codes).
   // Each code is removed from the array once consumed.
   backupCodes: jsonb('backup_codes').notNull().default(sql`'[]'::jsonb`),
   // Null until the user successfully verifies their first code.

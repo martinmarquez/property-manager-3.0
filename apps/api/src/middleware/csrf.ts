@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Context, MiddlewareHandler, Next } from 'hono';
 
 const CSRF_COOKIE = 'csrf_token';
@@ -65,7 +65,12 @@ export function csrfMiddleware(isSecure = false): MiddlewareHandler {
         return next();
       }
 
-      if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+      const tokensMatch =
+        cookieToken &&
+        headerToken &&
+        cookieToken.length === headerToken.length &&
+        timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
+      if (!tokensMatch) {
         return c.json({ error: 'CSRF token mismatch' }, 403);
       }
     } else {

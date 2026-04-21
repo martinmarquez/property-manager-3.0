@@ -5,7 +5,7 @@ import { ZodError } from 'zod';
 import { createDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
 import { checkRateLimit, RateLimitPresets } from '@corredor/core';
 import { logger } from '@corredor/telemetry';
-import { getSession, refreshSession, getSessionId } from './middleware/session.js';
+import { getSession, refreshSession, destroySession, getSessionId, IDLE_TIMEOUT_SECONDS } from './middleware/session.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,6 +94,13 @@ const tenantMiddleware = middleware(async ({ ctx, next }) => {
   const session = await getSession(redis, sessionId);
   if (!session) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Session expired or invalid' });
+  }
+
+  // ASVS V3.3.2 — enforce 30-minute idle timeout
+  const idleSeconds = (Date.now() - new Date(session.lastSeenAt).getTime()) / 1000;
+  if (idleSeconds > IDLE_TIMEOUT_SECONDS) {
+    await destroySession(redis, sessionId);
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Session expired due to inactivity' });
   }
 
   // Slide the session TTL on each authenticated request
