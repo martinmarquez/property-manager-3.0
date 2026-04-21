@@ -1,9 +1,14 @@
 import { type Page } from '@playwright/test';
+import { RegisterPage } from '../pages/RegisterPage.js';
 
 export interface TenantOptions {
-  orgName: string;
-  ownerEmail: string;
-  ownerPassword: string;
+  nombre?: string;
+  apellido?: string;
+  email: string;
+  password: string;
+  agencyName?: string;
+  cuit?: string;
+  provincia?: string;
 }
 
 export interface UserCredentials {
@@ -12,26 +17,33 @@ export interface UserCredentials {
 }
 
 /**
- * Creates a new tenant (agency owner sign-up flow).
- * Navigates to /register, fills the form, and returns the created credentials.
+ * Creates a new tenant via the 3-step RegisterFlow at /register.
+ * Uses sensible defaults for optional fields.
  */
 export async function createTenant(page: Page, opts: TenantOptions): Promise<void> {
-  await page.goto('/register');
-  await page.getByLabel('Organisation name').fill(opts.orgName);
-  await page.getByLabel('Email').fill(opts.ownerEmail);
-  await page.getByLabel('Password').fill(opts.ownerPassword);
-  await page.getByRole('button', { name: /create account/i }).click();
-  // Wait for redirect to dashboard after successful registration
-  await page.waitForURL('**/dashboard');
+  const register = new RegisterPage(page);
+  await register.goto();
+  await register.register({
+    nombre: opts.nombre ?? 'Test',
+    apellido: opts.apellido ?? 'User',
+    email: opts.email,
+    password: opts.password,
+    agencyName: opts.agencyName ?? 'Test Agency',
+    cuit: opts.cuit ?? '30-12345678-9',
+    provincia: opts.provincia ?? 'Buenos Aires (CABA)',
+  });
 }
 
 /**
- * Signs in as an existing user.
+ * Signs in an existing user at /login.
+ * Waits for navigation away from /login after submit.
  */
 export async function loginAs(page: Page, creds: UserCredentials): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(creds.email);
-  await page.getByLabel('Password').fill(creds.password);
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL('**/dashboard');
+  await page.getByLabel('Contraseña').fill(creds.password);
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  // In Phase B (real auth): wait for redirect to /dashboard.
+  // Until then, the stub navigates to / which redirects to /dashboard.
+  await page.waitForURL(/\/(dashboard|setup)/);
 }

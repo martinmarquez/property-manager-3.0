@@ -1,16 +1,22 @@
 import { type Page, type Locator } from '@playwright/test';
 
+/**
+ * Page Object: DashboardPage (at /dashboard)
+ *
+ * Phase A: renders with a mock user ("Buenos días, {nombre}") and onboarding checklist.
+ * Phase B: will render with a real authenticated user from the session.
+ */
 export class DashboardPage {
   readonly page: Page;
   readonly heading: Locator;
-  readonly emptyState: Locator;
-  readonly userMenu: Locator;
+  readonly onboardingChecklist: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /dashboard/i });
-    this.emptyState = page.getByTestId('dashboard-empty-state');
-    this.userMenu = page.getByRole('button', { name: /account/i });
+    // h1 greeting: "Buenos días, {name} 👋"
+    this.heading = page.getByRole('heading', { level: 1 });
+    // Onboarding checklist items from DashboardPage
+    this.onboardingChecklist = page.getByRole('list');
   }
 
   async goto(): Promise<void> {

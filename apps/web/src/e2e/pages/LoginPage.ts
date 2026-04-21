@@ -1,5 +1,11 @@
 import { type Page, type Locator } from '@playwright/test';
 
+/**
+ * Page Object: LoginPage (at /login)
+ *
+ * UI is in Spanish — matches the LoginPage component in @corredor/ui.
+ * Submit button text: "Ingresar"
+ */
 export class LoginPage {
   readonly page: Page;
   readonly emailInput: Locator;
@@ -10,8 +16,8 @@ export class LoginPage {
   constructor(page: Page) {
     this.page = page;
     this.emailInput = page.getByLabel('Email');
-    this.passwordInput = page.getByLabel('Password');
-    this.submitButton = page.getByRole('button', { name: /sign in/i });
+    this.passwordInput = page.getByLabel('Contraseña');
+    this.submitButton = page.getByRole('button', { name: 'Ingresar' });
     this.errorMessage = page.getByRole('alert');
   }
 

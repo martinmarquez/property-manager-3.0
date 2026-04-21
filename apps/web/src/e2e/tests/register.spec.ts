@@ -1,35 +1,74 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage } from '../pages/RegisterPage.js';
-import { DashboardPage } from '../pages/DashboardPage.js';
 
-const TEST_ORG = 'Smoke Test Agency';
-const OWNER_EMAIL = `owner+${Date.now()}@example.com`;
-const OWNER_PASSWORD = 'Test1234!@#';
-const INVITED_EMAIL = `invited+${Date.now()}@example.com`;
+const TS = Date.now();
+const OWNER_EMAIL = `owner+${TS}@example.com`;
+const PASSWORD = 'Test1234!@#';
 
-test.describe('Register — Phase A smoke', () => {
-  test('new agency owner can sign up and land on dashboard', async ({ page }) => {
+test.describe('Registro — Phase A smoke', () => {
+  test('el flujo de 3 pasos se completa y redirige tras crear cuenta', async ({ page }) => {
     const registerPage = new RegisterPage(page);
-    const dashboardPage = new DashboardPage(page);
-
     await registerPage.goto();
-    await registerPage.register(TEST_ORG, OWNER_EMAIL, OWNER_PASSWORD);
 
-    await dashboardPage.isAt();
-    await expect(dashboardPage.heading).toBeVisible();
+    // Step 0 — Tu cuenta
+    await expect(page.getByText('Tu cuenta')).toBeVisible();
+    await registerPage.nombreInput.fill('Martín');
+    await registerPage.apellidoInput.fill('García');
+    await registerPage.emailInput.fill(OWNER_EMAIL);
+    await registerPage.passwordInput.fill(PASSWORD);
+    await registerPage.confirmPasswordInput.fill(PASSWORD);
+    await registerPage.continueButton.click();
+
+    // Step 1 — Tu agencia
+    await expect(page.getByText('Tu agencia')).toBeVisible();
+    await registerPage.agencyNameInput.fill('Agencia Test SA');
+    await registerPage.cuitInput.fill('30-71234567-8');
+    await registerPage.provinciaSelect.selectOption('Buenos Aires (CABA)');
+    await registerPage.continueButton.click();
+
+    // Step 2 — Equipo
+    await expect(page.getByText('Equipo')).toBeVisible();
+    await registerPage.createAccountButton.click();
+
+    // After submit, the app navigates away from /register.
+    // Phase A stub goes to /setup/2fa; Phase B (real auth) will go to /dashboard.
+    await expect(page).not.toHaveURL(/\/register/);
   });
 
-  test('registered owner can invite a second user by email', async ({ page }) => {
+  test('validation: campos requeridos bloquean el primer paso', async ({ page }) => {
     const registerPage = new RegisterPage(page);
-    const dashboardPage = new DashboardPage(page);
-
-    // First register
     await registerPage.goto();
-    await registerPage.register(TEST_ORG, `owner2+${Date.now()}@example.com`, OWNER_PASSWORD);
-    await dashboardPage.isAt();
 
-    // Then invite
-    await registerPage.inviteUser(INVITED_EMAIL);
-    await expect(page.getByText(/invite sent/i)).toBeVisible();
+    // Submit empty step 0 — should stay on step 0
+    await registerPage.continueButton.click();
+    await expect(page).toHaveURL(/\/register/);
+    await expect(page.getByText('Tu cuenta')).toBeVisible();
+  });
+
+  test('el tercer paso permite agregar un email de invitación', async ({ page }) => {
+    const registerPage = new RegisterPage(page);
+    await registerPage.goto();
+
+    // Step 0
+    await registerPage.nombreInput.fill('Ana');
+    await registerPage.apellidoInput.fill('López');
+    await registerPage.emailInput.fill(`owner2+${TS}@example.com`);
+    await registerPage.passwordInput.fill(PASSWORD);
+    await registerPage.confirmPasswordInput.fill(PASSWORD);
+    await registerPage.continueButton.click();
+
+    // Step 1
+    await registerPage.agencyNameInput.fill('Agencia Invite SA');
+    await registerPage.cuitInput.fill('30-71234567-8');
+    await registerPage.provinciaSelect.selectOption('Buenos Aires (CABA)');
+    await registerPage.continueButton.click();
+
+    // Step 2 — fill invite
+    const inviteEmail = `invited+${TS}@example.com`;
+    await registerPage.inviteTeamMember(inviteEmail);
+    await expect(registerPage.inviteEmailInput).toHaveValue(inviteEmail);
+
+    // Button label changes to "Crear cuenta e invitar"
+    await expect(page.getByRole('button', { name: /Crear cuenta e invitar/ })).toBeVisible();
   });
 });
