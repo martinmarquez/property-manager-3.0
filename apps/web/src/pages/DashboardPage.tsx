@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import { OnboardingChecklist } from '@corredor/ui';
 import type { ChecklistItem } from '@corredor/ui';
 import { trpc } from '../trpc.js';
@@ -23,43 +24,28 @@ const F = {
   body:    "'DM Sans', system-ui, sans-serif",
 };
 
-const ONBOARDING_ITEMS: ChecklistItem[] = [
-  {
-    id: 'profile',
-    label: 'Completá tu perfil',
-    description: 'Agregá tu nombre, foto y datos de contacto.',
-    done: false,
-    href: '/settings/profile',
-  },
-  {
-    id: 'organization',
-    label: 'Configurá tu agencia',
-    description: 'Nombre, CUIT, logo y datos de tu inmobiliaria.',
-    done: false,
-    href: '/settings/organization',
-  },
-  {
-    id: 'first-property',
-    label: 'Agregá tu primera propiedad',
-    description: 'Cargá una propiedad para comenzar a gestionar tu cartera.',
-    done: false,
-    href: '/properties/new',
-  },
-  {
-    id: 'invite-team',
-    label: 'Invitá a tu equipo',
-    description: 'Sumá colaboradores a tu agencia.',
-    done: false,
-    href: '/settings/team',
-  },
-  {
-    id: 'first-contact',
-    label: 'Creá tu primer contacto',
-    description: 'Importá o cargá manualmente tus primeros contactos.',
-    done: false,
-    href: '/contacts/new',
-  },
-];
+const messages = defineMessages({
+  greeting:             { id: 'dashboard.greeting' },
+  subtitle:             { id: 'dashboard.subtitle' },
+  apiUnavailable:       { id: 'dashboard.api.unavailable' },
+  apiStatus:            { id: 'dashboard.api.status' },
+  statsProperties:      { id: 'dashboard.stats.properties' },
+  statsContacts:        { id: 'dashboard.stats.contacts' },
+  statsLeads:           { id: 'dashboard.stats.leads' },
+  statsVisits:          { id: 'dashboard.stats.visits' },
+  activityTitle:        { id: 'dashboard.activity.title' },
+  activityEmpty:        { id: 'dashboard.activity.empty' },
+  onboardingProfile:    { id: 'onboarding.profile.label' },
+  onboardingProfileDesc:{ id: 'onboarding.profile.description' },
+  onboardingOrg:        { id: 'onboarding.organization.label' },
+  onboardingOrgDesc:    { id: 'onboarding.organization.description' },
+  onboardingProp:       { id: 'onboarding.firstProperty.label' },
+  onboardingPropDesc:   { id: 'onboarding.firstProperty.description' },
+  onboardingTeam:       { id: 'onboarding.inviteTeam.label' },
+  onboardingTeamDesc:   { id: 'onboarding.inviteTeam.description' },
+  onboardingContact:    { id: 'onboarding.firstContact.label' },
+  onboardingContactDesc:{ id: 'onboarding.firstContact.description' },
+});
 
 interface DashboardPageProps {
   userName?: string;
@@ -67,22 +53,68 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: DashboardPageProps) {
-  const [items, setItems] = React.useState(ONBOARDING_ITEMS);
+  const intl = useIntl();
   const [checklistDismissed, setChecklistDismissed] = React.useState(false);
 
-  // Verify tRPC connectivity — system.health probe
+  const ONBOARDING_ITEMS: ChecklistItem[] = React.useMemo(() => [
+    {
+      id: 'profile',
+      label: intl.formatMessage(messages.onboardingProfile),
+      description: intl.formatMessage(messages.onboardingProfileDesc),
+      done: false,
+      href: '/settings/profile',
+    },
+    {
+      id: 'organization',
+      label: intl.formatMessage(messages.onboardingOrg),
+      description: intl.formatMessage(messages.onboardingOrgDesc),
+      done: false,
+      href: '/settings/organization',
+    },
+    {
+      id: 'first-property',
+      label: intl.formatMessage(messages.onboardingProp),
+      description: intl.formatMessage(messages.onboardingPropDesc),
+      done: false,
+      href: '/properties/new',
+    },
+    {
+      id: 'invite-team',
+      label: intl.formatMessage(messages.onboardingTeam),
+      description: intl.formatMessage(messages.onboardingTeamDesc),
+      done: false,
+      href: '/settings/team',
+    },
+    {
+      id: 'first-contact',
+      label: intl.formatMessage(messages.onboardingContact),
+      description: intl.formatMessage(messages.onboardingContactDesc),
+      done: false,
+      href: '/contacts/new',
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [intl.locale]);
+
+  const [items, setItems] = React.useState(ONBOARDING_ITEMS);
+
   const { data: health, isError: healthError } = trpc.system.health.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
   });
 
   const handleItemClick = (id: string) => {
-    // Mark as done optimistically (real impl: navigate to href)
     setItems(prev => prev.map(item => item.id === id ? { ...item, done: true } : item));
     onChecklistItemClick?.(id);
   };
 
   const allDone = items.every(i => i.done);
+
+  const statsCards = [
+    { label: intl.formatMessage(messages.statsProperties), value: '—', icon: '🏠' },
+    { label: intl.formatMessage(messages.statsContacts),   value: '—', icon: '👥' },
+    { label: intl.formatMessage(messages.statsLeads),      value: '—', icon: '📈' },
+    { label: intl.formatMessage(messages.statsVisits),     value: '—', icon: '📅' },
+  ];
 
   return (
     <div style={{
@@ -99,14 +131,14 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
           color: C.textPrimary, letterSpacing: '-0.025em',
           marginBottom: 4,
         }}>
-          Buenos días, {userName.split(' ')[0]} 👋
+          {intl.formatMessage(messages.greeting, { name: userName.split(' ')[0] })}
         </h1>
         <p style={{ fontSize: '0.9375rem', color: C.textSecondary }}>
-          Aquí está el resumen de tu agencia.
+          {intl.formatMessage(messages.subtitle)}
         </p>
       </div>
 
-      {/* API health indicator (dev helper — shows tRPC system.health result) */}
+      {/* API health indicator (dev helper) */}
       {(health ?? healthError) ? (
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -125,24 +157,22 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
             flexShrink: 0,
           }} />
           {healthError
-            ? 'API no disponible'
-            : `API ${health?.status ?? 'ok'} · v${health?.version ?? '—'}`}
+            ? intl.formatMessage(messages.apiUnavailable)
+            : intl.formatMessage(messages.apiStatus, {
+                status: health?.status ?? 'ok',
+                version: health?.version ?? '—',
+              })}
         </div>
       ) : null}
 
-      {/* Stat cards — skeleton/empty state */}
+      {/* Stat cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
         gap: 14,
         marginBottom: 32,
       }}>
-        {[
-          { label: 'Propiedades activas', value: '—', icon: '🏠' },
-          { label: 'Contactos', value: '—', icon: '👥' },
-          { label: 'Leads activos', value: '—', icon: '📈' },
-          { label: 'Visitas este mes', value: '—', icon: '📅' },
-        ].map(({ label, value, icon }) => (
+        {statsCards.map(({ label, value, icon }) => (
           <div
             key={label}
             style={{
@@ -175,7 +205,6 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
         gap: 20,
         alignItems: 'start',
       }}>
-        {/* Onboarding checklist */}
         {!checklistDismissed && !allDone && (
           <OnboardingChecklist
             items={items}
@@ -184,7 +213,6 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
           />
         )}
 
-        {/* Activity feed placeholder */}
         <div style={{
           background: C.bgRaised,
           border: `1px solid ${C.border}`,
@@ -197,7 +225,7 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
             fontSize: '0.9375rem', fontWeight: 700,
             color: C.textPrimary, marginBottom: 16,
           }}>
-            Actividad reciente
+            {intl.formatMessage(messages.activityTitle)}
           </h3>
           <div style={{
             display: 'flex', flexDirection: 'column',
@@ -216,7 +244,7 @@ export function DashboardPage({ userName = 'Usuario', onChecklistItemClick }: Da
               </svg>
             </div>
             <p style={{ fontSize: '0.875rem', color: C.textTertiary }}>
-              La actividad aparecerá aquí cuando empieces a operar.
+              {intl.formatMessage(messages.activityEmpty)}
             </p>
           </div>
         </div>

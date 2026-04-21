@@ -1,4 +1,5 @@
 import React, { Suspense, useMemo, useCallback, useState } from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import { useNavigate } from '@tanstack/react-router';
 import { PropertyTable } from './PropertyTable.js';
 import { PropertyCards } from './PropertyCards.js';
@@ -39,6 +40,15 @@ const F = {
   display: "'Syne', system-ui, sans-serif",
   body:    "'DM Sans', system-ui, sans-serif",
 };
+
+const messages = defineMessages({
+  title:       { id: 'pages.properties.title' },
+  filterBtn:   { id: 'properties.list.filters.btn' },
+  filtersActive: { id: 'properties.list.filters.active' },
+  filtersClear:{ id: 'properties.list.filters.clear' },
+  addNew:      { id: 'properties.list.addNew' },
+  loadingMap:  { id: 'properties.list.loadingMap' },
+});
 
 /* ── Mock data — replace with real API hook ── */
 function useMockRows(filter: PropertyFilter): { rows: PropertyRow[]; total: number; isLoading: boolean } {
@@ -122,6 +132,7 @@ const MOCK_USER_ID = 'mock-user-1';
 
 /* ── Page ── */
 export function PropertyListPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const { filter, viewMode, setFilter, setViewMode, clearFilters, activeFilterCount } = usePropertyFilters();
   const { views, saveView, deleteView } = useSavedViews(MOCK_USER_ID);
@@ -168,11 +179,11 @@ export function PropertyListPage() {
               fontFamily: F.display, fontSize: '1.25rem', fontWeight: 700,
               color: C.textPrimary, letterSpacing: '-0.02em', margin: 0,
             }}>
-              Propiedades
+              {intl.formatMessage(messages.title)}
             </h1>
             {!isLoading && (
               <span style={{ fontSize: 13, color: C.textTertiary }}>
-                {total.toLocaleString('es-AR')}
+                {intl.formatNumber(total)}
               </span>
             )}
           </div>
@@ -204,7 +215,7 @@ export function PropertyListPage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
               </svg>
-              Filtros
+              {intl.formatMessage(messages.filterBtn)}
               {activeFilterCount > 0 && (
                 <span style={{
                   minWidth: 16, height: 16, borderRadius: 8,
@@ -238,7 +249,7 @@ export function PropertyListPage() {
                 <line x1="8" y1="2" x2="8" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
                 <line x1="2" y1="8" x2="14" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              Nueva propiedad
+              {intl.formatMessage(messages.addNew)}
             </button>
           </div>
         </div>
@@ -247,7 +258,7 @@ export function PropertyListPage() {
         {activeFilterCount > 0 && (
           <div style={{ paddingBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, color: C.textTertiary }}>
-              {activeFilterCount} filtro{activeFilterCount !== 1 ? 's' : ''} activo{activeFilterCount !== 1 ? 's' : ''}
+              {intl.formatMessage(messages.filtersActive, { count: activeFilterCount })}
             </span>
             <button
               onClick={clearFilters}
@@ -256,7 +267,7 @@ export function PropertyListPage() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
               }}
             >
-              Limpiar
+              {intl.formatMessage(messages.filtersClear)}
             </button>
           </div>
         )}
@@ -278,7 +289,7 @@ export function PropertyListPage() {
             alignItems: 'center', justifyContent: 'center',
             color: C.textTertiary, fontSize: 14,
           }}>
-            Cargando mapa…
+            {intl.formatMessage(messages.loadingMap)}
           </div>
         }>
           <PropertyMap

@@ -1,5 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { formatMoney } from '@corredor/core';
 import type { PropertyRow, PropertyStatus } from '../../routes/properties/-types.js';
 
 const C = {
@@ -15,19 +17,27 @@ const STATUS_COLORS: Record<PropertyStatus, string> = {
   active: '#18A659', reserved: '#F59E0B',
   sold: '#6B7FD7', paused: '#506180', archived: '#3A4E6A',
 };
-const STATUS_LABELS: Record<PropertyStatus, string> = {
-  active: 'Disponible', reserved: 'Reservado',
-  sold: 'Vendido', paused: 'Pausado', archived: 'Archivado',
-};
-const OP_LABELS: Record<string, string> = {
-  sale: 'Venta', rent: 'Alquiler', temp_rent: 'Alq. temp.',
-  commercial_rent: 'Alq. com.', commercial_sale: 'Vta. com.',
-};
 
 const CARD_HEIGHT = 310;
 const GAP = 14;
-// Fixed column count — a responsive version can compute this from container width
 const COLS = 4;
+
+const messages = defineMessages({
+  statusActive:   { id: 'properties.status.active' },
+  statusReserved: { id: 'properties.status.reserved' },
+  statusSold:     { id: 'properties.status.sold' },
+  statusPaused:   { id: 'properties.status.paused' },
+  statusArchived: { id: 'properties.status.archived' },
+  opSale:           { id: 'properties.operation.sale.short' },
+  opRent:           { id: 'properties.operation.rent.short' },
+  opTempRent:       { id: 'properties.operation.temp_rent.short' },
+  opCommercialRent: { id: 'properties.operation.commercial_rent.short' },
+  opCommercialSale: { id: 'properties.operation.commercial_sale.short' },
+  priceNone: { id: 'properties.price.none' },
+  loading:   { id: 'properties.table.loading' },
+  empty:     { id: 'properties.table.empty' },
+  featured:  { id: 'filter.featured' },
+});
 
 interface PropertyCardsProps {
   rows: PropertyRow[];
@@ -36,9 +46,25 @@ interface PropertyCardsProps {
 }
 
 export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsProps) {
+  const intl = useIntl();
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // Group rows into rows of COLS
+  const statusLabels: Record<PropertyStatus, string> = useMemo(() => ({
+    active:   intl.formatMessage(messages.statusActive),
+    reserved: intl.formatMessage(messages.statusReserved),
+    sold:     intl.formatMessage(messages.statusSold),
+    paused:   intl.formatMessage(messages.statusPaused),
+    archived: intl.formatMessage(messages.statusArchived),
+  }), [intl]);
+
+  const opLabels: Record<string, string> = useMemo(() => ({
+    sale:            intl.formatMessage(messages.opSale),
+    rent:            intl.formatMessage(messages.opRent),
+    temp_rent:       intl.formatMessage(messages.opTempRent),
+    commercial_rent: intl.formatMessage(messages.opCommercialRent),
+    commercial_sale: intl.formatMessage(messages.opCommercialSale),
+  }), [intl]);
+
   const rowGroups: PropertyRow[][] = [];
   for (let i = 0; i < rows.length; i += COLS) {
     rowGroups.push(rows.slice(i, i + COLS));
@@ -55,7 +81,7 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
         height: 320, color: C.textTertiary, fontSize: 14 }}>
-        Cargando propiedades…
+        {intl.formatMessage(messages.loading)}
       </div>
     );
   }
@@ -79,9 +105,9 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
               {group.map((prop) => {
                 const statusColor = STATUS_COLORS[prop.status];
                 const priceStr =
-                  prop.hasPricePublic && prop.priceAmount
-                    ? `${prop.priceCurrency === 'ARS' ? '$' : 'USD'} ${Number(prop.priceAmount).toLocaleString('es-AR')}`
-                    : 'Sin precio';
+                  prop.hasPricePublic && prop.priceAmount != null
+                    ? formatMoney(intl, prop.priceCurrency ?? 'ARS', prop.priceAmount)
+                    : intl.formatMessage(messages.priceNone);
 
                 return (
                   <button
@@ -133,7 +159,7 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
                         fontSize: 11, fontWeight: 500, color: statusColor,
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
-                        {STATUS_LABELS[prop.status]}
+                        {statusLabels[prop.status]}
                       </div>
                       {prop.featured && (
                         <div style={{
@@ -142,8 +168,9 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
                           border: '1px solid rgba(245,158,11,0.4)',
                           borderRadius: 4, padding: '2px 6px',
                           fontSize: 10, color: '#F59E0B', fontWeight: 700,
+                          textTransform: 'uppercase',
                         }}>
-                          DESTACADO
+                          {intl.formatMessage(messages.featured)}
                         </div>
                       )}
                     </div>
@@ -151,7 +178,7 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
                     {/* Content */}
                     <div style={{ padding: '12px 14px' }}>
                       <div style={{ fontSize: 11, color: C.textTertiary, marginBottom: 3 }}>
-                        {prop.operationKind ? OP_LABELS[prop.operationKind] : ''}
+                        {prop.operationKind ? (opLabels[prop.operationKind] ?? prop.operationKind) : ''}
                         {prop.referenceCode && ` · ${prop.referenceCode}`}
                       </div>
                       <div style={{
@@ -193,7 +220,6 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
                   </button>
                 );
               })}
-              {/* Fill empty slots in last row to keep alignment */}
               {Array.from({ length: COLS - group.length }).map((_, i) => (
                 <div key={`empty-${i}`}
                   style={{ flex: `0 0 calc(${100 / COLS}% - ${(GAP * (COLS - 1)) / COLS}px)` }} />
@@ -205,7 +231,7 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
 
       {rows.length === 0 && (
         <div style={{ textAlign: 'center', padding: '80px 0', color: C.textTertiary, fontSize: 14 }}>
-          No se encontraron propiedades con los filtros aplicados.
+          {intl.formatMessage(messages.empty)}
         </div>
       )}
     </div>

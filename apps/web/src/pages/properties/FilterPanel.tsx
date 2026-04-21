@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import type {
   PropertyFilter,
   OperationKind,
@@ -30,6 +31,60 @@ const C = {
   textTertiary: '#506180',
 };
 
+const messages = defineMessages({
+  title:     { id: 'filter.title' },
+  clearAll:  { id: 'filter.clearAll' },
+  apply:     { id: 'filter.apply' },
+  sectionOperation:  { id: 'filter.section.operation' },
+  sectionStatus:     { id: 'filter.section.status' },
+  sectionType:       { id: 'filter.section.type' },
+  sectionPrice:      { id: 'filter.section.price' },
+  sectionAreaCovered:{ id: 'filter.section.areaCovered' },
+  sectionAreaTotal:  { id: 'filter.section.areaTotal' },
+  sectionRooms:      { id: 'filter.section.rooms' },
+  sectionBedrooms:   { id: 'filter.section.bedrooms' },
+  sectionBathrooms:  { id: 'filter.section.bathrooms' },
+  sectionAge:        { id: 'filter.section.age' },
+  sectionLocation:   { id: 'filter.section.location' },
+  sectionDate:       { id: 'filter.section.date' },
+  boolAll: { id: 'filter.bool.all' },
+  boolYes: { id: 'filter.bool.yes' },
+  boolNo:  { id: 'filter.bool.no' },
+  min:     { id: 'filter.min' },
+  max:     { id: 'filter.max' },
+  featured:    { id: 'filter.featured' },
+  publicPrice: { id: 'filter.publicPrice' },
+  locationProvince:    { id: 'filter.location.province' },
+  locationLocality:    { id: 'filter.location.locality' },
+  locationNeighborhood:{ id: 'filter.location.neighborhood' },
+  opSale:           { id: 'properties.operation.sale' },
+  opRent:           { id: 'properties.operation.rent' },
+  opTempRent:       { id: 'properties.operation.temp_rent' },
+  opCommercialRent: { id: 'properties.operation.commercial_rent' },
+  opCommercialSale: { id: 'properties.operation.commercial_sale' },
+  statusActive:   { id: 'properties.status.active' },
+  statusReserved: { id: 'properties.status.reserved' },
+  statusSold:     { id: 'properties.status.sold' },
+  statusPaused:   { id: 'properties.status.paused' },
+  statusArchived: { id: 'properties.status.archived' },
+  typeApartment:    { id: 'properties.type.apartment' },
+  typePH:           { id: 'properties.type.ph' },
+  typeHouse:        { id: 'properties.type.house' },
+  typeQuinta:       { id: 'properties.type.quinta' },
+  typeLand:         { id: 'properties.type.land' },
+  typeOffice:       { id: 'properties.type.office' },
+  typeCommercial:   { id: 'properties.type.commercial' },
+  typeGarage:       { id: 'properties.type.garage' },
+  typeWarehouse:    { id: 'properties.type.warehouse' },
+  typeFarm:         { id: 'properties.type.farm' },
+  typeHotel:        { id: 'properties.type.hotel' },
+  typeBuilding:     { id: 'properties.type.building' },
+  typeBusinessFund: { id: 'properties.type.business_fund' },
+  typeDevelopment:  { id: 'properties.type.development' },
+  ariaClose:  { id: 'filter.title' },
+  ariaDialog: { id: 'filter.title' },
+});
+
 interface FilterPanelProps {
   open: boolean;
   filter: PropertyFilter;
@@ -37,42 +92,6 @@ interface FilterPanelProps {
   onClear: () => void;
   onClose: () => void;
 }
-
-/* ── Operation options ── */
-const OPERATIONS: { value: OperationKind; label: string }[] = [
-  { value: 'sale',            label: 'Venta' },
-  { value: 'rent',            label: 'Alquiler' },
-  { value: 'temp_rent',       label: 'Alq. temporal' },
-  { value: 'commercial_rent', label: 'Alq. comercial' },
-  { value: 'commercial_sale', label: 'Vta. comercial' },
-];
-
-/* ── Status options ── */
-const STATUSES: { value: PropertyStatus; label: string; color: string }[] = [
-  { value: 'active',   label: 'Disponible', color: '#18A659' },
-  { value: 'reserved', label: 'Reservado',  color: '#F59E0B' },
-  { value: 'sold',     label: 'Vendido',    color: '#6B7FD7' },
-  { value: 'paused',   label: 'Pausado',    color: '#506180' },
-  { value: 'archived', label: 'Archivado',  color: '#3A4E6A' },
-];
-
-/* ── Property type options ── */
-const PROPERTY_TYPES: { value: PropertyTypeName; label: string }[] = [
-  { value: 'apartment',      label: 'Departamento' },
-  { value: 'ph',             label: 'PH' },
-  { value: 'house',          label: 'Casa' },
-  { value: 'quinta',         label: 'Quinta' },
-  { value: 'land',           label: 'Terreno' },
-  { value: 'office',         label: 'Oficina' },
-  { value: 'commercial',     label: 'Local comercial' },
-  { value: 'garage',         label: 'Cochera' },
-  { value: 'warehouse',      label: 'Depósito / Galpón' },
-  { value: 'farm',           label: 'Chacra / Campo' },
-  { value: 'hotel',          label: 'Hotel' },
-  { value: 'building',       label: 'Edificio' },
-  { value: 'business_fund',  label: 'Fondo de comercio' },
-  { value: 'development',    label: 'Emprendimiento' },
-];
 
 /* ── Helpers ── */
 function toggle<T>(arr: T[], val: T): T[] {
@@ -135,14 +154,14 @@ function ChipGroup<T extends string>({
 }
 
 function RangeInputs({
-  min, max, onMin, onMax, placeholder = 'Cualquiera', prefix,
+  min, max, onMin, onMax, prefix,
 }: {
   min?: number; max?: number;
   onMin: (v: number | undefined) => void;
   onMax: (v: number | undefined) => void;
-  placeholder?: string;
   prefix?: string;
 }) {
+  const intl = useIntl();
   const inputStyle: React.CSSProperties = {
     flex: 1, padding: '6px 8px', borderRadius: 5, fontSize: 12,
     background: '#0A1120', border: `1px solid ${C.border}`,
@@ -160,7 +179,7 @@ function RangeInputs({
       {prefix && <span style={{ fontSize: 11, color: C.textTertiary, flexShrink: 0 }}>{prefix}</span>}
       <input
         type="text" inputMode="numeric"
-        placeholder={`Mín${placeholder !== 'Cualquiera' ? '' : ''}`}
+        placeholder={intl.formatMessage(messages.min)}
         defaultValue={min ?? ''}
         onChange={(e) => onMin(parse(e.target.value))}
         style={inputStyle}
@@ -168,7 +187,7 @@ function RangeInputs({
       <span style={{ color: C.textTertiary, fontSize: 12 }}>–</span>
       <input
         type="text" inputMode="numeric"
-        placeholder="Máx"
+        placeholder={intl.formatMessage(messages.max)}
         defaultValue={max ?? ''}
         onChange={(e) => onMax(parse(e.target.value))}
         style={inputStyle}
@@ -184,10 +203,11 @@ function BoolTriple({
   value: boolean | undefined;
   onChange: (v: boolean | undefined) => void;
 }) {
+  const intl = useIntl();
   const opts: { v: boolean | undefined; l: string }[] = [
-    { v: undefined, l: 'Todos' },
-    { v: true,      l: 'Sí' },
-    { v: false,     l: 'No' },
+    { v: undefined, l: intl.formatMessage(messages.boolAll) },
+    { v: true,      l: intl.formatMessage(messages.boolYes) },
+    { v: false,     l: intl.formatMessage(messages.boolNo) },
   ];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -220,8 +240,58 @@ function Divider() {
   return <div style={{ borderTop: `1px solid ${C.border}`, margin: '16px 0' }} />;
 }
 
+const STATUS_COLORS: Record<PropertyStatus, string> = {
+  active: '#18A659', reserved: '#F59E0B',
+  sold: '#6B7FD7', paused: '#506180', archived: '#3A4E6A',
+};
+
 /* ── Main component ── */
 export function FilterPanel({ open, filter, onChange, onClear, onClose }: FilterPanelProps) {
+  const intl = useIntl();
+
+  const operations: { value: OperationKind; label: string }[] = useMemo(() => [
+    { value: 'sale',            label: intl.formatMessage(messages.opSale) },
+    { value: 'rent',            label: intl.formatMessage(messages.opRent) },
+    { value: 'temp_rent',       label: intl.formatMessage(messages.opTempRent) },
+    { value: 'commercial_rent', label: intl.formatMessage(messages.opCommercialRent) },
+    { value: 'commercial_sale', label: intl.formatMessage(messages.opCommercialSale) },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [intl.locale]);
+
+  const statuses: { value: PropertyStatus; label: string; color: string }[] = useMemo(() => [
+    { value: 'active',   label: intl.formatMessage(messages.statusActive),   color: '#18A659' },
+    { value: 'reserved', label: intl.formatMessage(messages.statusReserved), color: '#F59E0B' },
+    { value: 'sold',     label: intl.formatMessage(messages.statusSold),     color: '#6B7FD7' },
+    { value: 'paused',   label: intl.formatMessage(messages.statusPaused),   color: '#506180' },
+    { value: 'archived', label: intl.formatMessage(messages.statusArchived), color: '#3A4E6A' },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [intl.locale]);
+
+  const propertyTypes: { value: PropertyTypeName; label: string }[] = useMemo(() => [
+    { value: 'apartment',     label: intl.formatMessage(messages.typeApartment) },
+    { value: 'ph',            label: intl.formatMessage(messages.typePH) },
+    { value: 'house',         label: intl.formatMessage(messages.typeHouse) },
+    { value: 'quinta',        label: intl.formatMessage(messages.typeQuinta) },
+    { value: 'land',          label: intl.formatMessage(messages.typeLand) },
+    { value: 'office',        label: intl.formatMessage(messages.typeOffice) },
+    { value: 'commercial',    label: intl.formatMessage(messages.typeCommercial) },
+    { value: 'garage',        label: intl.formatMessage(messages.typeGarage) },
+    { value: 'warehouse',     label: intl.formatMessage(messages.typeWarehouse) },
+    { value: 'farm',          label: intl.formatMessage(messages.typeFarm) },
+    { value: 'hotel',         label: intl.formatMessage(messages.typeHotel) },
+    { value: 'building',      label: intl.formatMessage(messages.typeBuilding) },
+    { value: 'business_fund', label: intl.formatMessage(messages.typeBusinessFund) },
+    { value: 'development',   label: intl.formatMessage(messages.typeDevelopment) },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [intl.locale]);
+
+  const locationPlaceholders: Record<'province' | 'locality' | 'neighborhood', string> = useMemo(() => ({
+    province:     intl.formatMessage(messages.locationProvince),
+    locality:     intl.formatMessage(messages.locationLocality),
+    neighborhood: intl.formatMessage(messages.locationNeighborhood),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [intl.locale]);
+
   if (!open) return null;
 
   return (
@@ -245,7 +315,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
           fontFamily: "'DM Sans', system-ui, sans-serif",
         }}
         role="dialog"
-        aria-label="Filtros de búsqueda"
+        aria-label={intl.formatMessage(messages.title)}
         aria-modal="true"
       >
         {/* Header */}
@@ -255,7 +325,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
           borderBottom: `1px solid ${C.border}`,
         }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary }}>
-            Filtros
+            {intl.formatMessage(messages.title)}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -265,7 +335,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
                 border: 'none', cursor: 'pointer', padding: '3px 6px',
               }}
             >
-              Limpiar todo
+              {intl.formatMessage(messages.clearAll)}
             </button>
             <button
               onClick={onClose}
@@ -275,7 +345,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
                 color: C.textSecondary, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-              aria-label="Cerrar filtros"
+              aria-label={intl.formatMessage(messages.clearAll)}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -288,39 +358,35 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
         {/* Scrollable body */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px' }}>
 
-          {/* Operación */}
-          <SectionTitle>Operación</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionOperation)}</SectionTitle>
           <ChipGroup
-            options={OPERATIONS}
+            options={operations}
             selected={filter.operations}
             onToggle={(v) => onChange({ operations: toggle(filter.operations, v) })}
           />
 
           <Divider />
 
-          {/* Estado */}
-          <SectionTitle>Estado</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionStatus)}</SectionTitle>
           <ChipGroup
-            options={STATUSES}
+            options={statuses}
             selected={filter.statuses}
             onToggle={(v) => onChange({ statuses: toggle(filter.statuses, v) })}
-            colorFn={(v) => STATUSES.find((s) => s.value === v)?.color ?? C.brand}
+            colorFn={(v) => STATUS_COLORS[v]}
           />
 
           <Divider />
 
-          {/* Tipo de propiedad */}
-          <SectionTitle>Tipo de propiedad</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionType)}</SectionTitle>
           <ChipGroup
-            options={PROPERTY_TYPES}
+            options={propertyTypes}
             selected={filter.types}
             onToggle={(v) => onChange({ types: toggle(filter.types, v) })}
           />
 
           <Divider />
 
-          {/* Precio */}
-          <SectionTitle>Precio</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionPrice)}</SectionTitle>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {(['USD', 'ARS'] as const).map((cur) => {
               const active = filter.price.currency === cur;
@@ -351,8 +417,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
 
           <Divider />
 
-          {/* Superficies */}
-          <SectionTitle>Superficie cubierta (m²)</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionAreaCovered)}</SectionTitle>
           <RangeInputs
             min={filter.coveredArea.min}
             max={filter.coveredArea.max}
@@ -360,7 +425,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
             onMax={(v) => onChange({ coveredArea: { ...filter.coveredArea, max: v } })}
           />
           <div style={{ marginTop: 12 }} />
-          <SectionTitle>Superficie total (m²)</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionAreaTotal)}</SectionTitle>
           <RangeInputs
             min={filter.totalArea.min}
             max={filter.totalArea.max}
@@ -370,22 +435,21 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
 
           <Divider />
 
-          {/* Ambientes / Dorm / Baños */}
-          <SectionTitle>Ambientes</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionRooms)}</SectionTitle>
           <RangeInputs
             min={filter.rooms.min} max={filter.rooms.max}
             onMin={(v) => onChange({ rooms: { ...filter.rooms, min: v } })}
             onMax={(v) => onChange({ rooms: { ...filter.rooms, max: v } })}
           />
           <div style={{ marginTop: 12 }} />
-          <SectionTitle>Dormitorios</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionBedrooms)}</SectionTitle>
           <RangeInputs
             min={filter.bedrooms.min} max={filter.bedrooms.max}
             onMin={(v) => onChange({ bedrooms: { ...filter.bedrooms, min: v } })}
             onMax={(v) => onChange({ bedrooms: { ...filter.bedrooms, max: v } })}
           />
           <div style={{ marginTop: 12 }} />
-          <SectionTitle>Baños</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionBathrooms)}</SectionTitle>
           <RangeInputs
             min={filter.bathrooms.min} max={filter.bathrooms.max}
             onMin={(v) => onChange({ bathrooms: { ...filter.bathrooms, min: v } })}
@@ -394,8 +458,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
 
           <Divider />
 
-          {/* Antigüedad */}
-          <SectionTitle>Antigüedad (años)</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionAge)}</SectionTitle>
           <RangeInputs
             min={filter.age.min} max={filter.age.max}
             onMin={(v) => onChange({ age: { ...filter.age, min: v } })}
@@ -404,33 +467,28 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
 
           <Divider />
 
-          {/* Ubicación */}
-          <SectionTitle>Ubicación</SectionTitle>
-          {(['province', 'locality', 'neighborhood'] as const).map((field, i) => {
-            const placeholders = ['Provincia', 'Localidad', 'Barrio'];
-            return (
-              <input
-                key={field}
-                type="text"
-                placeholder={placeholders[i]}
-                defaultValue={filter[field] ?? ''}
-                onChange={(e) => onChange({ [field]: e.target.value || undefined })}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  padding: '7px 10px', borderRadius: 5, fontSize: 12,
-                  background: '#0A1120', border: `1px solid ${C.border}`,
-                  color: C.textPrimary, outline: 'none', marginBottom: 6,
-                }}
-              />
-            );
-          })}
+          <SectionTitle>{intl.formatMessage(messages.sectionLocation)}</SectionTitle>
+          {(['province', 'locality', 'neighborhood'] as const).map((field) => (
+            <input
+              key={field}
+              type="text"
+              placeholder={locationPlaceholders[field]}
+              defaultValue={filter[field] ?? ''}
+              onChange={(e) => onChange({ [field]: e.target.value || undefined })}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '7px 10px', borderRadius: 5, fontSize: 12,
+                background: '#0A1120', border: `1px solid ${C.border}`,
+                color: C.textPrimary, outline: 'none', marginBottom: 6,
+              }}
+            />
+          ))}
 
           <Divider />
 
-          {/* Fechas */}
-          <SectionTitle>Fecha de carga</SectionTitle>
+          <SectionTitle>{intl.formatMessage(messages.sectionDate)}</SectionTitle>
           <div style={{ display: 'flex', gap: 6 }}>
-            {(['createdFrom', 'createdTo'] as const).map((field, i) => (
+            {(['createdFrom', 'createdTo'] as const).map((field) => (
               <input
                 key={field}
                 type="date"
@@ -442,27 +500,24 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
                   color: C.textSecondary, outline: 'none',
                   colorScheme: 'dark',
                 }}
-                title={i === 0 ? 'Desde' : 'Hasta'}
               />
             ))}
           </div>
 
           <Divider />
 
-          {/* Booleans */}
           <BoolTriple
-            label="Destacado"
+            label={intl.formatMessage(messages.featured)}
             value={filter.featured}
             onChange={(v) => onChange({ featured: v })}
           />
           <div style={{ marginTop: 10 }} />
           <BoolTriple
-            label="Con precio público"
+            label={intl.formatMessage(messages.publicPrice)}
             value={filter.hasPricePublic}
             onChange={(v) => onChange({ hasPricePublic: v })}
           />
 
-          {/* Bottom spacer */}
           <div style={{ height: 24 }} />
         </div>
 
@@ -479,7 +534,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
               background: C.brand, border: 'none', color: '#fff', cursor: 'pointer',
             }}
           >
-            Aplicar filtros
+            {intl.formatMessage(messages.apply)}
           </button>
         </div>
       </div>

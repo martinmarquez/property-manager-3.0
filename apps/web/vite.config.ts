@@ -5,7 +5,16 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: [
+          ['babel-plugin-formatjs', {
+            idInterpolationPattern: '[sha512:contenthash:base64:6]',
+            ast: true,
+          }],
+        ],
+      },
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {

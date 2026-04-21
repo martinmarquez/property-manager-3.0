@@ -37,6 +37,17 @@ export type {
   TenantContext,
 } from "./tenant.js";
 
+// i18n utilities
+export {
+  formatMoney,
+  formatDate,
+  formatNumber,
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  FALLBACK_LOCALE,
+} from "./i18n/index.js";
+export type { SupportedCurrency, SupportedLocale } from "./i18n/index.js";
+
 // Middleware
 export {
   securityHeaders,

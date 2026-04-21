@@ -5,10 +5,12 @@ import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, red
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { trpc, queryClient, makeTRPCReactClient } from './trpc.js';
+import { I18nProvider } from './i18n/index.js';
 
 // Design system tokens (Google Fonts + CSS custom properties)
 import '@corredor/ui/styles/tokens.css';
 
+import { useIntl, defineMessages } from 'react-intl';
 import {
   LoginPage,
   RegisterFlow,
@@ -27,6 +29,7 @@ import {
 import { PropertyListPage } from './pages/properties/PropertyListPage.js';
 import { OrganizationSettings } from '@corredor/ui';
 import type { OrganizationData } from '@corredor/ui';
+import { LocaleSwitcher } from './pages/settings/LocaleSwitcher.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -203,6 +206,7 @@ const settingsRoute = createRoute({
   component: function SettingsRoute() {
     return (
       <SettingsPage>
+        <LocaleSwitcher />
         <Outlet />
       </SettingsPage>
     );
@@ -236,11 +240,18 @@ const organizationSettingsRoute = createRoute({
   },
 });
 
+const notFoundMessages = defineMessages({
+  title:   { id: 'notFound.title' },
+  message: { id: 'notFound.message' },
+  back:    { id: 'notFound.back' },
+});
+
 // 404 catch-all
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
   component: function NotFoundRoute() {
+    const intl = useIntl();
     return (
       <div style={{
         minHeight: '100vh',
@@ -253,10 +264,12 @@ const notFoundRoute = createRoute({
         fontFamily: "'DM Sans', system-ui, sans-serif",
         gap: '1rem',
       }}>
-        <span style={{ fontSize: '4rem', fontWeight: 700, fontFamily: "'Syne', system-ui, sans-serif" }}>404</span>
-        <p style={{ color: '#8DA0C0', margin: 0 }}>Página no encontrada</p>
+        <span style={{ fontSize: '4rem', fontWeight: 700, fontFamily: "'Syne', system-ui, sans-serif" }}>
+          {intl.formatMessage(notFoundMessages.title)}
+        </span>
+        <p style={{ color: '#8DA0C0', margin: 0 }}>{intl.formatMessage(notFoundMessages.message)}</p>
         <a href="/" style={{ color: '#4669ff', textDecoration: 'none', fontSize: '0.875rem' }}>
-          Volver al inicio
+          {intl.formatMessage(notFoundMessages.back)}
         </a>
       </div>
     );
@@ -296,12 +309,14 @@ declare module '@tanstack/react-router' {
 function App() {
   const [trpcReactClient] = useState(() => makeTRPCReactClient());
   return (
-    <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      </QueryClientProvider>
-    </trpc.Provider>
+    <I18nProvider>
+      <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </QueryClientProvider>
+      </trpc.Provider>
+    </I18nProvider>
   );
 }
 

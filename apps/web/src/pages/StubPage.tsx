@@ -1,6 +1,20 @@
 import React from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import { EmptyState } from '@corredor/ui';
 import type { EmptyStateProps } from '@corredor/ui';
+
+const messages = defineMessages({
+  propertiesTitle:   { id: 'pages.properties.title' },
+  propertiesSubtitle:{ id: 'pages.properties.subtitle' },
+  propertiesCta:     { id: 'pages.properties.cta' },
+  contactsTitle:     { id: 'pages.contacts.title' },
+  contactsSubtitle:  { id: 'pages.contacts.subtitle' },
+  contactsCta:       { id: 'pages.contacts.cta' },
+  leadsTitle:        { id: 'pages.leads.title' },
+  leadsSubtitle:     { id: 'pages.leads.subtitle' },
+  leadsCta:          { id: 'pages.leads.cta' },
+  commonNew:         { id: 'common.new' },
+});
 
 /* ─────────────────────────────────────────────────────────
    Stub pages for /properties, /contacts, /leads
@@ -36,6 +50,7 @@ interface StubPageProps {
 export function StubPage({
   title, subtitle, emptyVariant, ctaLabel, onCta, children,
 }: StubPageProps) {
+  const intl = useIntl();
   return (
     <div style={{ minHeight: '100%', fontFamily: F.body }}>
       {/* Page header */}
@@ -87,7 +102,7 @@ export function StubPage({
                 <line x1="8" y1="2" x2="8" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
                 <line x1="2" y1="8" x2="14" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              {ctaLabel ?? 'Nuevo'}
+              {ctaLabel ?? intl.formatMessage(messages.commonNew)}
             </button>
           )}
         </div>
@@ -110,36 +125,39 @@ export function StubPage({
 // ─── Concrete page exports ────────────────────────────────
 
 export function PropertiesPage({ onNew }: { onNew?: () => void }) {
+  const intl = useIntl();
   return (
     <StubPage
-      title="Propiedades"
-      subtitle="Gestioná tu cartera de propiedades"
+      title={intl.formatMessage(messages.propertiesTitle)}
+      subtitle={intl.formatMessage(messages.propertiesSubtitle)}
       emptyVariant="properties"
-      ctaLabel="Agregar propiedad"
+      ctaLabel={intl.formatMessage(messages.propertiesCta)}
       {...(onNew && { onCta: onNew })}
     />
   );
 }
 
 export function ContactsPage({ onNew }: { onNew?: () => void }) {
+  const intl = useIntl();
   return (
     <StubPage
-      title="Contactos"
-      subtitle="Compradores, inquilinos y propietarios"
+      title={intl.formatMessage(messages.contactsTitle)}
+      subtitle={intl.formatMessage(messages.contactsSubtitle)}
       emptyVariant="contacts"
-      ctaLabel="Crear contacto"
+      ctaLabel={intl.formatMessage(messages.contactsCta)}
       {...(onNew && { onCta: onNew })}
     />
   );
 }
 
 export function LeadsPage({ onNew }: { onNew?: () => void }) {
+  const intl = useIntl();
   return (
     <StubPage
-      title="Leads"
-      subtitle="Seguimiento de oportunidades comerciales"
+      title={intl.formatMessage(messages.leadsTitle)}
+      subtitle={intl.formatMessage(messages.leadsSubtitle)}
       emptyVariant="leads"
-      ctaLabel="Crear lead"
+      ctaLabel={intl.formatMessage(messages.leadsCta)}
       {...(onNew && { onCta: onNew })}
     />
   );

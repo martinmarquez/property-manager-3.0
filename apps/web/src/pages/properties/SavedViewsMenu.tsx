@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useIntl, defineMessages } from 'react-intl';
 import type { SavedView, PropertyFilter, ViewMode } from '../../routes/properties/-types.js';
 
 /* ─────────────────────────────────────────────────────────
@@ -21,24 +22,35 @@ const C = {
   textTertiary: '#506180',
 };
 
+const messages = defineMessages({
+  title:       { id: 'savedViews.title' },
+  saveLabel:   { id: 'savedViews.save.label' },
+  placeholder: { id: 'savedViews.save.placeholder' },
+  saveBtn:     { id: 'savedViews.save.btn' },
+  empty:       { id: 'savedViews.empty' },
+  dateToday:   { id: 'savedViews.date.today' },
+  dateYesterday: { id: 'savedViews.date.yesterday' },
+  dateDaysAgo:   { id: 'savedViews.date.daysAgo' },
+  dateMonthsAgo: { id: 'savedViews.date.monthsAgo' },
+});
+
 interface SavedViewsMenuProps {
   views: SavedView[];
   onSave: (name: string) => void;
   onApply: (filter: PropertyFilter, viewMode: ViewMode) => void;
   onDelete: (id: string) => void;
-  /** Count of active filters (shown on button badge) */
   activeFilterCount: number;
 }
 
 export function SavedViewsMenu({
   views, onSave, onApply, onDelete, activeFilterCount,
 }: SavedViewsMenuProps) {
+  const intl = useIntl();
   const [open, setOpen] = useState(false);
   const [saveInput, setSaveInput] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Close on outside click ── */
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
@@ -50,7 +62,6 @@ export function SavedViewsMenu({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  /* ── Focus input when menu opens ── */
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -70,11 +81,11 @@ export function SavedViewsMenu({
     try {
       const diff = Date.now() - new Date(iso).getTime();
       const days = Math.floor(diff / 86_400_000);
-      if (days === 0) return 'hoy';
-      if (days === 1) return 'ayer';
-      if (days < 30) return `hace ${days} días`;
+      if (days === 0) return intl.formatMessage(messages.dateToday);
+      if (days === 1) return intl.formatMessage(messages.dateYesterday);
+      if (days < 30) return intl.formatMessage(messages.dateDaysAgo, { days });
       const months = Math.floor(days / 30);
-      return `hace ${months} mes${months > 1 ? 'es' : ''}`;
+      return intl.formatMessage(messages.dateMonthsAgo, { months });
     } catch {
       return '';
     }
@@ -101,6 +112,10 @@ export function SavedViewsMenu({
     ),
   };
 
+  const placeholderText = activeFilterCount > 0
+    ? `${intl.formatMessage(messages.placeholder)} (${activeFilterCount} filtros)`
+    : intl.formatMessage(messages.placeholder);
+
   return (
     <div ref={menuRef} style={{ position: 'relative' }}>
       {/* Trigger button */}
@@ -123,7 +138,7 @@ export function SavedViewsMenu({
           <polyline points="17 21 17 13 7 13 7 21"/>
           <polyline points="7 3 7 8 15 8"/>
         </svg>
-        Vistas guardadas
+        {intl.formatMessage(messages.title)}
         {views.length > 0 && (
           <span style={{
             minWidth: 16, height: 16, borderRadius: 8,
@@ -159,7 +174,7 @@ export function SavedViewsMenu({
           {/* Save current view */}
           <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
             <p style={{ fontSize: 11, color: C.textTertiary, margin: '0 0 8px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Guardar vista actual
+              {intl.formatMessage(messages.saveLabel)}
             </p>
             <form onSubmit={handleSave} style={{ display: 'flex', gap: 6 }}>
               <input
@@ -167,7 +182,7 @@ export function SavedViewsMenu({
                 type="text"
                 value={saveInput}
                 onChange={(e) => setSaveInput(e.target.value)}
-                placeholder={`Vista${activeFilterCount > 0 ? ` (${activeFilterCount} filtros)` : ''}`}
+                placeholder={placeholderText}
                 maxLength={60}
                 style={{
                   flex: 1, padding: '6px 9px', borderRadius: 5, fontSize: 12,
@@ -186,7 +201,7 @@ export function SavedViewsMenu({
                   cursor: saveInput.trim() ? 'pointer' : 'default',
                 }}
               >
-                Guardar
+                {intl.formatMessage(messages.saveBtn)}
               </button>
             </form>
           </div>
@@ -194,7 +209,7 @@ export function SavedViewsMenu({
           {/* View list */}
           {views.length === 0 ? (
             <div style={{ padding: '20px 14px', textAlign: 'center', color: C.textTertiary, fontSize: 12 }}>
-              No hay vistas guardadas
+              {intl.formatMessage(messages.empty)}
             </div>
           ) : (
             <div style={{ maxHeight: 280, overflowY: 'auto' }}>
@@ -235,7 +250,6 @@ export function SavedViewsMenu({
                   {/* Delete */}
                   <button
                     onClick={() => onDelete(view.id)}
-                    title="Eliminar vista"
                     style={{
                       flexShrink: 0, width: 24, height: 24, borderRadius: 4,
                       background: 'transparent', border: 'none',
@@ -244,7 +258,7 @@ export function SavedViewsMenu({
                     }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#EF4444'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = C.textTertiary; }}
-                    aria-label={`Eliminar vista ${view.name}`}
+                    aria-label={`${intl.formatMessage(messages.title)} — ${view.name}`}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                       <polyline points="3 6 5 6 21 6"/>
