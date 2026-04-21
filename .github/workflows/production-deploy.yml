@@ -1,0 +1,117 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm turbo typecheck
+
+      - name: Lint
+        run: pnpm turbo lint
+
+      - name: Unit tests
+        run: pnpm turbo test:unit
+
+      - name: Integration tests
+        run: pnpm turbo test:integration
+        env:
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+
+      - name: Build
+        run: pnpm turbo build
+        env:
+          # Web: @sentry/vite-plugin uploads source maps during build when SENTRY_AUTH_TOKEN is set
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+
+      - name: Upload source maps — API
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        run: |
+          pnpm dlx @sentry/cli sourcemaps inject apps/api/dist
+          pnpm dlx @sentry/cli sourcemaps upload \
+            --release "$GITHUB_SHA" \
+            --dist "api" \
+            apps/api/dist
+          find apps/api/dist -name "*.map" -delete
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+      - name: Upload source maps — Worker
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        run: |
+          pnpm dlx @sentry/cli sourcemaps inject apps/worker/dist
+          pnpm dlx @sentry/cli sourcemaps upload \
+            --release "$GITHUB_SHA" \
+            --dist "worker" \
+            apps/worker/dist
+          find apps/worker/dist -name "*.map" -delete
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+  deploy:
+    name: Deploy to Production
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Run Drizzle migrations (production)
+        run: |
+          pnpm --filter @corredor/api db:migrate
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy API
+        run: flyctl deploy --config fly.api.toml --remote-only --wait-timeout 300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy Web
+        run: flyctl deploy --config fly.web.toml --remote-only --wait-timeout 300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy Worker
+        run: flyctl deploy --config fly.worker.toml --remote-only --wait-timeout 300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
