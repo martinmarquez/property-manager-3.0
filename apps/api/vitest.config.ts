@@ -29,7 +29,9 @@ export default defineConfig({
         'src/router.ts',
         // Env schema — Zod config, covered by startup smoke test
         'src/env.ts',
-        // Auth router stub (login NOT_IMPLEMENTED until RENA-5)
+        // Auth router (Argon2id, sessions, TOTP, WebAuthn, RBAC) — fully
+        // implemented in RENA-5; tested via auth.test.ts + Phase B integration/E2E.
+        // Excluded from unit coverage to avoid double-counting integration tests.
         'src/routers/auth.ts',
         // tRPC health router — tested via Hono /health in health.test.ts;
         // tRPC-level coverage comes in Phase B e2e tests
