@@ -7,44 +7,74 @@
 Corredor uses a **GitHub Actions → Fly.io** pipeline. All deploys are automated; no SSH access to machines is needed.
 
 ```
-Developer pushes to main
+PR opened / updated
         │
         ▼
-GitHub Actions: ci.yml
-  ├─ Typecheck (all packages)
-  ├─ Lint (all packages)
-  ├─ Test (all packages, Neon CI branch)
-  └─ Build (all apps)
+.github/workflows/ci.yml
+  ├─ Typecheck (turbo)
+  ├─ Lint (turbo)
+  ├─ Test (turbo)
+  └─ Build (turbo)
         │
-        ▼ (if all checks pass)
-GitHub Actions: deploy.yml
-  ├─ Run Drizzle migrations against Neon main branch
-  ├─ fly deploy --app corredor-api (rolling)
-  ├─ fly deploy --app corredor-worker (rolling)
-  ├─ fly deploy --app corredor-site (rolling)
-  ├─ fly deploy --app corredor-admin (rolling)
-  └─ Cloudflare Pages: auto-deploy apps/web via CF Pages Git integration
+        ▼ (in parallel)
+.github/workflows/preview.yml
+  ├─ Create Neon branch pr-{n}
+  ├─ Run Drizzle migrations on pr-{n}
+  ├─ Deploy corredor-api-pr-{n} to Fly.io
+  ├─ Build + deploy apps/web to Cloudflare Pages (branch: pr-{n})
+  └─ Comment preview URLs on PR
+        │
+Push to main
+        │
+        ▼
+.github/workflows/production-deploy.yml
+  ├─ [CI Gate] Typecheck + Lint + Test + Build
+  ├─ [CI Gate] Sentry source map upload (api, worker)
+  ├─ Run Drizzle migrations (Neon main branch)
+  ├─ Deploy corredor-api to Fly.io (rolling)
+  ├─ Deploy corredor-worker to Fly.io (rolling)
+  └─ Build + deploy apps/web to Cloudflare Pages (production)
+
+PR closed (merged or abandoned)
+        │
+        ▼
+.github/workflows/cleanup-preview.yml
+  ├─ Destroy corredor-api-pr-{n} on Fly.io
+  └─ Delete Neon pr-{n} branch
 ```
 
-**Rolling deploy strategy:** Fly.io brings up new machines with the new version, health-checks them (30s grace), then drains traffic from old machines. Zero downtime for stateless apps (`api`, `site`, `admin`, `web`).
+**Rolling deploy strategy:** Fly.io brings up new machines with the new version, health-checks them, then drains traffic from old machines. Zero downtime for stateless apps.
 
-> **Note:** The GitHub Actions workflows are being finalized in [RENA-8](/RENA/issues/RENA-8). This runbook documents the deploy topology and manual procedures; refer to `infra/github/workflows/` for the current workflow definitions once RENA-8 is complete.
+---
+
+## Workflow Files
+
+All workflows live in `.github/workflows/`.
+
+| File | Trigger | Purpose |
+|------|---------|---------|
+| `ci.yml` | PR to `main`/`staging`; push to `main` | Typecheck, lint, test, build gate |
+| `preview.yml` | PR opened / updated | Spin up isolated preview environment |
+| `production-deploy.yml` | Push to `main` | Full CI gate + production deploy |
+| `cleanup-preview.yml` | PR closed | Destroy Fly preview app + Neon branch |
+| `security.yml` | PR, push to `main`, daily cron (03:00 UTC) | `pnpm audit`, Snyk, gitleaks, CodeQL |
+| `nightly-regression.yml` | Daily cron (03:00 UTC); manual dispatch | Full Playwright E2E suite against production |
+| `e2e-smoke.yml` | See file | E2E smoke tests (PR/staging path) |
 
 ---
 
 ## Environments
 
-| Environment | Trigger | Apps deployed to |
-|-------------|---------|-----------------|
-| **Preview** | PR opened / updated | `corredor-api-pr-{n}`, `corredor-worker-pr-{n}`, etc. on Fly + Neon `pr-{n}` branch |
-| **Staging** | Merge to `main` (staging config) | `corredor-api-staging`, etc. on Fly + Neon `staging` branch |
-| **Production** | Manual promotion from staging | `corredor-api`, etc. on Fly + Neon `main` branch |
+| Environment | Trigger | Apps |
+|-------------|---------|------|
+| **Preview** | PR opened / updated | `corredor-api-pr-{n}` on Fly + CF Pages branch `pr-{n}` + Neon `pr-{n}` branch |
+| **Production** | Push to `main` (after CI gate passes) | `corredor-api`, `corredor-worker` on Fly + CF Pages production (`corredor-web`) |
 
 ---
 
 ## Triggering a Manual Deploy
 
-### Manual deploy via Fly CLI
+### Via Fly CLI
 
 Requires the Fly CLI (`flyctl`) installed and authenticated:
 
@@ -52,75 +82,60 @@ Requires the Fly CLI (`flyctl`) installed and authenticated:
 # Authenticate once
 flyctl auth login
 
-# Deploy the API manually
-flyctl deploy --app corredor-api --strategy rolling
+# Deploy the API
+flyctl deploy --config infra/fly/api.fly.toml --remote-only --wait-timeout 300
 
 # Deploy the worker
-flyctl deploy --app corredor-worker --strategy rolling
-
-# Deploy the site
-flyctl deploy --app corredor-site --strategy rolling
-
-# Deploy admin
-flyctl deploy --app corredor-admin --strategy rolling
+flyctl deploy --config infra/fly/worker.fly.toml --remote-only --wait-timeout 300
 ```
 
-To deploy with a specific image tag:
+### Via GitHub Actions (manual dispatch)
 
-```bash
-flyctl deploy --app corredor-api --image registry.fly.io/corredor-api:<tag>
-```
-
-### Manual deploy with Doppler secrets injection
-
-```bash
-doppler run -- flyctl deploy --app corredor-api
-```
-
-### Deploy a single app via GitHub Actions (manual trigger)
-
-> Available once CI/CD workflows are active (see [RENA-8](/RENA/issues/RENA-8)).
+The nightly regression workflow supports manual dispatch. To trigger it:
 
 1. Go to the GitHub repository → **Actions** tab.
-2. Select the `deploy.yml` workflow.
-3. Click **Run workflow**, select the target environment, and confirm.
+2. Select **Nightly Regression**.
+3. Click **Run workflow** → confirm.
+
+For a manual production deploy without a code change, trigger a push to `main` or use `flyctl deploy` directly.
 
 ---
 
 ## Rolling Back
 
-### Rollback via Fly CLI (fastest — uses last good image)
+### Rollback via Fly CLI (fastest)
 
 ```bash
-# List recent releases for an app
+# List recent releases
 flyctl releases --app corredor-api
 
-# Roll back to a specific version (get the version number from the list above)
-flyctl deploy --app corredor-api --image registry.fly.io/corredor-api:<previous-tag>
+# Roll back to a specific version
+flyctl deploy --app corredor-api --image registry.fly.io/corredor-api:<previous-sha>
+
+# Roll back the worker too if needed
+flyctl deploy --app corredor-worker --image registry.fly.io/corredor-worker:<previous-sha>
 ```
 
-### Rollback all apps to a known good state
+### Roll back all apps to a known good commit
 
 ```bash
-# Find the last stable deployment tag (from CI or Fly release history)
-STABLE_TAG="<known-good-sha>"
+STABLE_SHA="<known-good-git-sha>"
 
-flyctl deploy --app corredor-api --image registry.fly.io/corredor-api:$STABLE_TAG
-flyctl deploy --app corredor-worker --image registry.fly.io/corredor-worker:$STABLE_TAG
-flyctl deploy --app corredor-site --image registry.fly.io/corredor-site:$STABLE_TAG
-flyctl deploy --app corredor-admin --image registry.fly.io/corredor-admin:$STABLE_TAG
+flyctl deploy --app corredor-api    --image registry.fly.io/corredor-api:$STABLE_SHA
+flyctl deploy --app corredor-worker --image registry.fly.io/corredor-worker:$STABLE_SHA
 ```
 
-### Rollback a database migration
+`apps/web` on Cloudflare Pages: roll back via the Cloudflare dashboard (Pages → `corredor-web` → Deployments → select a previous deployment → **Rollback**).
+
+### Roll back a database migration
 
 Drizzle migrations are not automatically reversible. To undo a migration:
 
-1. Write a reverse migration manually as a new migration file in `packages/db/migrations/`.
-2. Commit the reverse migration and merge it through the normal PR flow.
-3. Once merged, the CI pipeline applies the reverse migration to the Neon `main` branch.
-4. Do **not** manually edit the Neon `main` branch outside of the CI migration pipeline.
+1. Write a reverse migration as a new file in `packages/db/migrations/`.
+2. Merge it through the normal PR flow.
+3. The production deploy pipeline applies it to the Neon `main` branch automatically.
 
-For emergency rollbacks under active incident, contact the database administrator with DBA access to the Neon project.
+Do **not** manually edit the Neon `main` branch outside of the CI pipeline.
 
 ---
 
@@ -133,35 +148,65 @@ flyctl status --app corredor-api
 # Tail live logs
 flyctl logs --app corredor-api
 
-# Open Fly dashboard for an app
-flyctl dashboard --app corredor-api
-
 # Check health endpoint
 curl https://api.corredor.ar/health
+
+# Open Fly dashboard
+flyctl dashboard --app corredor-api
 ```
+
+GitHub Actions run history: **GitHub repo → Actions tab** — filter by workflow name.
 
 ---
 
 ## Preview Environments
 
-Every pull request gets an isolated preview environment:
+Every pull request gets an isolated preview environment created by `preview.yml`:
 
-- **Fly apps:** `corredor-api-pr-{n}`, `corredor-worker-pr-{n}`, `corredor-site-pr-{n}`
-- **Neon branch:** `pr-{n}` — copy-on-write snapshot from `main`, used only by this PR's apps
-- **Lifecycle:** Created on PR open; destroyed on PR merge or close
+- **Fly app:** `corredor-api-pr-{n}` — API server pointing at the PR's Neon branch
+- **Cloudflare Pages:** `pr-{n}` branch deploy — web app pointing at the preview API
+- **Neon branch:** `pr-{n}` — copy-on-write snapshot from `main` with PR migrations applied
+- **Lifecycle:** Created on PR open/update; destroyed automatically by `cleanup-preview.yml` on PR close
 
-Preview URLs are posted as a PR comment by GitHub Actions automatically once the deploy completes.
+Preview URLs are posted as a PR comment by the workflow. The API URL is `https://corredor-api-pr-{n}.fly.dev`. The web URL appears in the Cloudflare Pages deployment comment.
 
-To manually destroy a preview environment:
+### Manual preview cleanup
+
+If a preview environment was not cleaned up automatically:
 
 ```bash
 PR_NUM=42
-flyctl apps destroy corredor-api-pr-$PR_NUM --yes
-flyctl apps destroy corredor-worker-pr-$PR_NUM --yes
 
-# Delete the Neon branch (via Neon CLI)
+# Destroy Fly preview app
+flyctl apps destroy corredor-api-pr-$PR_NUM --yes
+
+# Delete Neon branch (Neon CLI)
 neonctl branches delete pr-$PR_NUM --project-id $NEON_PROJECT_ID
 ```
+
+Cloudflare Pages preview branches are cleaned up automatically by Cloudflare — no manual step needed.
+
+---
+
+## Security Scans
+
+The `security.yml` workflow runs on every PR and push to `main`, plus daily at 03:00 UTC:
+
+| Check | Tool | Fail condition |
+|-------|------|----------------|
+| Dependency vulnerabilities | `pnpm audit` + Snyk | High or critical CVE |
+| Secrets in git history | gitleaks | Any secret detected |
+| Static analysis (SAST) | CodeQL (`security-extended`) | Any detected issue |
+
+Snyk results are also uploaded to the **GitHub Security tab** as SARIF.
+
+---
+
+## Nightly Regression
+
+`nightly-regression.yml` runs the full Playwright E2E suite against production every night at 03:00 UTC. It can also be triggered manually via the Actions tab.
+
+Results (Playwright HTML report) are uploaded as a GitHub Actions artifact and retained for 30 days. Check the **Actions → Nightly Regression** run history if you suspect a silent regression.
 
 ---
 
@@ -176,10 +221,7 @@ flyctl scale show --app corredor-api
 ### Scale up (incident / traffic spike)
 
 ```bash
-# Add machines to corredor-api
 flyctl scale count 4 --app corredor-api
-
-# Scale to specific regions
 flyctl scale count 3 --region gru --app corredor-api
 flyctl scale count 1 --region scl --app corredor-api
 ```
@@ -190,7 +232,7 @@ flyctl scale count 1 --region scl --app corredor-api
 flyctl scale count 2 --app corredor-api
 ```
 
-### Default scaling policy (from fly.api.toml)
+### Default scaling policy
 
 | App | Min | Max | Region |
 |-----|-----|-----|--------|
@@ -202,72 +244,53 @@ flyctl scale count 2 --app corredor-api
 
 ---
 
+## Fly App Naming Convention
+
+All Fly apps follow: `corredor-{app}-{env}`
+
+| App | Production | Preview |
+|-----|-----------|---------|
+| API | `corredor-api` | `corredor-api-pr-{n}` |
+| Worker | `corredor-worker` | `corredor-worker-pr-{n}` |
+| Site | `corredor-site` | — |
+| Admin | `corredor-admin` | — |
+
+`apps/web` is deployed to **Cloudflare Pages** — no Fly app.
+
+---
+
 ## Secrets Management in Production
 
-Secrets are managed via Doppler and synced to Fly.io on each deploy.
+Secrets are managed via Doppler and injected into Fly at deploy time.
 
-To update a secret in production:
+To update a secret:
 
 ```bash
-# Update in Doppler first (UI or CLI)
+# 1. Update in Doppler (source of truth)
 doppler secrets set KEY=new_value --project corredor --config production
 
-# Then redeploy to pick up the new value
-flyctl deploy --app corredor-api
+# 2. Redeploy to pick up the new value
+flyctl deploy --config infra/fly/api.fly.toml --remote-only
 ```
 
-To set a Fly secret directly (for emergency use):
+For emergency direct updates (reconcile in Doppler afterward to prevent drift):
 
 ```bash
 flyctl secrets set MY_SECRET=value --app corredor-api
 ```
 
-This persists independently of Doppler. Reconcile the Doppler value afterward to avoid drift.
-
-See [docs/runbooks/secrets.md](secrets.md) for the full list of secrets per app.
-
----
-
-## Fly App Naming Convention
-
-All Fly apps follow: `corredor-{app}-{env}`
-
-| App | Production | Staging | Preview |
-|-----|-----------|---------|---------|
-| API | `corredor-api` | `corredor-api-staging` | `corredor-api-pr-{n}` |
-| Worker | `corredor-worker` | `corredor-worker-staging` | `corredor-worker-pr-{n}` |
-| Site | `corredor-site` | `corredor-site-staging` | `corredor-site-pr-{n}` |
-| Admin | `corredor-admin` | `corredor-admin-staging` | `corredor-admin-pr-{n}` |
-
-`apps/web` is deployed to **Cloudflare Pages** — it has no Fly app.
-
----
-
-## Cloudflare Pages (apps/web)
-
-`apps/web` is a static Vite SPA deployed to Cloudflare Pages.
-
-- **Automatic deploys:** Cloudflare Pages has a Git integration. Every push to `main` triggers a new build + deploy.
-- **Preview deploys:** Every PR branch gets a preview URL from Cloudflare Pages automatically.
-- **Build command:** `pnpm --filter @corredor/web build`
-- **Output directory:** `apps/web/dist`
-
-To check the Cloudflare Pages deployment:
-
-1. Log in to the Cloudflare dashboard.
-2. Go to **Pages** → `corredor-web`.
-3. View deployments, preview URLs, and build logs.
+See [docs/runbooks/secrets.md](secrets.md) for the full secrets list per app.
 
 ---
 
 ## Health Checks
 
-| App | Health Endpoint | Expected Response |
-|-----|----------------|-------------------|
-| `corredor-api` | `GET /health` | `200 OK` |
-| `corredor-worker` | TCP port 9090 | Connection accepted |
-| `corredor-site` | `GET /` | `200 OK` |
-| `corredor-admin` | `GET /` | `200 OK` |
-| `corredor-web` | Cloudflare Pages | Always up (CDN) |
+| App | Check type | Endpoint | Interval |
+|-----|-----------|----------|---------|
+| `corredor-api` | HTTP GET | `/health` → `200 OK` | 15s |
+| `corredor-worker` | TCP | port 9090 | 30s |
+| `corredor-site` | HTTP GET | `/` → `200 OK` | 15s |
+| `corredor-admin` | HTTP GET | `/` → `200 OK` | 15s |
+| `corredor-web` | Cloudflare Pages | Always up (CDN) | — |
 
-Fly.io checks these every 15 seconds. A machine that fails 3 consecutive health checks is replaced automatically.
+Fly.io replaces machines that fail 3 consecutive health checks automatically.
