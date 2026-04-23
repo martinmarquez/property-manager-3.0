@@ -19,6 +19,17 @@ initOtel({
 // Queues: portal-publish, portal-update, portal-unpublish, portal-sync, portal-leads,
 //         ai-embed, ai-eval, email-send, doc-pdf, import-csv
 
+import Redis from 'ioredis';
+import { ImportCsvWorker } from './workers/import-csv.js';
+
 logger.info('worker starting');
 
-// TODO Phase D: wire up BullMQ workers
+const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
+const databaseUrl = process.env['DATABASE_URL'] ?? '';
+
+const redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
+
+const importCsvWorker = new ImportCsvWorker(redis, databaseUrl);
+logger.info('worker ready', { queues: ['import-csv'] });
+
+void importCsvWorker;

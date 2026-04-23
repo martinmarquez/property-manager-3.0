@@ -17,6 +17,8 @@
 
 import { neon } from '@neondatabase/serverless';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http';
+import { Pool } from 'pg';
+import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import * as schema from './schema/index.js';
 
@@ -31,6 +33,16 @@ export function createDb(databaseUrl: string) {
 }
 
 export type Db = ReturnType<typeof createDb>;
+
+// ---------------------------------------------------------------------------
+// Node-postgres (pooled) client — for long-running workers
+// ---------------------------------------------------------------------------
+export function createNodeDb(databaseUrl: string) {
+  const pool = new Pool({ connectionString: databaseUrl, max: 10 });
+  return drizzlePg(pool, { schema });
+}
+
+export type NodeDb = ReturnType<typeof createNodeDb>;
 
 // ---------------------------------------------------------------------------
 // RLS context helper — call at the start of every application transaction
