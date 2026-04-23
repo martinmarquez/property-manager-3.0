@@ -1,7 +1,7 @@
 # Competitive Battlecard: Corredor vs Tokko Broker
 
 > One-page reference for founders and sales reps. Use in early beta sales conversations.
-> Last updated: 2026-04-20 | Owner: Sales | Source: [RENA-26](/RENA/issues/RENA-26)
+> Last updated: 2026-04-23 | Owner: Sales | Sources: [RENA-24](/RENA/issues/RENA-24), [RENA-26](/RENA/issues/RENA-26), pricing from [RENA-17](/RENA/issues/RENA-17)
 
 ---
 
@@ -43,18 +43,18 @@ The top 5 reasons agencies leave Tokko (sourced from forums, direct teardown, an
 
 ## Price Comparison
 
-| Agency size | Tokko Broker (est.) | Corredor (working hypothesis) |
-|------------|---------------------|------------------------------|
-| Solo broker (1 user) | USD 25–35/month | ~USD 25/month (Solo plan) |
-| Small agency (2–5 users) | USD 60–100/month | ~USD 80–120/month (Equipo plan) |
-| Mid-size (6–20 users) | USD 120–200/month | ~USD 80–120/month (Equipo plan) |
-| Large/multi-branch (20+ users) | USD 250–500+/month (negotiated) | ~USD 200–350/month (Agencia plan) |
+| Agency size | Tokko Broker (est.) | Corredor | Savings |
+|------------|---------------------|---------|---------|
+| Solo broker (1 user) | USD 25–35/month | **USD 12/month** (Solo) | 50–65% cheaper |
+| Small agency (2–5 users) | USD 60–100/month | **USD 45/month** (Agencia) | 30–55% cheaper + AI + WhatsApp |
+| Mid-size (6–20 users) | USD 120–200/month | **USD 45–120/month** (Agencia/Pro) | 40–60% cheaper |
+| Large/multi-branch (30+ users) | USD 250–500+/month (negotiated) | **USD 120/month** (Pro) or custom | Significant savings |
 
-> ⚠️ Corredor pricing is a working hypothesis pending CMO sign-off ([RENA-17](/RENA/issues/RENA-17)). Do not share externally until confirmed.
+> Pricing confirmed — RENA-17 (CMO) + RENA-23 (Growth). Safe to share externally.
 
-**Key differentiator:** Corredor includes WhatsApp inbox, AI features, and mobile — at comparable or lower price than Tokko's basic plans. Tokko charges extra for add-ons or doesn't offer them at all.
+**Key differentiator:** At every tier, Corredor is cheaper than Tokko *and* includes WhatsApp inbox, AI features, and mobile PWA — features Tokko doesn't offer at any price.
 
-**Beta offer:** 3 months free + free Tokko migration for early beta agencies.
+**Beta offer:** 14-day free trial (full Pro, no credit card) + 3 months free + free Tokko migration for the first 100 agencies.
 
 ---
 

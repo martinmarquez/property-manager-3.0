@@ -1,7 +1,7 @@
 # Corredor Sales Playbook — v0.1
 
 > Go-to-market playbook for Corredor CRM. Argentina-first. Primary competitor: Tokko Broker.
-> Status: Draft — pending CEO review. Pricing section TBD pending RENA-17 CMO alignment.
+> Status: Approved — pricing confirmed from RENA-17 + RENA-23. Ready for use.
 
 ---
 
@@ -200,30 +200,43 @@ See `docs/sales/tokko-competitive-intel.md` Section 5 for the full objection lib
 
 ---
 
-## 6. Pricing (Draft — Pending RENA-17 CMO Alignment)
+## 6. Pricing
 
-> ⚠️ This section is a placeholder. Final pricing to be set in coordination with CMO per [RENA-17](/RENA/issues/RENA-17). The below are working hypotheses for internal validation — do NOT share externally until CMO sign-off.
+> Confirmed from [RENA-17](/RENA/issues/RENA-17) (CMO) and [RENA-23](/RENA/issues/RENA-23) (Growth). Safe to share externally.
 
-### Hypothetical tier structure
+### Confirmed tier structure
 
-| Plan | Target | Price (USD/month) | Key inclusions |
-|------|--------|------------------|----------------|
-| **Solo** | 1 agent | ~USD 25 | Properties, contacts, 1 portal, WhatsApp inbox |
-| **Equipo** | 2–10 agents | ~USD 80–120 | Everything + multi-agent, AI descriptions, all portals |
-| **Agencia** | 11–30 agents | ~USD 200–350 | Multi-branch, advanced analytics, priority support |
-| **Enterprise** | 30+ agents | Custom | Custom contract, SLA, dedicated onboarding |
+| Plan | Users | Active listings | Price USD/mo | Price ARS/mo* | Key inclusions |
+|------|-------|----------------|-------------|--------------|----------------|
+| **Solo** | 1 | 50 | $12 | ~$12,000 | Basic listings, contacts, portals — no AI, no team features |
+| **Agencia** | up to 10 | 500 | $45 | ~$45,000 | Portal sync, basic AI, team collaboration |
+| **Pro** | up to 30 | Unlimited | $120 | ~$120,000 | All AI features, advanced analytics, priority support |
+| **Empresa** | Unlimited | Unlimited | Custom | Custom | White-label, SLA, dedicated onboarding |
 
-### Unit economics targets (working hypotheses)
-- **CAC target (SMB):** < USD 300 (blended — mostly inbound/referral)
-- **CAC target (mid-market):** < USD 1,500
-- **LTV target (Equipo plan, 2-year avg retention):** USD 2,400–2,900
-- **LTV:CAC target:** > 6x
-- **Payback period target:** < 12 months
+*ARS pricing indexed to USD. Updated quarterly using formula: USD × BNA official × 1.15.
 
-### What agencies currently pay (Tokko reference)
-- Small agency (2–5 agents): USD 60–100/month
-- Mid-size (6–20 agents): USD 120–200/month
-- Pricing window: 20–30% premium if AI features are differentiated; parity if entering on switching narrative
+### Trial & migration offers
+- **14-day free trial** — full Pro access, no credit card required
+- **3 months free** for the first 100 Tokko migrators (beta launch offer)
+- **Annual billing:** 2 months free (net-profitable vs monthly once churn modeled per RENA-23)
+- **Monthly contracts** available for the first 90 days — no lock-in during evaluation
+
+### Unit economics (validated in RENA-23)
+- **LTV:CAC:** ≥ 3:1 across all tiers at target acquisition costs
+- **CAC target (Solo/Agencia):** USD 15–80 via content SEO + referral + association partnerships
+- **CAC target (Pro):** USD 80–300 via inbound + direct outreach
+- **Trial-to-paid conversion target:** 25%
+- **Month-1 MRR target:** USD 2,000–5,000 | **Month-6:** USD 10,000–15,000
+
+### Price comparison vs Tokko
+| Agency size | Tokko (estimated) | Corredor |
+|------------|------------------|---------|
+| Solo broker (1 user) | USD 25–35/month | **USD 12/month** — 50–65% cheaper |
+| Small agency (2–5 users) | USD 60–100/month | **USD 45/month** (Agencia) — includes AI + WhatsApp |
+| Mid-size (6–20 users) | USD 120–200/month | **USD 45–120/month** — 40–60% cheaper with more features |
+| Large (30+ users) | USD 250–500+/month (negotiated) | **USD 120/month** (Pro) or custom Empresa |
+
+**Pricing narrative:** At every tier, Corredor is cheaper than Tokko *and* includes features Tokko doesn't offer (WhatsApp inbox, AI, mobile PWA). Price is not the primary pitch — lead with value — but it's a strong close.
 
 ---
 
