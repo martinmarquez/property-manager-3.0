@@ -76,8 +76,12 @@ const GetHistoryInput = z.object({
 const StartImportInput = z
   .object({
     originalFilename: z.string().max(255),
-    columnMapping: z.record(z.string(), z.string()),
-    csvBase64: z.string().optional(),
+    columnMapping: z
+      .record(z.string(), z.string())
+      .refine((m) => Object.keys(m).length <= 50, {
+        message: 'columnMapping must not exceed 50 keys',
+      }),
+    csvBase64: z.string().max(4_000_000).optional(),
     csvStorageKey: z.string().optional(),
   })
   .refine(

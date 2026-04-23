@@ -24,6 +24,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { trpcServer } from '@hono/trpc-server';
 import { cors } from 'hono/cors';
+import { bodyLimit } from 'hono/body-limit';
 import { logger as honoLogger } from 'hono/logger';
 import { requestId } from 'hono/request-id';
 import { sql } from 'drizzle-orm';
@@ -54,6 +55,7 @@ const app = new Hono();
 // ── Global middleware (applied to all routes) ──────────────────────────────
 app.use('*', requestId());
 app.use('*', honoLogger());
+app.use('*', bodyLimit({ maxSize: 5 * 1024 * 1024 })); // 5 MB — defense-in-depth for csvBase64 uploads
 app.use('*', apiSecurityHeaders);
 app.use(
   '/trpc/*',
