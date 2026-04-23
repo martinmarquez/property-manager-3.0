@@ -27,6 +27,7 @@ import {
   SettingsPage,
 } from './pages/StubPage.js';
 import { PropertyListPage } from './pages/properties/PropertyListPage.js';
+import { PropertyFormPage } from './pages/properties/PropertyFormPage.js';
 import { OrganizationSettings } from '@corredor/ui';
 import type { OrganizationData } from '@corredor/ui';
 import { LocaleSwitcher } from './pages/settings/LocaleSwitcher.js';
@@ -184,6 +185,23 @@ const propertiesRoute = createRoute({
   },
 });
 
+const propertyNewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/properties/new',
+  component: function PropertyNewRoute() {
+    return <PropertyFormPage />;
+  },
+});
+
+const propertyEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/properties/$propertyId/edit',
+  component: function PropertyEditRoute() {
+    const { propertyId } = propertyEditRoute.useParams();
+    return <PropertyFormPage propertyId={propertyId} />;
+  },
+});
+
 const contactsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/contacts',
@@ -287,6 +305,8 @@ const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     dashboardRoute,
     propertiesRoute,
+    propertyNewRoute,
+    propertyEditRoute,
     contactsRoute,
     leadsRoute,
     settingsRoute.addChildren([

@@ -235,6 +235,7 @@ export function PropertyListPage() {
             {/* + Nueva propiedad */}
             <button
               type="button"
+              onClick={() => void navigate({ to: '/properties/new' })}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
