@@ -35,6 +35,12 @@ import { PropertyFormPage } from './pages/properties/PropertyFormPage.js';
 import { OrganizationSettings } from '@corredor/ui';
 import type { OrganizationData } from '@corredor/ui';
 import { LocaleSwitcher } from './pages/settings/LocaleSwitcher.js';
+import { PipelineKanbanPage } from './pages/pipelines/PipelineKanbanPage.js';
+import { PipelineConfigPage } from './pages/pipelines/PipelineConfigPage.js';
+import { PipelineFunnelPage } from './pages/pipelines/PipelineFunnelPage.js';
+import { CalendarPage } from './pages/calendar/CalendarPage.js';
+import { InquiryListPage } from './pages/inquiries/InquiryListPage.js';
+import { InquiryDetailPage } from './pages/inquiries/InquiryDetailPage.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -304,6 +310,58 @@ const organizationSettingsRoute = createRoute({
   },
 });
 
+// ─── Pipelines routes ────────────────────────────────────────────────────────
+const pipelinesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/pipelines',
+  component: function PipelinesRoute() {
+    return <PipelineKanbanPage />;
+  },
+});
+
+const pipelineConfigRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/pipelines/config',
+  component: function PipelineConfigRoute() {
+    return <PipelineConfigPage />;
+  },
+});
+
+const pipelineFunnelRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/pipelines/funnel',
+  component: function PipelineFunnelRoute() {
+    return <PipelineFunnelPage />;
+  },
+});
+
+// ─── Calendar routes ─────────────────────────────────────────────────────────
+const calendarRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/calendar',
+  component: function CalendarRoute() {
+    return <CalendarPage />;
+  },
+});
+
+// ─── Inquiries routes ────────────────────────────────────────────────────────
+const inquiriesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/inquiries',
+  component: function InquiriesRoute() {
+    return <InquiryListPage />;
+  },
+});
+
+const inquiryDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/inquiries/$inquiryId',
+  component: function InquiryDetailRoute() {
+    const { inquiryId } = inquiryDetailRoute.useParams();
+    return <InquiryDetailPage inquiryId={inquiryId} />;
+  },
+});
+
 const notFoundMessages = defineMessages({
   title:   { id: 'notFound.title' },
   message: { id: 'notFound.message' },
@@ -360,6 +418,12 @@ const routeTree = rootRoute.addChildren([
     contactDuplicatesRoute,
     contactSegmentsRoute,
     leadsRoute,
+    pipelinesRoute,
+    pipelineConfigRoute,
+    pipelineFunnelRoute,
+    calendarRoute,
+    inquiriesRoute,
+    inquiryDetailRoute,
     settingsRoute.addChildren([
       settingsIndexRoute,
       organizationSettingsRoute,
