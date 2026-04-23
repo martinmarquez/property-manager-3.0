@@ -35,7 +35,7 @@
 ---
 
 ### CTA Primario
-> **Empezá gratis** *(botón principal — sin tarjeta de crédito)*
+> **Empezá gratis 14 días** *(botón principal — sin tarjeta de crédito)*
 
 ### CTA Secundario
 > **Pedí una demo** *(enlace o botón secundario)*
@@ -43,6 +43,9 @@
 ### Texto de anclaje bajo CTA
 > "Más de [N] agencias ya gestionan sus propiedades con Corredor."
 > *(placeholder hasta tener dato real; alternar con: "Migrá desde Tokko en menos de 24 horas")*
+
+### Nota de período de prueba (bajo el CTA)
+> 14 días de prueba completa. Sin tarjeta. Cancelás cuando querés.
 
 ---
 

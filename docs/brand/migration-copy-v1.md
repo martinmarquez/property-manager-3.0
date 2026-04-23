@@ -91,7 +91,7 @@
 > La importación automática tarda entre 2 y 24 horas dependiendo del tamaño de tu cartera. Un asesor de Corredor te acompaña durante todo el proceso.
 
 ### ¿Qué pasa con mis integraciones (portales, WhatsApp, etc.)?
-> Las integraciones con Zonaprop, Mercado Libre, Argenprop y ArgenProp se configuran en Corredor en menos de 30 minutos. Te mandamos una guía paso a paso.
+> Las integraciones con Zonaprop, Mercado Libre, Argenprop y Properati se configuran en Corredor en menos de 30 minutos. Te mandamos una guía paso a paso.
 
 ### ¿Y si no me convence Corredor?
 > Exportás tus datos cuando quieras. No hay lock-in. Los datos son tuyos.
