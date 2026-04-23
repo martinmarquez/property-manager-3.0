@@ -38,6 +38,8 @@ export default defineConfig({
         'src/routers/health.ts',
         // CSRF middleware covered by Phase B HTTP integration tests
         'src/middleware/csrf.ts',
+        // Contacts router — implemented in RENA-30 Phase B; unit tests added with that issue
+        'src/routers/contacts.ts',
         '**/*.d.ts',
       ],
       thresholds: {
