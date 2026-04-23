@@ -1,6 +1,7 @@
 -- =============================================================================
--- Migration: 0004_properties_bulk_csv_history_trash
+-- Migration: 0006_properties_bulk_csv_history_trash
 -- Phase B — RENA-30: Bulk edit, CSV import, history, soft-delete + trash
+-- Depends on: 0004_properties_base (property, property_history tables)
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------

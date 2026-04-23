@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration: 0004_contacts
+-- Migration: 0005_contacts
 -- Phase B — Contacts entity group (RENA-31)
 --
 -- Tables: contact, contact_relationship_kind, contact_relationship,
