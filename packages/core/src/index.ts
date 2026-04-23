@@ -48,6 +48,27 @@ export {
 } from "./i18n/index.js";
 export type { SupportedCurrency, SupportedLocale } from "./i18n/index.js";
 
+// Contact domain helpers
+export { scoreDuplicateFields, trigramSimilarity } from './contacts/duplicate.js';
+export type { CandidateFields } from './contacts/duplicate.js';
+
+// Inquiry match engine
+export {
+  computeMatchScore,
+  MATCH_WEIGHTS,
+} from './inquiries/match-engine.js';
+export type {
+  InquiryCriteria,
+  ZoneCriterion,
+  PropertyData,
+  ListingData,
+  ScoreBreakdown,
+  MatchResult,
+} from './inquiries/match-engine.js';
+
+// Analytics event taxonomy and KPI helpers
+export * from './analytics/index.js';
+
 // Middleware
 export {
   securityHeaders,

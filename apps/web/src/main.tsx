@@ -22,10 +22,14 @@ import {
 import type { AppShellUser } from '@corredor/ui';
 import { DashboardPage } from './pages/DashboardPage.js';
 import {
-  ContactsPage,
   LeadsPage,
   SettingsPage,
 } from './pages/StubPage.js';
+import { ContactListPage } from './pages/contacts/ContactListPage.js';
+import { ContactFormPage } from './pages/contacts/ContactFormPage.js';
+import { ContactDetailPage } from './pages/contacts/ContactDetailPage.js';
+import { DuplicatesPage } from './pages/contacts/DuplicatesPage.js';
+import { SegmentBuilderPage } from './pages/contacts/SegmentBuilderPage.js';
 import { PropertyListPage } from './pages/properties/PropertyListPage.js';
 import { PropertyFormPage } from './pages/properties/PropertyFormPage.js';
 import { OrganizationSettings } from '@corredor/ui';
@@ -206,7 +210,49 @@ const contactsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/contacts',
   component: function ContactsRoute() {
-    return <ContactsPage />;
+    return <ContactListPage />;
+  },
+});
+
+const contactNewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/contacts/new',
+  component: function ContactNewRoute() {
+    return <ContactFormPage />;
+  },
+});
+
+const contactDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/contacts/$contactId',
+  component: function ContactDetailRoute() {
+    const { contactId } = contactDetailRoute.useParams();
+    return <ContactDetailPage contactId={contactId} />;
+  },
+});
+
+const contactEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/contacts/$contactId/edit',
+  component: function ContactEditRoute() {
+    const { contactId } = contactEditRoute.useParams();
+    return <ContactFormPage contactId={contactId} />;
+  },
+});
+
+const contactDuplicatesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/contacts/duplicates',
+  component: function ContactDuplicatesRoute() {
+    return <DuplicatesPage />;
+  },
+});
+
+const contactSegmentsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/contacts/segments',
+  component: function ContactSegmentsRoute() {
+    return <SegmentBuilderPage />;
   },
 });
 
@@ -308,6 +354,11 @@ const routeTree = rootRoute.addChildren([
     propertyNewRoute,
     propertyEditRoute,
     contactsRoute,
+    contactNewRoute,
+    contactDetailRoute,
+    contactEditRoute,
+    contactDuplicatesRoute,
+    contactSegmentsRoute,
     leadsRoute,
     settingsRoute.addChildren([
       settingsIndexRoute,
