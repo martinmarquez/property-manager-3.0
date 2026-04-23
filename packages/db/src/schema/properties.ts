@@ -73,6 +73,14 @@ export const mediaDeletionReasonEnum = pgEnum('media_deletion_reason', [
   'other',
 ]);
 
+export const propertyDeletionReasonEnum = pgEnum('property_deletion_reason', [
+  'sold_externally',
+  'owner_withdrew',
+  'duplicate',
+  'data_error',
+  'other',
+]);
+
 // ---------------------------------------------------------------------------
 // property — core listing record
 // ---------------------------------------------------------------------------
@@ -118,7 +126,9 @@ export const property = pgTable('property', {
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   deletedBy: uuid('deleted_by').references(() => user.id),
-  deletionReason: mediaDeletionReasonEnum('deletion_reason'),
+  deletionReason: propertyDeletionReasonEnum('deletion_reason'),
+  deletionNote: text('deletion_note'),
+  autoPurgeAt: timestamp('auto_purge_at', { withTimezone: true }),
 
   // Audit columns
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -214,6 +224,7 @@ export const propertyHistory = pgTable('property_history', {
   field: text('field').notNull(),
   oldValue: jsonb('old_value'),
   newValue: jsonb('new_value'),
+  eventSource: text('event_source').notNull().default('single'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -241,3 +252,57 @@ export const savedView = pgTable('saved_view', {
     .notNull()
     .default(sql`now()`),
 });
+
+// ---------------------------------------------------------------------------
+// import_job — one row per CSV import session
+// ---------------------------------------------------------------------------
+
+export const importJob = pgTable('import_job', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: uuid('tenant_id').notNull(),
+  createdBy: uuid('created_by').references(() => user.id),
+  status: text('status').notNull().default('pending'),
+  originalFilename: text('original_filename'),
+  columnMapping: jsonb('column_mapping').notNull().default('{}'),
+  totalRows: integer('total_rows'),
+  importedRows: integer('imported_rows').default(0),
+  skippedRows: integer('skipped_rows').default(0),
+  failedRows: integer('failed_rows').default(0),
+  resultStorageKey: text('result_storage_key'),
+  errorMessage: text('error_message'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+// ---------------------------------------------------------------------------
+// import_job_row — one row per CSV input row
+// ---------------------------------------------------------------------------
+
+export const importJobRow = pgTable('import_job_row', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  importJobId: uuid('import_job_id')
+    .notNull()
+    .references(() => importJob.id),
+  tenantId: uuid('tenant_id').notNull(),
+  rowNumber: integer('row_number').notNull(),
+  rowStatus: text('row_status').notNull().default('pending'),
+  referenceCode: text('reference_code'),
+  propertyId: uuid('property_id').references(() => property.id),
+  errorReason: text('error_reason'),
+  rawData: jsonb('raw_data'),
+});
+
+// ---------------------------------------------------------------------------
+// Type exports — import tables
+// ---------------------------------------------------------------------------
+export type ImportJob = typeof importJob.$inferSelect;
+export type NewImportJob = typeof importJob.$inferInsert;
+
+export type ImportJobRow = typeof importJobRow.$inferSelect;
+export type NewImportJobRow = typeof importJobRow.$inferInsert;
