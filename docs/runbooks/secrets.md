@@ -173,11 +173,19 @@ Set with `fly secrets set KEY=VALUE --app <app-name>`.
 
 | Secret | Last Rotated | Next Due | Rotated By |
 |--------|-------------|----------|-----------|
+| **Neon main-branch password** | **(PENDING — see RENA-39)** | **Immediate** | **CTO/Security** |
 | SESSION_SECRET | (initial setup) | 2026-07-20 | — |
 | AWS_SES keys | (initial setup) | 2026-07-20 | — |
 | FLY_API_TOKEN | (initial setup) | 2026-07-20 | — |
 | STRIPE_SECRET_KEY | (initial setup) | 2026-10-20 | — |
 | ANTHROPIC_API_KEY | (initial setup) | 2026-10-20 | — |
+
+> **ACTION REQUIRED (2026-04-23):** The Neon main-branch password was found in `packages/db/.env` on at least one developer machine (RENA-39). Rotate the password immediately:
+> 1. Neon Console → Project → Roles → Reset password for `neondb_owner`
+> 2. Update `DATABASE_URL` / `DIRECT_DATABASE_URL` in all Fly.io app secrets
+> 3. Update `CI_DATABASE_URL` / `DATABASE_URL` GitHub Actions secrets
+> 4. Update Doppler production config
+> 5. Each developer must re-run `./infra/neon/dev-branch.sh` (their dev branches inherit the new password automatically — only the production secrets need manual updates)
 
 ### Standard Rotation Procedure
 
@@ -326,6 +334,21 @@ Copy `.env.example` to `.env.local` in each app directory and fill in values.
 `.env.local` is in `.gitignore` — never commit it.
 
 **Preferred method:** use `doppler run --` instead of `.env.local` for full parity with production secrets.
+
+### Branch-per-Developer Policy (packages/db)
+
+**Policy:** `packages/db/.env` must always point to a personal Neon dev branch, never to the main branch.
+
+| Who | Neon branch |
+|-----|-------------|
+| Developer (local) | `dev-<username>` — created via `./infra/neon/dev-branch.sh` |
+| CI (`ci.yml`) | Dedicated CI branch — connection string in `CI_DATABASE_URL` GitHub secret |
+| PR previews | `pr-<number>` — created/deleted automatically by `preview.yml` |
+| Production | `main` — connection string in Fly.io secrets only, never on dev machines |
+
+**Setup:** see [Local Setup Runbook — Neon dev branch section](local-setup.md#setting-up-your-personal-neon-dev-branch-required-for-db-package-work).
+
+**Rationale:** `neondb_owner` has full DDL + DML access. A compromised developer machine with main-branch credentials would expose production data directly. Personal branches are isolated clones — an attacker can only reach the developer's own scratch copy.
 
 ---
 

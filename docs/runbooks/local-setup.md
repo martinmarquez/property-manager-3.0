@@ -309,21 +309,44 @@ Drizzle does not support automatic rollbacks. To undo a migration:
 2. Write a reverse migration manually as a new migration file.
 3. Run `pnpm --filter @corredor/db migrate` to apply.
 
-### Create a fresh dev Neon branch (instead of Docker)
+### Setting up your personal Neon dev branch (required for DB package work)
 
-If you prefer to use Neon in local dev instead of Docker Postgres:
+**Security policy:** every developer must use a personal Neon branch (`dev-<username>`).
+The main-branch (production) credentials must never appear in `packages/db/.env`.
+See [docs/runbooks/secrets.md](secrets.md) for the full policy.
+
+**One-time setup (~60 seconds):**
+
+1. Get your Neon API key at https://console.neon.tech/app/settings/api-keys
+2. Get the `NEON_PROJECT_ID` from your team lead (or `docs/runbooks/secrets.md`)
+3. Run the setup script:
 
 ```bash
-# Install Neon CLI
-npm install -g neonctl
+NEON_API_KEY=<your-key> NEON_PROJECT_ID=<project-id> \
+  ./infra/neon/dev-branch.sh <your-username>
+```
 
-# Create a personal dev branch
-neonctl branches create --name dev-yourname --project-id $NEON_PROJECT_ID
+4. Paste the printed lines into `packages/db/.env` (replacing any existing values).
+5. Apply migrations to your branch:
 
-# Get the connection string
-neonctl connection-string --branch dev-yourname --project-id $NEON_PROJECT_ID
+```bash
+pnpm --filter @corredor/db migrate
+```
 
-# Update your local DATABASE_URL to the Neon connection string
+The script creates a Neon branch named `dev-<your-username>` forked from `main`. It is free,
+isolated from production, and safe to reset or trash at any time.
+
+**Branch management:**
+
+```bash
+# Sync your branch with the latest main (after a main-branch migration lands)
+neonctl branches reset dev-<your-username> --parent --project-id $NEON_PROJECT_ID
+pnpm --filter @corredor/db migrate
+
+# Delete and recreate from scratch
+neonctl branches delete dev-<your-username> --project-id $NEON_PROJECT_ID
+./infra/neon/dev-branch.sh <your-username>
+pnpm --filter @corredor/db migrate
 ```
 
 ---

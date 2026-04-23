@@ -34,6 +34,10 @@ jobs:
 
       - name: Test
         run: pnpm turbo test
+        env:
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.CI_DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
 
       - name: Build
         run: pnpm turbo build
