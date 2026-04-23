@@ -28,6 +28,7 @@ DO $$ BEGIN
   ALTER TABLE property DROP COLUMN IF EXISTS deletion_reason;
   ALTER TABLE property
     ADD COLUMN deletion_reason property_deletion_reason;
+EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
 -- ---------------------------------------------------------------------------

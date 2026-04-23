@@ -288,7 +288,7 @@ export const importJobRow = pgTable('import_job_row', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   importJobId: uuid('import_job_id')
     .notNull()
-    .references(() => importJob.id),
+    .references(() => importJob.id, { onDelete: 'cascade' }),
   tenantId: uuid('tenant_id').notNull(),
   rowNumber: integer('row_number').notNull(),
   rowStatus: text('row_status').notNull().default('pending'),
