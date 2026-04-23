@@ -36,6 +36,9 @@ export const QUEUE_NAMES = {
   DOC_GENERATE: "doc-generate",
   DOC_SIGN_WEBHOOK: "doc-sign-webhook",
 
+  // Import — medium priority
+  IMPORT_CSV: "import-csv",
+
   // Marketing — low priority
   CAMPAIGN_SEND: "campaign-send",
   NURTURE_STEP: "nurture-step",
@@ -128,6 +131,7 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.AI_CHUNK_UPSERT]:  { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
   [QUEUE_NAMES.DOC_GENERATE]:     { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.DOC_SIGN_WEBHOOK]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
+  [QUEUE_NAMES.IMPORT_CSV]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.CAMPAIGN_SEND]:    { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 2  },
   [QUEUE_NAMES.NURTURE_STEP]:     { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 2  },
   [QUEUE_NAMES.CLEANUP]:          { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
