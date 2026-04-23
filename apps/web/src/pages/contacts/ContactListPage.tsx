@@ -66,7 +66,7 @@ export function ContactListPage() {
   const contacts = data?.items ?? [];
 
   const handleRowClick = useCallback((id: string) => {
-    void navigate({ to: `/contacts/${id}/edit` as never });
+    void navigate({ to: `/contacts/${id}` as never });
   }, [navigate]);
 
   return (

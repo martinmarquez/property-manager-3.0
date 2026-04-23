@@ -33,6 +33,7 @@ const msgs = defineMessages({
   fieldLabel:  { id: 'contacts.segments.criterion.field' },
   opLabel:     { id: 'contacts.segments.criterion.op' },
   valueLabel:  { id: 'contacts.segments.criterion.value' },
+  back:        { id: 'contacts.detail.back' },
 });
 
 const FIELD_OPTIONS = [
@@ -146,7 +147,7 @@ export function SegmentBuilderPage() {
             onClick={() => void navigate({ to: '/contacts' as never })}
             style={outlineBtn}
           >
-            &larr; Contactos
+            &larr; {intl.formatMessage(msgs.back)}
           </button>
           <button
             type="button"

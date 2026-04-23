@@ -31,6 +31,7 @@ const msgs = defineMessages({
   keepRight:  { id: 'contacts.duplicates.keepRight' },
   winner:     { id: 'contacts.duplicates.winner' },
   confirm:    { id: 'contacts.duplicates.confirm' },
+  back:       { id: 'contacts.detail.back' },
 });
 
 interface DuplicatePair {
@@ -88,7 +89,7 @@ export function DuplicatesPage() {
           onClick={() => void navigate({ to: '/contacts' as never })}
           style={outlineBtn}
         >
-          &larr; Contactos
+          &larr; {intl.formatMessage(msgs.back)}
         </button>
       </div>
 

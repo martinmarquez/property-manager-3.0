@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useIntl, defineMessages } from 'react-intl';
 import { trpc } from '../../trpc.js';
 
@@ -34,17 +34,48 @@ interface RelationshipsTabProps {
   contactId: string;
 }
 
+function useDebounced(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 export function RelationshipsTab({ contactId }: RelationshipsTabProps) {
   const intl = useIntl();
   const [showModal, setShowModal] = useState(false);
   const [newKindId, setNewKindId] = useState('');
   const [newTargetId, setNewTargetId] = useState('');
+  const [newTargetName, setNewTargetName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [newNotes, setNewNotes] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const debouncedSearch = useDebounced(searchQuery, 200);
 
   const { data: relationships, refetch } = trpc.contacts.relationships.list.useQuery({ contactId });
   const { data: kinds } = trpc.contacts.relationships.kinds.useQuery();
+  const { data: searchResults } = trpc.contacts.list.useQuery(
+    { q: debouncedSearch, limit: 8 },
+    { enabled: debouncedSearch.length >= 2 },
+  );
   const createMut = trpc.contacts.relationships.create.useMutation({ onSuccess: () => { void refetch(); setShowModal(false); } });
   const deleteMut = trpc.contacts.relationships.delete.useMutation({ onSuccess: () => { void refetch(); } });
+
+  const filteredResults = searchResults?.items.filter((c) => c.id !== contactId) ?? [];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleCreate = () => {
     if (!newKindId || !newTargetId) return;
@@ -63,8 +94,17 @@ export function RelationshipsTab({ contactId }: RelationshipsTabProps) {
   const openModal = () => {
     setNewKindId('');
     setNewTargetId('');
+    setNewTargetName('');
+    setSearchQuery('');
     setNewNotes('');
     setShowModal(true);
+  };
+
+  const selectContact = (id: string, name: string) => {
+    setNewTargetId(id);
+    setNewTargetName(name);
+    setSearchQuery('');
+    setShowDropdown(false);
   };
 
   return (
@@ -136,15 +176,59 @@ export function RelationshipsTab({ contactId }: RelationshipsTabProps) {
               </select>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 12, position: 'relative' }} ref={dropdownRef}>
               <label style={labelStyle}>{intl.formatMessage(msgs.contactId)}</label>
-              <input
-                type="text"
-                value={newTargetId}
-                onChange={(e) => setNewTargetId(e.target.value)}
-                placeholder="UUID del contacto destino"
-                style={inputStyle}
-              />
+              {newTargetId ? (
+                <div style={{
+                  ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <span style={{ color: C.textPrimary }}>{newTargetName}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setNewTargetId(''); setNewTargetName(''); }}
+                    style={{ background: 'none', border: 'none', color: C.textTertiary, cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
+                  onFocus={() => { if (searchQuery.length >= 2) setShowDropdown(true); }}
+                  placeholder={intl.formatMessage(msgs.contactId)}
+                  style={inputStyle}
+                />
+              )}
+              {showDropdown && filteredResults.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                  background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 7,
+                  maxHeight: 200, overflowY: 'auto', marginTop: 4,
+                }}>
+                  {filteredResults.map((c) => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => selectContact(c.id, c.displayName)}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px',
+                        background: 'transparent', border: 'none', color: C.textPrimary,
+                        fontSize: 13, cursor: 'pointer', fontFamily: F.body,
+                        borderBottom: `1px solid ${C.border}`,
+                      }}
+                      onMouseEnter={(e) => { (e.target as HTMLElement).style.background = `${C.brand}18`; }}
+                      onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
+                    >
+                      <span>{c.displayName}</span>
+                      {c.primaryEmail && (
+                        <span style={{ color: C.textTertiary, fontSize: 11, marginLeft: 8 }}>{c.primaryEmail}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: 16 }}>

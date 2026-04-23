@@ -40,6 +40,7 @@ import {
   contactRelationshipKind,
   contactTag,
   contactSegment,
+  contactSegmentMember,
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
 import { scoreDuplicateFields } from '@corredor/core';
@@ -151,8 +152,15 @@ function criteriaToConditions(criteria: z.infer<typeof segmentCriterionSchema>[]
       case 'has_open_leads':
         // Placeholder — Phase C (RENA-34) adds the leads table
         return c.op === 'is_true' ? sql`false` : sql`true`;
+      case 'province':
+      case 'locality':
+      case 'created_at':
+      case 'last_activity':
+      case 'operation_interest':
+        // Not yet implemented — match nothing until backing columns exist
+        return sql`false`;
     }
-    return sql`true`;
+    return sql`false`;
   });
 }
 
@@ -409,6 +417,7 @@ const tagsRouter = router({
     const rows = await db
       .selectDistinct({ tag: contactTag.tag })
       .from(contactTag)
+      .innerJoin(contact, and(eq(contactTag.contactId, contact.id), isNull(contact.deletedAt)))
       .where(eq(contactTag.tenantId, tenantId))
       .orderBy(contactTag.tag);
     return rows.map((r: { tag: string }) => r.tag);
@@ -544,6 +553,20 @@ export const contactsRouter = router({
       if (input.createdFrom) conditions.push(gte(contact.createdAt, new Date(input.createdFrom)));
       if (input.createdTo)   conditions.push(lte(contact.createdAt, new Date(input.createdTo)));
 
+      if (input.cursor) {
+        const cursorRow = await db
+          .select({ updatedAt: contact.updatedAt })
+          .from(contact)
+          .where(eq(contact.id, input.cursor))
+          .limit(1);
+        if (cursorRow[0]) {
+          conditions.push(or(
+            sql`${contact.updatedAt} < ${cursorRow[0].updatedAt}`,
+            and(eq(contact.updatedAt, cursorRow[0].updatedAt), sql`${contact.id} > ${input.cursor}::uuid`),
+          ));
+        }
+      }
+
       const rows = await db
         .select({
           id:          contact.id,
@@ -559,7 +582,7 @@ export const contactsRouter = router({
         })
         .from(contact)
         .where(and(...conditions))
-        .orderBy(desc(contact.updatedAt))
+        .orderBy(desc(contact.updatedAt), contact.id)
         .limit(input.limit + 1);
 
       const hasMore = rows.length > input.limit;
@@ -602,6 +625,9 @@ export const contactsRouter = router({
 
   checkDuplicates: protectedProcedure
     .input(z.object({
+      firstName:  z.string().optional(),
+      lastName:   z.string().optional(),
+      legalName:  z.string().optional(),
       emails:     z.array(z.string().email()).default([]),
       phones:     z.array(z.string()).default([]),
       nationalId: z.string().optional(),
@@ -610,49 +636,96 @@ export const contactsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db, tenantId } = ctx;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const conditions: any[] = [
-        eq(contact.tenantId, tenantId),
-        isNull(contact.deletedAt),
-      ];
-      if (input.excludeId) conditions.push(ne(contact.id, input.excludeId));
+      const nameProbe = [input.firstName, input.lastName, input.legalName].filter(Boolean).join(' ');
+      const hasName = nameProbe.length > 0;
+      const hasEmail = input.emails.length > 0;
+      const hasNationalId = !!input.nationalId;
 
-      const candidates = await db
-        .select({
-          id:         contact.id,
-          kind:       contact.kind,
-          firstName:  contact.firstName,
-          lastName:   contact.lastName,
-          legalName:  contact.legalName,
-          emails:     contact.emails,
-          phones:     contact.phones,
-          nationalId: contact.nationalId,
-        })
-        .from(contact)
-        .where(and(...conditions))
-        .limit(500);
+      if (!hasName && !hasEmail && !hasNationalId) {
+        return { duplicates: [] };
+      }
 
-      const scored = candidates
-        .map((c) => ({
-          id:    c.id,
-          name:  displayName(c),
-          score: scoreDuplicateFields(
+      const excludeClause = input.excludeId
+        ? sql`AND c.id != ${input.excludeId}::uuid`
+        : sql``;
+
+      const emailJsonb = input.emails.length
+        ? sql`${JSON.stringify(input.emails.map((v) => ({ value: v })))}::jsonb`
+        : sql`'[]'::jsonb`;
+
+      const rows = await db.execute(sql`
+        SELECT
+          c.id,
+          c.kind,
+          c.first_name,
+          c.last_name,
+          c.legal_name,
+          c.emails,
+          c.phones,
+          c.national_id
+        FROM contact c
+        WHERE c.tenant_id = ${tenantId}::uuid
+          AND c.deleted_at IS NULL
+          ${excludeClause}
+          AND (
+            ${hasName
+              ? sql`similarity(
+                  coalesce(c.first_name,'') || ' ' || coalesce(c.last_name,'') || ' ' || coalesce(c.legal_name,''),
+                  ${nameProbe}
+                ) > 0.3`
+              : sql`false`}
+            ${hasEmail
+              ? sql`OR EXISTS (
+                  SELECT 1
+                  FROM jsonb_array_elements(c.emails) ce
+                  JOIN jsonb_array_elements(${emailJsonb}) ie
+                    ON lower(ce->>'value') = lower(ie->>'value')
+                )`
+              : sql``}
+            ${hasNationalId
+              ? sql`OR (c.national_id IS NOT NULL AND c.national_id = ${input.nationalId})`
+              : sql``}
+          )
+        ORDER BY similarity(
+          coalesce(c.first_name,'') || ' ' || coalesce(c.last_name,'') || ' ' || coalesce(c.legal_name,''),
+          ${nameProbe || ''}
+        ) DESC
+        LIMIT 10
+      `);
+
+      const rowsArray: Record<string, unknown>[] = Array.isArray(rows) ? rows as Record<string, unknown>[] : ((rows as { rows?: Record<string, unknown>[] }).rows ?? []);
+
+      const scored = rowsArray
+        .map((row) => {
+          const cEmails = (row.emails as Array<{ value: string }>).map((e) => e.value);
+          const cPhones = (row.phones as Array<{ e164: string }>).map((p) => p.e164);
+          const score = scoreDuplicateFields(
             {
-              firstName:  null,
-              lastName:   null,
+              firstName:  input.firstName ?? null,
+              lastName:   input.lastName ?? null,
               emails:     input.emails,
               phones:     input.phones,
               nationalId: input.nationalId ?? null,
             },
             {
-              firstName:  c.firstName,
-              lastName:   c.lastName,
-              emails:     (c.emails as Array<{ value: string }>).map((e) => e.value),
-              phones:     (c.phones as Array<{ e164: string }>).map((p) => p.e164),
-              nationalId: c.nationalId,
+              firstName:  row.first_name as string | null,
+              lastName:   row.last_name as string | null,
+              emails:     cEmails,
+              phones:     cPhones,
+              nationalId: row.national_id as string | null,
             },
-          ),
-        }))
+          );
+          return {
+            id:    row.id as string,
+            name:  displayName({
+              kind:      row.kind as string,
+              firstName: row.first_name as string | null,
+              lastName:  row.last_name as string | null,
+              legalName: row.legal_name as string | null,
+            }),
+            score,
+          };
+        })
         .filter((c) => c.score >= 0.4)
         .sort((a, b) => b.score - a.score)
         .slice(0, 5);
@@ -721,7 +794,7 @@ export const contactsRouter = router({
       await db
         .update(contact)
         .set({ ...data, updatedBy: userId, updatedAt: new Date(), version: sql`version + 1` })
-        .where(and(eq(contact.id, input.id), eq(contact.tenantId, tenantId)));
+        .where(and(eq(contact.id, input.id), eq(contact.tenantId, tenantId), isNull(contact.deletedAt)));
 
       if (tags !== undefined) {
         await db.delete(contactTag).where(and(
@@ -745,7 +818,12 @@ export const contactsRouter = router({
       await db
         .update(contact)
         .set({ deletedAt: new Date(), deletedBy: userId, deletionReason: 'manual' })
-        .where(and(eq(contact.id, input.id), eq(contact.tenantId, tenantId)));
+        .where(and(eq(contact.id, input.id), eq(contact.tenantId, tenantId), isNull(contact.deletedAt)));
+
+      await db
+        .delete(contactSegmentMember)
+        .where(and(eq(contactSegmentMember.contactId, input.id), eq(contactSegmentMember.tenantId, tenantId)));
+
       return { ok: true };
     }),
 
@@ -774,10 +852,11 @@ export const contactsRouter = router({
       }
 
       const [winner, loser] = await Promise.all([
-        db.query.contact.findFirst({ where: and(eq(contact.id, input.winnerId), eq(contact.tenantId, tenantId)) }),
-        db.query.contact.findFirst({ where: and(eq(contact.id, input.loserId),  eq(contact.tenantId, tenantId)) }),
+        db.query.contact.findFirst({ where: and(eq(contact.id, input.winnerId), eq(contact.tenantId, tenantId), isNull(contact.deletedAt)) }),
+        db.query.contact.findFirst({ where: and(eq(contact.id, input.loserId),  eq(contact.tenantId, tenantId), isNull(contact.deletedAt)) }),
       ]);
-      if (!winner || !loser) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (!winner) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Winner contact is deleted or does not exist' });
+      if (!loser)  throw new TRPCError({ code: 'BAD_REQUEST', message: 'Loser contact is deleted or does not exist' });
 
       // Build merged field set with overrides
       const mergeableFields = [
@@ -809,15 +888,62 @@ export const contactsRouter = router({
         ).onConflictDoNothing();
       }
 
-      // Re-attribute relationships from loser to winner
+      // Re-attribute relationships from loser to winner (safe merge)
+      // 1. Soft-delete loser relationships that would conflict with existing winner relationships
+      await db.execute(sql`
+        UPDATE contact_relationship lr
+        SET deleted_at = now()
+        FROM contact_relationship wr
+        WHERE lr.tenant_id = ${tenantId}::uuid
+          AND lr.deleted_at IS NULL
+          AND wr.tenant_id = lr.tenant_id
+          AND wr.deleted_at IS NULL
+          AND lr.from_contact_id = ${input.loserId}::uuid
+          AND wr.from_contact_id = ${input.winnerId}::uuid
+          AND lr.to_contact_id = wr.to_contact_id
+          AND lr.kind_id = wr.kind_id
+      `);
+      await db.execute(sql`
+        UPDATE contact_relationship lr
+        SET deleted_at = now()
+        FROM contact_relationship wr
+        WHERE lr.tenant_id = ${tenantId}::uuid
+          AND lr.deleted_at IS NULL
+          AND wr.tenant_id = lr.tenant_id
+          AND wr.deleted_at IS NULL
+          AND lr.to_contact_id = ${input.loserId}::uuid
+          AND wr.to_contact_id = ${input.winnerId}::uuid
+          AND lr.from_contact_id = wr.from_contact_id
+          AND lr.kind_id = wr.kind_id
+      `);
+
+      // 2. Re-attribute remaining non-deleted loser relationships to winner
       await db
         .update(contactRelationship)
         .set({ fromContactId: input.winnerId })
-        .where(and(eq(contactRelationship.fromContactId, input.loserId), eq(contactRelationship.tenantId, tenantId)));
+        .where(and(
+          eq(contactRelationship.fromContactId, input.loserId),
+          eq(contactRelationship.tenantId, tenantId),
+          isNull(contactRelationship.deletedAt),
+        ));
       await db
         .update(contactRelationship)
         .set({ toContactId: input.winnerId })
-        .where(and(eq(contactRelationship.toContactId, input.loserId), eq(contactRelationship.tenantId, tenantId)));
+        .where(and(
+          eq(contactRelationship.toContactId, input.loserId),
+          eq(contactRelationship.tenantId, tenantId),
+          isNull(contactRelationship.deletedAt),
+        ));
+
+      // 3. Soft-delete any self-referential rows created by re-attribution
+      await db
+        .update(contactRelationship)
+        .set({ deletedAt: new Date() })
+        .where(and(
+          eq(contactRelationship.tenantId, tenantId),
+          sql`${contactRelationship.fromContactId} = ${contactRelationship.toContactId}`,
+          isNull(contactRelationship.deletedAt),
+        ));
 
       // Soft-delete the loser
       await db

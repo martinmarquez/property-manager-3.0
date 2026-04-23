@@ -43,6 +43,7 @@ const msgs = defineMessages({
   noActivity:       { id: 'contacts.detail.noActivity' },
   created:          { id: 'contacts.detail.created' },
   updated:          { id: 'contacts.detail.updated' },
+  cancel:           { id: 'contacts.detail.relationships.cancel' },
 });
 
 type Tab = 'info' | 'relationships' | 'activity';
@@ -200,7 +201,7 @@ export function ContactDetailPage({ contactId }: ContactDetailPageProps) {
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setShowDeleteConfirm(false)} style={outlineBtn}>
-                ← {intl.formatMessage(msgs.tabInfo)}
+                {intl.formatMessage(msgs.cancel)}
               </button>
               <button
                 type="button"
