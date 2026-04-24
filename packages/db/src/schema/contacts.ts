@@ -194,3 +194,82 @@ export const contactSegmentMember = pgTable('contact_segment_member', {
 }, (t) => ({
   uniq: unique().on(t.segmentId, t.contactId),
 }));
+
+// ---------------------------------------------------------------------------
+// contact_import_job — one row per CSV import session (RENA-32)
+// ---------------------------------------------------------------------------
+
+export const contactImportJob = pgTable('contact_import_job', {
+  id:               uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  tenantId:         uuid('tenant_id').notNull(),
+  createdBy:        uuid('created_by').references(() => user.id),
+  status:           text('status').notNull().default('pending'),
+  sourceFormat:     text('source_format'),
+  originalFilename: text('original_filename'),
+  columnMapping:    jsonb('column_mapping').notNull().default('{}'),
+  totalRows:        integer('total_rows'),
+  importedRows:     integer('imported_rows').default(0),
+  skippedRows:      integer('skipped_rows').default(0),
+  failedRows:       integer('failed_rows').default(0),
+  resultStorageKey: text('result_storage_key'),
+  errorMessage:     text('error_message'),
+  startedAt:        timestamp('started_at', { withTimezone: true }),
+  completedAt:      timestamp('completed_at', { withTimezone: true }),
+  createdAt:        timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  updatedAt:        timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export type ContactImportJob = typeof contactImportJob.$inferSelect;
+export type NewContactImportJob = typeof contactImportJob.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// contact_import_row — one row per CSV input row
+// ---------------------------------------------------------------------------
+
+export const contactImportRow = pgTable('contact_import_row', {
+  id:           uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  importJobId:  uuid('import_job_id').notNull().references(() => contactImportJob.id, { onDelete: 'cascade' }),
+  tenantId:     uuid('tenant_id').notNull(),
+  rowNumber:    integer('row_number').notNull(),
+  rowStatus:    text('row_status').notNull().default('pending'),
+  displayName:  text('display_name'),
+  contactId:    uuid('contact_id').references(() => contact.id),
+  errorReason:  text('error_reason'),
+  rawData:      jsonb('raw_data'),
+});
+
+export type ContactImportRow = typeof contactImportRow.$inferSelect;
+export type NewContactImportRow = typeof contactImportRow.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// dsr_request — Data Subject Request lifecycle (Ley 25.326) (RENA-32)
+// ---------------------------------------------------------------------------
+
+export const dsrTypeEnum = pgEnum('dsr_type', [
+  'access', 'rectify', 'delete', 'portability',
+]);
+
+export const dsrStatusEnum = pgEnum('dsr_status', [
+  'pending', 'in_progress', 'completed', 'disputed',
+]);
+
+export const dsrRequest = pgTable('dsr_request', {
+  id:               uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  tenantId:         uuid('tenant_id').notNull(),
+  contactId:        uuid('contact_id').notNull().references(() => contact.id),
+  type:             dsrTypeEnum('type').notNull(),
+  status:           dsrStatusEnum('status').notNull().default('pending'),
+  requestedBy:      uuid('requested_by').references(() => user.id),
+  assignedTo:       uuid('assigned_to').references(() => user.id),
+  notes:            text('notes'),
+  deadlineAt:       timestamp('deadline_at', { withTimezone: true }).notNull(),
+  completedAt:      timestamp('completed_at', { withTimezone: true }),
+  disputedAt:       timestamp('disputed_at', { withTimezone: true }),
+  disputeReason:    text('dispute_reason'),
+  bundleStorageKey: text('bundle_storage_key'),
+  createdAt:        timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  updatedAt:        timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export type DsrRequest = typeof dsrRequest.$inferSelect;
+export type NewDsrRequest = typeof dsrRequest.$inferInsert;

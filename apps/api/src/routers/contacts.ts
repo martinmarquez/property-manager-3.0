@@ -41,9 +41,20 @@ import {
   contactTag,
   contactSegment,
   contactSegmentMember,
+  contactImportJob,
+  contactImportRow,
+  dsrRequest,
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
-import { scoreDuplicateFields } from '@corredor/core';
+import type { AuthenticatedContext } from '../trpc.js';
+import {
+  scoreDuplicateFields,
+  createQueue,
+  QUEUE_NAMES,
+  buildAccessBundle,
+  buildPortabilityBundle,
+  buildDeletePatch,
+} from '@corredor/core';
 
 // ---------------------------------------------------------------------------
 // Shared input schemas
@@ -522,6 +533,274 @@ const duplicatesRouter = router({
 });
 
 // ---------------------------------------------------------------------------
+// Import sub-router (RENA-32)
+// ---------------------------------------------------------------------------
+const importRouter = router({
+  start: protectedProcedure
+    .input(z.object({
+      originalFilename: z.string().min(1).max(500),
+      columnMapping:    z.record(z.string(), z.string()).default({}),
+      csvBase64:        z.string().max(70_000_000).optional(),
+      csvStorageKey:    z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, tenantId, userId, redis } = ctx as AuthenticatedContext;
+
+      const [job] = await db
+        .insert(contactImportJob)
+        .values({
+          tenantId,
+          createdBy: userId,
+          status: 'pending',
+          originalFilename: input.originalFilename,
+          columnMapping: input.columnMapping,
+        })
+        .returning({ id: contactImportJob.id });
+
+      if (!job) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create import job' });
+      }
+
+      const queue = createQueue(QUEUE_NAMES.IMPORT_CSV, redis);
+      await queue.add('import-contacts-csv', {
+        importJobId: job.id,
+        tenantId,
+        userId,
+        csvBase64: input.csvBase64,
+        csvStorageKey: input.csvStorageKey,
+        columnMapping: input.columnMapping,
+        entity: 'contact',
+      });
+      await queue.close();
+
+      return { importJobId: job.id };
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ importJobId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { db, tenantId } = ctx;
+
+      const job = await db.query.contactImportJob.findFirst({
+        where: and(
+          eq(contactImportJob.id, input.importJobId),
+          eq(contactImportJob.tenantId, tenantId),
+        ),
+      });
+      if (!job) throw new TRPCError({ code: 'NOT_FOUND' });
+      return job;
+    }),
+
+  rows: protectedProcedure
+    .input(z.object({
+      importJobId: z.string().uuid(),
+      status:      z.enum(['imported', 'skipped', 'failed']).optional(),
+      limit:       z.number().int().min(1).max(200).default(50),
+      offset:      z.number().int().min(0).default(0),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { db, tenantId } = ctx;
+
+      const conditions = [
+        eq(contactImportRow.importJobId, input.importJobId),
+        eq(contactImportRow.tenantId, tenantId),
+      ];
+      if (input.status) {
+        conditions.push(eq(contactImportRow.rowStatus, input.status));
+      }
+
+      const rows = await db
+        .select()
+        .from(contactImportRow)
+        .where(and(...conditions))
+        .orderBy(contactImportRow.rowNumber)
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return { items: rows };
+    }),
+});
+
+// ---------------------------------------------------------------------------
+// DSR sub-router — Data Subject Requests (Ley 25.326) (RENA-32)
+// ---------------------------------------------------------------------------
+const dsrRouter = router({
+  list: protectedProcedure
+    .input(z.object({
+      status: z.enum(['pending', 'in_progress', 'completed', 'disputed']).optional(),
+      limit:  z.number().int().min(1).max(100).default(20),
+      offset: z.number().int().min(0).default(0),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { db, tenantId } = ctx;
+
+      const conditions = [eq(dsrRequest.tenantId, tenantId)];
+      if (input.status) conditions.push(eq(dsrRequest.status, input.status));
+
+      const rows = await db
+        .select({
+          id:          dsrRequest.id,
+          contactId:   dsrRequest.contactId,
+          type:        dsrRequest.type,
+          status:      dsrRequest.status,
+          deadlineAt:  dsrRequest.deadlineAt,
+          completedAt: dsrRequest.completedAt,
+          disputedAt:  dsrRequest.disputedAt,
+          createdAt:   dsrRequest.createdAt,
+        })
+        .from(dsrRequest)
+        .where(and(...conditions))
+        .orderBy(desc(dsrRequest.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return { items: rows };
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { db, tenantId } = ctx;
+      const dsr = await db.query.dsrRequest.findFirst({
+        where: and(eq(dsrRequest.id, input.id), eq(dsrRequest.tenantId, tenantId)),
+      });
+      if (!dsr) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const c = await db.query.contact.findFirst({
+        where: eq(contact.id, dsr.contactId),
+      });
+
+      return { ...dsr, contact: c ?? null };
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      contactId: z.string().uuid(),
+      type:      z.enum(['access', 'rectify', 'delete', 'portability']),
+      notes:     z.string().max(2000).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, tenantId, userId } = ctx;
+
+      const c = await db.query.contact.findFirst({
+        where: and(eq(contact.id, input.contactId), eq(contact.tenantId, tenantId)),
+      });
+      if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'Contact not found' });
+
+      const deadlineAt = new Date();
+      deadlineAt.setDate(deadlineAt.getDate() + 30);
+
+      const [created] = await db.insert(dsrRequest).values({
+        tenantId,
+        contactId: input.contactId,
+        type: input.type,
+        requestedBy: userId,
+        assignedTo: userId,
+        notes: input.notes,
+        deadlineAt,
+      }).returning();
+
+      return created!;
+    }),
+
+  process: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, tenantId, userId } = ctx;
+
+      const dsr = await db.query.dsrRequest.findFirst({
+        where: and(eq(dsrRequest.id, input.id), eq(dsrRequest.tenantId, tenantId)),
+      });
+      if (!dsr) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (dsr.status === 'completed') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'DSR already completed' });
+      }
+
+      await db
+        .update(dsrRequest)
+        .set({ status: 'in_progress', updatedAt: new Date() })
+        .where(eq(dsrRequest.id, input.id));
+
+      const c = await db.query.contact.findFirst({
+        where: and(eq(contact.id, dsr.contactId), eq(contact.tenantId, tenantId)),
+      });
+      if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'Contact not found' });
+
+      const tags = await db
+        .select({ tag: contactTag.tag })
+        .from(contactTag)
+        .where(eq(contactTag.contactId, dsr.contactId));
+
+      const relatedData = {
+        tags: tags.map((t) => t.tag),
+        relationships: [],
+        leads: [],
+        inquiries: [],
+      };
+
+      let result: Record<string, unknown> = {};
+
+      if (dsr.type === 'access') {
+        const bundle = buildAccessBundle(c as never, relatedData);
+        const bundleJson = JSON.stringify(bundle, null, 2);
+        result = { bundle: bundleJson };
+      } else if (dsr.type === 'portability') {
+        const portBundle = buildPortabilityBundle(c as never, relatedData);
+        result = { jsonLd: JSON.stringify(portBundle.jsonLd, null, 2), csv: portBundle.csv };
+      } else if (dsr.type === 'delete') {
+        const patch = buildDeletePatch();
+        await db
+          .update(contact)
+          .set({ ...patch, updatedBy: userId, updatedAt: new Date(), version: sql`version + 1` })
+          .where(eq(contact.id, dsr.contactId));
+
+        await db.delete(contactTag).where(
+          and(eq(contactTag.contactId, dsr.contactId), eq(contactTag.tenantId, tenantId)),
+        );
+
+        await db
+          .delete(contactSegmentMember)
+          .where(and(eq(contactSegmentMember.contactId, dsr.contactId), eq(contactSegmentMember.tenantId, tenantId)));
+
+        result = { deleted: true };
+      } else if (dsr.type === 'rectify') {
+        result = { message: 'Rectification requires manual review — DSR marked in_progress for admin action' };
+        return result;
+      }
+
+      await db
+        .update(dsrRequest)
+        .set({ status: 'completed', completedAt: new Date(), updatedAt: new Date() })
+        .where(eq(dsrRequest.id, input.id));
+
+      return result;
+    }),
+
+  dispute: protectedProcedure
+    .input(z.object({
+      id:     z.string().uuid(),
+      reason: z.string().min(1).max(2000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, tenantId } = ctx;
+      const dsr = await db.query.dsrRequest.findFirst({
+        where: and(eq(dsrRequest.id, input.id), eq(dsrRequest.tenantId, tenantId)),
+      });
+      if (!dsr) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (dsr.status === 'completed') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot dispute a completed DSR' });
+      }
+
+      await db
+        .update(dsrRequest)
+        .set({ status: 'disputed', disputedAt: new Date(), disputeReason: input.reason, updatedAt: new Date() })
+        .where(eq(dsrRequest.id, input.id));
+
+      return { ok: true };
+    }),
+});
+
+// ---------------------------------------------------------------------------
 // Root contacts router
 // ---------------------------------------------------------------------------
 export const contactsRouter = router({
@@ -973,4 +1252,6 @@ export const contactsRouter = router({
   segments:      segmentsRouter,
   duplicates:    duplicatesRouter,
   tags:          tagsRouter,
+  import:        importRouter,
+  dsr:           dsrRouter,
 });

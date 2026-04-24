@@ -21,6 +21,7 @@ initOtel({
 
 import Redis from 'ioredis';
 import { ImportCsvWorker } from './workers/import-csv.js';
+import { ImportContactsCsvWorker } from './workers/import-contacts-csv.js';
 
 logger.info('worker starting');
 
@@ -30,6 +31,8 @@ const databaseUrl = process.env['DATABASE_URL'] ?? '';
 const redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
 
 const importCsvWorker = new ImportCsvWorker(redis, databaseUrl);
-logger.info('worker ready', { queues: ['import-csv'] });
+const importContactsCsvWorker = new ImportContactsCsvWorker(redis, databaseUrl);
+logger.info('worker ready', { queues: ['import-csv', 'import-contacts-csv'] });
 
 void importCsvWorker;
+void importContactsCsvWorker;

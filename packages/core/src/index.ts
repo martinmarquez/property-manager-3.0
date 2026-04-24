@@ -52,6 +52,29 @@ export type { SupportedCurrency, SupportedLocale } from "./i18n/index.js";
 export { scoreDuplicateFields, trigramSimilarity } from './contacts/duplicate.js';
 export type { CandidateFields } from './contacts/duplicate.js';
 
+// Contact CSV import
+export {
+  detectFormat,
+  buildAutoMapping,
+  parseContactRow,
+  normalizeArgPhone,
+} from './contacts/csv-parser.js';
+export type { SourceFormat, ParsedContactRow } from './contacts/csv-parser.js';
+
+// DSR (Data Subject Request) processing — Ley 25.326
+export {
+  buildAccessBundle,
+  buildPortabilityBundle,
+  buildDeletePatch,
+  PII_FIELDS_TO_NULL,
+} from './contacts/dsr.js';
+export type {
+  DsrContactData,
+  DsrRelatedData,
+  AccessBundle,
+  PortabilityBundle,
+} from './contacts/dsr.js';
+
 // Inquiry match engine
 export {
   computeMatchScore,
