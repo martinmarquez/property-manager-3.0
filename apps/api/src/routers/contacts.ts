@@ -152,12 +152,22 @@ function criteriaToConditions(criteria: z.infer<typeof segmentCriterionSchema>[]
       case 'has_open_leads':
         // Placeholder — Phase C (RENA-34) adds the leads table
         return c.op === 'is_true' ? sql`false` : sql`true`;
-      case 'province':
-      case 'locality':
       case 'created_at':
+        if (c.op === 'gte') return gte(contact.createdAt, new Date(String(c.value)));
+        if (c.op === 'lte') return lte(contact.createdAt, new Date(String(c.value)));
+        if (c.op === 'gt')  return sql`${contact.createdAt} > ${new Date(String(c.value))}`;
+        if (c.op === 'lt')  return sql`${contact.createdAt} < ${new Date(String(c.value))}`;
+        break;
+      case 'province':
+        if (c.op === 'eq')  return sql`EXISTS (SELECT 1 FROM jsonb_array_elements(${contact.addresses}) a WHERE a->>'province' = ${String(c.value)})`;
+        if (c.op === 'neq') return sql`NOT EXISTS (SELECT 1 FROM jsonb_array_elements(${contact.addresses}) a WHERE a->>'province' = ${String(c.value)})`;
+        break;
+      case 'locality':
+        if (c.op === 'eq')  return sql`EXISTS (SELECT 1 FROM jsonb_array_elements(${contact.addresses}) a WHERE a->>'city' = ${String(c.value)})`;
+        if (c.op === 'neq') return sql`NOT EXISTS (SELECT 1 FROM jsonb_array_elements(${contact.addresses}) a WHERE a->>'city' = ${String(c.value)})`;
+        break;
       case 'last_activity':
       case 'operation_interest':
-        // Not yet implemented — match nothing until backing columns exist
         return sql`false`;
     }
     return sql`false`;

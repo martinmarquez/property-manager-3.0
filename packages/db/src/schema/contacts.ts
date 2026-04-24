@@ -114,6 +114,10 @@ export const contactRelationshipKind = pgTable('contact_relationship_kind', {
   builtIn:      boolean('built_in').notNull().default(false),
   createdAt:    timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   createdBy:    uuid('created_by').references(() => user.id),
+  updatedAt:    timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
+  updatedBy:    uuid('updated_by').references(() => user.id),
+  deletedAt:    timestamp('deleted_at', { withTimezone: true }),
+  version:      integer('version').notNull().default(1),
 }, (t) => ({
   uniq: unique().on(t.tenantId, t.label),
 }));
