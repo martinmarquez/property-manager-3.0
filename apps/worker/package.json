@@ -14,6 +14,7 @@
   "dependencies": {
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
+    "@corredor/documents": "workspace:*",
     "@sentry/node": "^8.0.0",
     "bullmq": "^5.30.0",
     "csv-parse": "^5.6.0",

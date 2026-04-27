@@ -17,6 +17,7 @@
   "dependencies": {
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
+    "@corredor/documents": "workspace:*",
     "@corredor/telemetry": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "@hono/trpc-server": "^0.3.4",

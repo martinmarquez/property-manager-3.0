@@ -28,6 +28,15 @@ const envSchema = z.object({
   WEBAUTHN_RP_NAME: z.string().min(1).default('Corredor'),
   /** Full origin for WebAuthn verification. Defaults to https://{WEBAUTHN_RP_ID}. */
   WEBAUTHN_ORIGIN: z.string().optional(),
+
+  // E-sign providers (RENA-57)
+  SIGNATURIT_API_KEY: z.string().optional(),
+  SIGNATURIT_BASE_URL: z.string().default('https://api.sandbox.signaturit.com'),
+  SIGNATURIT_WEBHOOK_SECRET: z.string().optional(),
+  DOCUSIGN_INTEGRATION_KEY: z.string().optional(),
+  DOCUSIGN_SECRET_KEY: z.string().optional(),
+  DOCUSIGN_ACCOUNT_ID: z.string().optional(),
+  DOCUSIGN_WEBHOOK_SECRET: z.string().optional(),
 });
 
 function parseEnv() {

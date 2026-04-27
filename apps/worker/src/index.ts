@@ -22,6 +22,7 @@ initOtel({
 import Redis from 'ioredis';
 import { ImportCsvWorker } from './workers/import-csv.js';
 import { ImportContactsCsvWorker } from './workers/import-contacts-csv.js';
+import { DocSignWebhookWorker } from './workers/doc-sign-webhook.js';
 
 logger.info('worker starting');
 
@@ -32,7 +33,22 @@ const redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
 
 const importCsvWorker = new ImportCsvWorker(redis, databaseUrl);
 const importContactsCsvWorker = new ImportContactsCsvWorker(redis, databaseUrl);
-logger.info('worker ready', { queues: ['import-csv', 'import-contacts-csv'] });
+
+const docSignWebhookWorker = new DocSignWebhookWorker(redis, databaseUrl, {
+  signaturit: process.env['SIGNATURIT_API_KEY']
+    ? { apiKey: process.env['SIGNATURIT_API_KEY'], baseUrl: process.env['SIGNATURIT_BASE_URL'] ?? 'https://api.sandbox.signaturit.com' }
+    : undefined,
+  docusign: process.env['DOCUSIGN_INTEGRATION_KEY']
+    ? {
+        integrationKey: process.env['DOCUSIGN_INTEGRATION_KEY'],
+        secretKey: process.env['DOCUSIGN_SECRET_KEY'] ?? '',
+        accountId: process.env['DOCUSIGN_ACCOUNT_ID'] ?? '',
+      }
+    : undefined,
+});
+
+logger.info('worker ready', { queues: ['import-csv', 'import-contacts-csv', 'doc-sign-webhook'] });
 
 void importCsvWorker;
 void importContactsCsvWorker;
+void docSignWebhookWorker;

@@ -35,6 +35,7 @@ import { env } from './env.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 import { createContext } from './trpc.js';
 import { appRouter } from './router.js';
+import { createEsignWebhookRoutes } from './routes/webhooks-esign.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
 const db = createDb(env.DATABASE_URL);
@@ -107,6 +108,12 @@ app.get('/health', async (c) => {
     healthy ? 200 : 503,
   );
 });
+
+// ── E-sign provider webhooks (no auth — HMAC-verified) ───────────────────
+app.route('/webhooks/esign', createEsignWebhookRoutes(redis, {
+  SIGNATURIT_WEBHOOK_SECRET: env.SIGNATURIT_WEBHOOK_SECRET,
+  DOCUSIGN_WEBHOOK_SECRET: env.DOCUSIGN_WEBHOOK_SECRET,
+}));
 
 // ── tRPC router ────────────────────────────────────────────────────────────
 // @hono/trpc-server passes (trpcOpts, honoContext) to createContext
