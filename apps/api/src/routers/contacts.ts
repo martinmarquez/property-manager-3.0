@@ -1053,6 +1053,7 @@ export const contactsRouter = router({
   update: protectedProcedure
     .input(z.object({
       id: z.string().uuid(),
+      version: z.number().int().min(1).optional(),
       data: z.object({
         // person fields
         firstName:      z.string().min(1).max(100).optional(),
@@ -1079,6 +1080,19 @@ export const contactsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db, tenantId, userId } = ctx;
       const { data, tags } = input;
+
+      if (input.version !== undefined) {
+        const existing = await db.query.contact.findFirst({
+          where: and(eq(contact.id, input.id), eq(contact.tenantId, tenantId), isNull(contact.deletedAt)),
+          columns: { version: true },
+        });
+        if (!existing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Contact not found' });
+        }
+        if (existing.version !== input.version) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
+        }
+      }
 
       await db
         .update(contact)
@@ -1117,9 +1131,23 @@ export const contactsRouter = router({
     }),
 
   restore: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().uuid(), version: z.number().int().min(1).optional() }))
     .mutation(async ({ ctx, input }) => {
       const { db, tenantId } = ctx;
+
+      if (input.version !== undefined) {
+        const existing = await db.query.contact.findFirst({
+          where: and(eq(contact.id, input.id), eq(contact.tenantId, tenantId)),
+          columns: { version: true },
+        });
+        if (!existing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Contact not found' });
+        }
+        if (existing.version !== input.version) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
+        }
+      }
+
       await db
         .update(contact)
         .set({ deletedAt: null, deletedBy: null, deletionReason: null })
@@ -1129,9 +1157,11 @@ export const contactsRouter = router({
 
   merge: protectedProcedure
     .input(z.object({
-      winnerId:     z.string().uuid(),
-      loserId:      z.string().uuid(),
-      fieldWinners: z.record(z.string(), z.enum(['winner', 'loser'])).default({}),
+      winnerId:      z.string().uuid(),
+      loserId:       z.string().uuid(),
+      winnerVersion: z.number().int().min(1).optional(),
+      loserVersion:  z.number().int().min(1).optional(),
+      fieldWinners:  z.record(z.string(), z.enum(['winner', 'loser'])).default({}),
     }))
     .mutation(async ({ ctx, input }) => {
       const { db, tenantId, userId } = ctx;
@@ -1146,6 +1176,13 @@ export const contactsRouter = router({
       ]);
       if (!winner) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Winner contact is deleted or does not exist' });
       if (!loser)  throw new TRPCError({ code: 'BAD_REQUEST', message: 'Loser contact is deleted or does not exist' });
+
+      if (input.winnerVersion !== undefined && winner.version !== input.winnerVersion) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
+      }
+      if (input.loserVersion !== undefined && loser.version !== input.loserVersion) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
+      }
 
       // Build merged field set with overrides
       const mergeableFields = [
