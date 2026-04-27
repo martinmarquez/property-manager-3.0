@@ -826,12 +826,14 @@ export const contactsRouter = router({
       ];
 
       if (input.q) {
+        const escaped = input.q.replace(/[%_\\]/g, '\\$&');
+        const pattern = `%${escaped}%`;
         conditions.push(
           sql`(
             coalesce(${contact.firstName},'') || ' ' || coalesce(${contact.lastName},'') || ' ' || coalesce(${contact.legalName},'')
-            ILIKE ${'%' + input.q + '%'}
-            OR ${contact.emails}::text ILIKE ${'%' + input.q + '%'}
-            OR ${contact.phones}::text ILIKE ${'%' + input.q + '%'}
+            ILIKE ${pattern}
+            OR ${contact.emails}::text ILIKE ${pattern}
+            OR ${contact.phones}::text ILIKE ${pattern}
           )`
         );
       }
