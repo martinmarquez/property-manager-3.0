@@ -3,6 +3,7 @@ import { useIntl, defineMessages } from 'react-intl';
 import { useNavigate } from '@tanstack/react-router';
 import { GalleryEditor, type MediaItem } from './GalleryEditor.js';
 import { usePropertyDraft } from './usePropertyDraft.js';
+import AIDescriptionModal from './AIDescriptionModal.js';
 import type { OperationKind, PropertyStatus, PropertyTypeName } from '../../routes/properties/-types.js';
 
 /* ─── Design tokens ─── */
@@ -488,7 +489,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const [activeSection, setActiveSection] = useState(SECTIONS[0]!.id);
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [tagInput, setTagInput] = useState('');
 
   const { saveDraft, loadDraft, clearDraft, hasDraft } = usePropertyDraft<DraftPayload>(draftKey);
@@ -594,22 +595,12 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     setTagInput('');
   };
 
-  /* AI description mock */
-  const handleAiGenerate = async () => {
-    setAiGenerating(true);
-    await new Promise((res) => setTimeout(res, 1800));
-    const typeLabel = PROPERTY_TYPES.find((t) => t.value === form.propertyType);
-    const typeName = typeLabel ? intl.formatMessage(msg[typeLabel.msgKey]) : 'propiedad';
-    const neighborhood = form.neighborhood || form.locality || 'zona premium';
-    setField(
-      'description',
-      `Excelente ${typeName} en ${neighborhood}. Cuenta con amplios espacios, ` +
-      `excelente iluminación natural y terminaciones de alta calidad. ` +
-      `Ubicación estratégica con fácil acceso a avenidas principales, ` +
-      `transporte público y zonas comerciales. ` +
-      `Ideal para quienes buscan comodidad y estilo de vida moderno.`,
-    );
-    setAiGenerating(false);
+  const handleAiGenerate = () => {
+    setShowAiModal(true);
+  };
+
+  const handleAiSave = (text: string) => {
+    setField('description', text);
   };
 
   /* Validation */
@@ -1244,29 +1235,24 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                   <button
                     type="button"
                     onClick={handleAiGenerate}
-                    disabled={aiGenerating}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
                       padding: '4px 10px',
                       borderRadius: 6,
-                      border: `1px solid ${C.brand}60`,
-                      background: `${C.brand}10`,
-                      color: aiGenerating ? C.textTertiary : C.brand,
+                      border: '1px solid rgba(126,58,242,0.4)',
+                      background: 'rgba(126,58,242,0.12)',
+                      color: '#9B59FF',
                       fontSize: 11,
                       fontWeight: 600,
-                      cursor: aiGenerating ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       fontFamily: F.body,
                       transition: 'background 0.15s',
                     }}
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                    </svg>
-                    {aiGenerating
-                      ? intl.formatMessage(msg.fieldAiGenerating)
-                      : intl.formatMessage(msg.fieldAiGenerate)}
+                    <span style={{ fontSize: 10 }}>✦</span>
+                    {intl.formatMessage(msg.fieldAiGenerate)}
                   </button>
                 </div>
                 <textarea
@@ -1547,6 +1533,17 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         input[type="number"]::-webkit-outer-spin-button { opacity: 0.3; }
         select option { background: #0D1526; color: #EFF4FF; }
       `}</style>
+
+      {propertyId && (
+        <AIDescriptionModal
+          open={showAiModal}
+          onClose={() => setShowAiModal(false)}
+          onSave={handleAiSave}
+          propertyId={propertyId}
+          propertyRef={form.referenceCode || undefined}
+          existingDescription={form.description || undefined}
+        />
+      )}
     </div>
   );
 }
