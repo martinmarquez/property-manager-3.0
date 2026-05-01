@@ -43,6 +43,8 @@ import { InquiryListPage } from './pages/inquiries/InquiryListPage.js';
 import { InquiryDetailPage } from './pages/inquiries/InquiryDetailPage.js';
 import SearchPage from './pages/search/SearchPage.js';
 import CommandPalette from './components/search/CommandPalette.js';
+import CopilotPage from './pages/copilot/CopilotPage.js';
+import CopilotFloat from './components/copilot/CopilotFloat.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -107,6 +109,7 @@ function AuthenticatedLayout() {
           router.navigate({ to: '/search', search: { q } });
         }}
       />
+      <CopilotFloat />
     </AppShell>
   );
 }
@@ -398,7 +401,7 @@ const inquiryDetailRoute = createRoute({
   },
 });
 
-// ─── Search route ──────────────────���────────────────────────────────────────
+// ─── Search route ──────────────────────────────────────────────────────────
 const searchRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/search',
@@ -408,6 +411,15 @@ const searchRoute = createRoute({
         onNavigate={href => router.navigate({ to: href })}
       />
     );
+  },
+});
+
+// ─── Copilot route ─────────────────────────────────────────────────────────
+const copilotRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/copilot',
+  component: function CopilotRoute() {
+    return <CopilotPage />;
   },
 });
 
@@ -475,6 +487,7 @@ const routeTree = rootRoute.addChildren([
     inquiriesRoute,
     inquiryDetailRoute,
     searchRoute,
+    copilotRoute,
     settingsRoute.addChildren([
       settingsIndexRoute,
       organizationSettingsRoute,

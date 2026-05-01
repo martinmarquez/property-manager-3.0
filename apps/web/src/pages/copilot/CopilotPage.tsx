@@ -1,4 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { trpc } from '../../trpc.js';
+import { useCopilotStream } from '../../hooks/useCopilotStream.js';
+import type { StreamCitation, StreamActionSuggestion } from '../../hooks/useCopilotStream.js';
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -30,10 +34,11 @@ const F = {
 };
 
 /* ─── Types ─────────────────────────────────────────────────── */
-type EntityType = 'propiedad' | 'contacto' | 'operacion' | 'documento' | 'tarea';
+type EntityType = 'property' | 'contact' | 'deal' | 'document' | 'task';
 
 interface Citation {
   entityType: EntityType;
+  entityId: string;
   code: string;
   label: string;
 }
@@ -42,7 +47,9 @@ interface ActionCard {
   type: 'send_message' | 'create_task';
   summary: string;
   detail: string;
+  payload: Record<string, unknown>;
   status: 'pending' | 'confirmed' | 'cancelled' | 'editing';
+  turnId: string | null;
 }
 
 interface Message {
@@ -52,88 +59,147 @@ interface Message {
   citations?: Citation[];
   actionCard?: ActionCard;
   timestamp: string;
+  isStreaming?: boolean;
 }
-
-interface Session {
-  id: string;
-  title: string;
-  date: string;
-  preview: string;
-}
-
-/* ─── Mock data ─────────────────────────────────────────────── */
-const SESSIONS: Session[] = [
-  { id: 's1', title: 'Análisis de propiedad BEL-00142', date: 'Hoy',  preview: 'Consulté el precio por m² de Belgrano…' },
-  { id: 's2', title: 'Borrador email a Juan García',    date: 'Hoy',  preview: 'Redacté un seguimiento para el interesado…' },
-  { id: 's3', title: 'Pipeline Q2 insights',            date: 'Ayer', preview: 'Operaciones cerradas este trimestre…' },
-  { id: 's4', title: 'Contactos duplicados',            date: 'Ayer', preview: 'Encontré 3 pares de contactos duplicados…' },
-  { id: 's5', title: 'Tasación 3 ambientes Palermo',    date: '28 abr', preview: 'Comparé con 8 propiedades similares…' },
-];
-
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: 'm1',
-    role: 'user',
-    text: '¿Cuántas propiedades en Belgrano tienen más de 3 ambientes disponibles?',
-    timestamp: '14:23',
-  },
-  {
-    id: 'm2',
-    role: 'assistant',
-    text: 'Encontré **12 propiedades** en Belgrano con 3 ambientes o más en estado disponible. La más reciente ingresó hace 2 días. El precio promedio es **USD 285.000** (rango: USD 220k – USD 410k).',
-    citations: [
-      { entityType: 'propiedad', code: 'BEL-00142', label: 'Av. Cabildo 1850' },
-      { entityType: 'propiedad', code: 'BEL-00137', label: 'Echeverría 2340' },
-      { entityType: 'propiedad', code: 'BEL-00129', label: 'Zabala 1620' },
-    ],
-    timestamp: '14:23',
-  },
-  {
-    id: 'm3',
-    role: 'user',
-    text: 'Crea una tarea para llamar al propietario de BEL-00142 el lunes a las 10am',
-    timestamp: '14:24',
-  },
-  {
-    id: 'm4',
-    role: 'assistant',
-    text: 'Voy a crear la tarea de seguimiento:',
-    actionCard: {
-      type: 'create_task',
-      summary: 'Llamar a propietario BEL-00142',
-      detail: 'Lunes 4 de mayo · 10:00 AM · Asignada a ti',
-      status: 'pending',
-    },
-    timestamp: '14:24',
-  },
-];
 
 const SUGGESTED_PROMPTS = [
-  '¿Qué propiedades vencen de publicación esta semana?',
-  'Muéstrame las operaciones cerradas en abril',
-  'Redacta un seguimiento para Juan García',
-  'Analiza los precios del corredor norte de Belgrano',
+  'Ver propiedades disponibles en Palermo',
+  'Cuántos leads no contactados tengo esta semana',
+  'Resumé el pipeline del mes actual',
+  'Buscar contactos con consultas sobre 3 ambientes',
 ];
 
-/* ─── Entity icons ──────────────────────────────────────────── */
-const ENTITY_ICONS: Record<EntityType, string> = {
-  propiedad:  '🏠',
-  contacto:   '👤',
-  operacion:  '📋',
-  documento:  '📄',
-  tarea:      '✅',
+const SESSION_KEY = 'copilot:activeSession';
+
+/* ─── Entity helpers ───────────────────────────────────────── */
+const ENTITY_ICONS: Record<string, string> = {
+  property:  '🏠',
+  contact:   '👤',
+  deal:      '📋',
+  document:  '📄',
+  task:      '✅',
 };
 
-const ACTION_ICONS: Record<ActionCard['type'], string> = {
+const ENTITY_ROUTES: Record<string, (id: string) => string> = {
+  property:  (id) => `/properties/${id}/edit`,
+  contact:   (id) => `/contacts/${id}`,
+  deal:      (id) => `/pipelines?deal=${id}`,
+  document:  (id) => `/documents/${id}`,
+  task:      (id) => `/calendar?task=${id}`,
+};
+
+const ACTION_ICONS: Record<string, string> = {
   send_message: '✉️',
   create_task:  '✅',
 };
 
+/* ─── Markdown renderer ───────────────────────────────────── */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split('\n');
+  const nodes: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+
+    if (line.startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i]!.startsWith('```')) {
+        codeLines.push(lines[i]!);
+        i++;
+      }
+      nodes.push(
+        <pre key={`code-${i}`} style={{
+          background:   C.bgBase,
+          border:       `1px solid ${C.border}`,
+          borderRadius: 8,
+          padding:      '10px 14px',
+          fontFamily:   F.mono,
+          fontSize:     12,
+          lineHeight:   1.6,
+          overflowX:    'auto',
+          margin:       '8px 0',
+          color:        C.textSecondary,
+        }}>
+          {codeLines.join('\n')}
+        </pre>,
+      );
+      continue;
+    }
+
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      const listItems: string[] = [line.slice(2)];
+      while (i + 1 < lines.length && (lines[i + 1]!.startsWith('- ') || lines[i + 1]!.startsWith('* '))) {
+        i++;
+        listItems.push(lines[i]!.slice(2));
+      }
+      nodes.push(
+        <ul key={`ul-${i}`} style={{ margin: '6px 0', paddingLeft: 20 }}>
+          {listItems.map((item, j) => (
+            <li key={j} style={{ marginBottom: 2 }}>{renderInline(item)}</li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
+    if (/^\d+\.\s/.test(line)) {
+      const listItems: string[] = [line.replace(/^\d+\.\s/, '')];
+      while (i + 1 < lines.length && /^\d+\.\s/.test(lines[i + 1]!)) {
+        i++;
+        listItems.push(lines[i]!.replace(/^\d+\.\s/, ''));
+      }
+      nodes.push(
+        <ol key={`ol-${i}`} style={{ margin: '6px 0', paddingLeft: 20 }}>
+          {listItems.map((item, j) => (
+            <li key={j} style={{ marginBottom: 2 }}>{renderInline(item)}</li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+
+    if (line.trim() === '') {
+      nodes.push(<br key={`br-${i}`} />);
+      continue;
+    }
+
+    nodes.push(<p key={`p-${i}`} style={{ margin: '2px 0' }}>{renderInline(line)}</p>);
+  }
+
+  return nodes;
+}
+
+function renderInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={i} style={{
+          background:   C.bgBase,
+          border:       `1px solid ${C.border}`,
+          borderRadius: 4,
+          padding:      '1px 5px',
+          fontFamily:   F.mono,
+          fontSize:     '0.9em',
+        }}>
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+}
+
 /* ─── Sub-components ────────────────────────────────────────── */
 
-function CitationPill({ citation }: { citation: Citation }) {
+function CitationPill({ citation, onClick }: { citation: Citation; onClick: () => void }) {
   return (
     <button
+      onClick={onClick}
       style={{
         display:       'inline-flex',
         alignItems:    'center',
@@ -157,8 +223,8 @@ function CitationPill({ citation }: { citation: Citation }) {
         (e.currentTarget as HTMLElement).style.borderColor = `${C.ai}40`;
       }}
     >
-      <span style={{ fontSize: 11 }}>{ENTITY_ICONS[citation.entityType]}</span>
-      <span>{citation.code}</span>
+      <span style={{ fontSize: 11 }}>{ENTITY_ICONS[citation.entityType] ?? '📎'}</span>
+      <span>{citation.code || citation.label}</span>
     </button>
   );
 }
@@ -184,17 +250,17 @@ function ActionConfirmCard({
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{
-          width:        36,
-          height:       36,
-          borderRadius: 8,
-          background:   C.aiFaint,
-          display:      'flex',
-          alignItems:   'center',
+          width:          36,
+          height:         36,
+          borderRadius:   8,
+          background:     C.aiFaint,
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          fontSize:     18,
-          flexShrink:   0,
+          fontSize:       18,
+          flexShrink:     0,
         }}>
-          {ACTION_ICONS[card.type]}
+          {ACTION_ICONS[card.type] ?? '⚡'}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: F.body, fontWeight: 600, color: C.textPrimary, fontSize: 14 }}>
@@ -219,7 +285,7 @@ function ActionConfirmCard({
             fontWeight:   600,
             cursor:       'pointer',
           }}>
-            Confirmar
+            Enviar
           </button>
           <button onClick={onEdit} style={{
             padding:      '6px 16px',
@@ -251,7 +317,7 @@ function ActionConfirmCard({
       {card.status === 'confirmed' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, color: C.success, fontSize: 13, fontFamily: F.body }}>
           <span>✓</span>
-          <span>Tarea creada exitosamente</span>
+          <span>{card.type === 'create_task' ? 'Tarea creada exitosamente' : 'Mensaje enviado'}</span>
         </div>
       )}
 
@@ -273,16 +339,17 @@ function TypingIndicator() {
       padding:    '12px 0',
     }}>
       <div style={{
-        width:        32,
-        height:       32,
-        borderRadius: '50%',
-        background:   C.aiFaint,
-        border:       `1px solid ${C.ai}40`,
-        display:      'flex',
-        alignItems:   'center',
+        width:          32,
+        height:         32,
+        borderRadius:   '50%',
+        background:     C.aiFaint,
+        border:         `1px solid ${C.ai}40`,
+        display:        'flex',
+        alignItems:     'center',
         justifyContent: 'center',
-        fontSize:     14,
-        flexShrink:   0,
+        fontSize:       14,
+        flexShrink:     0,
+        color:          C.ai,
       }}>
         ✦
       </div>
@@ -320,26 +387,18 @@ function TypingIndicator() {
 
 function MessageBubble({
   message,
+  onCitationClick,
   onActionConfirm,
   onActionCancel,
   onActionEdit,
 }: {
   message: Message;
+  onCitationClick?: (c: Citation) => void;
   onActionConfirm?: () => void;
   onActionCancel?: () => void;
   onActionEdit?: () => void;
 }) {
   const isUser = message.role === 'user';
-
-  const renderText = (text: string) => {
-    // Bold markdown **text**
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, i) =>
-      part.startsWith('**') && part.endsWith('**')
-        ? <strong key={i}>{part.slice(2, -2)}</strong>
-        : part
-    );
-  };
 
   return (
     <div style={{
@@ -349,28 +408,26 @@ function MessageBubble({
       gap:            12,
       marginBottom:   20,
     }}>
-      {/* Avatar */}
       {!isUser && (
         <div style={{
-          width:        32,
-          height:       32,
-          borderRadius: '50%',
-          background:   C.aiFaint,
-          border:       `1px solid ${C.ai}40`,
-          display:      'flex',
-          alignItems:   'center',
+          width:          32,
+          height:         32,
+          borderRadius:   '50%',
+          background:     C.aiFaint,
+          border:         `1px solid ${C.ai}40`,
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          fontSize:     14,
-          flexShrink:   0,
-          color:        C.ai,
-          fontFamily:   F.display,
+          fontSize:       14,
+          flexShrink:     0,
+          color:          C.ai,
+          fontFamily:     F.display,
         }}>
           ✦
         </div>
       )}
 
       <div style={{ maxWidth: '75%', minWidth: 0 }}>
-        {/* Bubble */}
         <div style={{
           padding:      '12px 16px',
           borderRadius: isUser ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
@@ -381,10 +438,20 @@ function MessageBubble({
           lineHeight:   1.6,
           color:        C.textPrimary,
         }}>
-          {renderText(message.text)}
+          {isUser ? message.text : renderMarkdown(message.text)}
+          {message.isStreaming && (
+            <span style={{
+              display:    'inline-block',
+              width:      6,
+              height:     16,
+              background: C.ai,
+              marginLeft: 2,
+              animation:  'copilot-cursor 0.8s infinite',
+              verticalAlign: 'text-bottom',
+            }} />
+          )}
         </div>
 
-        {/* Citations */}
         {message.citations && message.citations.length > 0 && (
           <div style={{
             display:    'flex',
@@ -392,13 +459,16 @@ function MessageBubble({
             gap:        6,
             marginTop:  8,
           }}>
-            {message.citations.map(c => (
-              <CitationPill key={c.code} citation={c} />
+            {message.citations.map((c, i) => (
+              <CitationPill
+                key={`${c.entityId}-${i}`}
+                citation={c}
+                onClick={() => onCitationClick?.(c)}
+              />
             ))}
           </div>
         )}
 
-        {/* Action card */}
         {message.actionCard && onActionConfirm && onActionCancel && onActionEdit && (
           <ActionConfirmCard
             card={message.actionCard}
@@ -408,7 +478,6 @@ function MessageBubble({
           />
         )}
 
-        {/* Timestamp */}
         <div style={{
           marginTop:  4,
           fontSize:   11,
@@ -420,22 +489,21 @@ function MessageBubble({
         </div>
       </div>
 
-      {/* User avatar */}
       {isUser && (
         <div style={{
-          width:        32,
-          height:       32,
-          borderRadius: '50%',
-          background:   C.brandFaint,
-          border:       `1px solid ${C.brand}50`,
-          display:      'flex',
-          alignItems:   'center',
+          width:          32,
+          height:         32,
+          borderRadius:   '50%',
+          background:     C.brandFaint,
+          border:         `1px solid ${C.brand}50`,
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          fontSize:     13,
-          fontWeight:   700,
-          color:        C.brandLight,
-          fontFamily:   F.display,
-          flexShrink:   0,
+          fontSize:       13,
+          fontWeight:     700,
+          color:          C.brandLight,
+          fontFamily:     F.display,
+          flexShrink:     0,
         }}>
           MM
         </div>
@@ -455,7 +523,6 @@ function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
       padding:        48,
       gap:            32,
     }}>
-      {/* Logo mark */}
       <div style={{
         width:          72,
         height:         72,
@@ -534,24 +601,56 @@ function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
   );
 }
 
+/* ─── Session sidebar ──────────────────────────────────────── */
+
+interface SessionItem {
+  id: string;
+  title: string | null;
+  turnCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function formatSessionDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / 86400000);
+
+  if (days === 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `Hace ${days} días`;
+  return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+}
+
+function groupSessionsByDate(sessions: SessionItem[]): Record<string, SessionItem[]> {
+  const groups: Record<string, SessionItem[]> = {};
+  for (const s of sessions) {
+    const key = formatSessionDate(s.createdAt);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s);
+  }
+  return groups;
+}
+
 function SessionSidebar({
   collapsed,
+  sessions,
   activeSession,
   onSelect,
   onNew,
+  isLoading,
 }: {
   collapsed: boolean;
+  sessions: SessionItem[];
   activeSession: string;
   onSelect: (id: string) => void;
   onNew: () => void;
+  isLoading: boolean;
 }) {
   if (collapsed) return null;
 
-  const groups: Record<string, Session[]> = {};
-  SESSIONS.forEach(s => {
-    if (!groups[s.date]) groups[s.date] = [];
-    groups[s.date].push(s);
-  });
+  const groups = groupSessionsByDate(sessions);
 
   return (
     <div style={{
@@ -589,20 +688,32 @@ function SessionSidebar({
       </div>
 
       <div style={{ padding: '8px 0', flex: 1, overflowY: 'auto' }}>
-        {Object.entries(groups).map(([date, sessions]) => (
+        {isLoading && (
+          <div style={{ padding: '16px', textAlign: 'center', color: C.textTertiary, fontSize: 12, fontFamily: F.mono }}>
+            Cargando…
+          </div>
+        )}
+
+        {!isLoading && sessions.length === 0 && (
+          <div style={{ padding: '16px', textAlign: 'center', color: C.textTertiary, fontSize: 12, fontFamily: F.body }}>
+            Sin conversaciones previas
+          </div>
+        )}
+
+        {Object.entries(groups).map(([date, groupSessions]) => (
           <div key={date}>
             <div style={{
-              padding:    '6px 16px 4px',
-              fontSize:   11,
-              fontFamily: F.mono,
-              color:      C.textTertiary,
-              fontWeight: 600,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
+              padding:        '6px 16px 4px',
+              fontSize:       11,
+              fontFamily:     F.mono,
+              color:          C.textTertiary,
+              fontWeight:     600,
+              letterSpacing:  '0.06em',
+              textTransform:  'uppercase',
             }}>
               {date}
             </div>
-            {sessions.map(session => (
+            {groupSessions.map(session => (
               <button
                 key={session.id}
                 onClick={() => onSelect(session.id)}
@@ -627,11 +738,24 @@ function SessionSidebar({
                     (e.currentTarget as HTMLElement).style.background = 'transparent';
                 }}
               >
-                <div style={{ fontFamily: F.body, fontSize: 13, fontWeight: 500, color: C.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {session.title}
+                <div style={{
+                  fontFamily:    F.body,
+                  fontSize:      13,
+                  fontWeight:    500,
+                  color:         C.textPrimary,
+                  whiteSpace:    'nowrap',
+                  overflow:      'hidden',
+                  textOverflow:  'ellipsis',
+                }}>
+                  {session.title || 'Nueva conversación'}
                 </div>
-                <div style={{ fontFamily: F.body, fontSize: 11, color: C.textTertiary, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {session.preview}
+                <div style={{
+                  fontFamily:    F.body,
+                  fontSize:      11,
+                  color:         C.textTertiary,
+                  marginTop:     2,
+                }}>
+                  {session.turnCount} mensajes
                 </div>
               </button>
             ))}
@@ -642,432 +766,450 @@ function SessionSidebar({
   );
 }
 
-/* ─── Compact Sheet (floating 400×600 variant) ──────────────── */
-function CompactSheet({ onClose }: { onClose: () => void }) {
-  const [input, setInput] = useState('');
-
-  return (
-    <div style={{
-      position:     'fixed',
-      bottom:       80,
-      right:        24,
-      width:        400,
-      height:       600,
-      borderRadius: 16,
-      background:   C.bgRaised,
-      border:       `1px solid ${C.border}`,
-      boxShadow:    `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px ${C.ai}20`,
-      display:      'flex',
-      flexDirection: 'column',
-      overflow:     'hidden',
-      zIndex:       9999,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding:        '14px 16px',
-        borderBottom:   `1px solid ${C.border}`,
-        display:        'flex',
-        alignItems:     'center',
-        gap:            10,
-      }}>
-        <div style={{
-          width:          28,
-          height:         28,
-          borderRadius:   8,
-          background:     C.aiFaint,
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          fontSize:       13,
-          color:          C.ai,
-        }}>
-          ✦
-        </div>
-        <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 14, color: C.textPrimary, flex: 1 }}>
-          Copilot
-        </span>
-        <button onClick={onClose} style={{
-          background: 'transparent',
-          border:     'none',
-          color:      C.textTertiary,
-          cursor:     'pointer',
-          fontSize:   16,
-          padding:    4,
-        }}>
-          ✕
-        </button>
-      </div>
-
-      {/* Messages area */}
-      <div style={{ flex: 1, padding: '12px 14px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', color: C.textTertiary, fontSize: 12, fontFamily: F.body, marginBottom: 16 }}>
-          Inicia una nueva conversación
-        </div>
-        <TypingIndicator />
-      </div>
-
-      {/* Input */}
-      <div style={{
-        padding:      '12px 14px',
-        borderTop:    `1px solid ${C.border}`,
-        display:      'flex',
-        gap:          8,
-      }}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Pregunta algo…"
-          style={{
-            flex:         1,
-            padding:      '9px 12px',
-            borderRadius: 8,
-            background:   C.bgElevated,
-            border:       `1px solid ${C.border}`,
-            color:        C.textPrimary,
-            fontFamily:   F.body,
-            fontSize:     13,
-            outline:      'none',
-          }}
-        />
-        <button style={{
-          padding:      '9px 14px',
-          borderRadius: 8,
-          background:   C.ai,
-          border:       'none',
-          color:        '#fff',
-          cursor:       'pointer',
-          fontSize:     14,
-        }}>
-          ↑
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Floating button ───────────────────────────────────────── */
-function FloatingButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      title="Abrir Copilot IA"
-      style={{
-        position:       'fixed',
-        bottom:         24,
-        right:          24,
-        width:          52,
-        height:         52,
-        borderRadius:   '50%',
-        background:     `linear-gradient(135deg, ${C.ai}, ${C.brand})`,
-        border:         'none',
-        boxShadow:      `0 8px 24px ${C.ai}50`,
-        cursor:         'pointer',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        fontSize:       22,
-        color:          '#fff',
-        zIndex:         9998,
-        transition:     'transform 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)';
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 32px ${C.ai}70`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${C.ai}50`;
-      }}
-    >
-      ✦
-    </button>
-  );
-}
-
 /* ─── Main page ─────────────────────────────────────────────── */
-export default function CopilotPage() {
-  const [messages, setMessages]           = useState<Message[]>(INITIAL_MESSAGES);
-  const [input, setInput]                 = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeSession, setActiveSession] = useState('s1');
-  const [isTyping, setIsTyping]           = useState(false);
-  const [isEmpty, setIsEmpty]             = useState(false);
-  const [showCompact, setShowCompact]     = useState(false);
-  const [viewMode, setViewMode]           = useState<'full' | 'demo'>('full');
-  const messagesEndRef                    = useRef<HTMLDivElement>(null);
 
+function turnToMessage(turn: {
+  id: string;
+  role: string;
+  content: string;
+  toolCalls?: unknown;
+  actionType: string | null;
+  actionConfirmed: boolean | null;
+  createdAt: string | Date;
+}): Message | null {
+  if (turn.role !== 'user' && turn.role !== 'assistant') return null;
+
+  const msg: Message = {
+    id:        turn.id,
+    role:      turn.role,
+    text:      turn.content,
+    timestamp: new Date(turn.createdAt as string | number).toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  };
+
+  if (turn.role === 'assistant' && turn.actionType && turn.actionConfirmed !== null) {
+    const toolCalls = turn.toolCalls as StreamActionSuggestion[] | null;
+    const suggestion = toolCalls?.[0];
+    msg.actionCard = {
+      type:    (turn.actionType as 'send_message' | 'create_task') ?? 'create_task',
+      summary: suggestion?.summary ?? turn.actionType,
+      detail:  suggestion?.detail ?? '',
+      payload: suggestion?.payload ?? {},
+      status:  turn.actionConfirmed === true ? 'confirmed' : turn.actionConfirmed === false ? 'pending' : 'cancelled',
+      turnId:  turn.id,
+    };
+  }
+
+  return msg;
+}
+
+function mapStreamCitations(citations: StreamCitation[]): Citation[] {
+  return citations.map((c) => ({
+    entityType: c.entityType as EntityType,
+    entityId:   c.entityId,
+    code:       c.content.slice(0, 20),
+    label:      c.content,
+  }));
+}
+
+export default function CopilotPage() {
+  const navigate = useNavigate();
+  const [input, setInput]                       = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeSessionId, setActiveSessionId]   = useState<string>(
+    () => localStorage.getItem(SESSION_KEY) ?? '',
+  );
+  const [messages, setMessages]                 = useState<Message[]>([]);
+  const messagesEndRef                          = useRef<HTMLDivElement>(null);
+  const textareaRef                             = useRef<HTMLTextAreaElement>(null);
+
+  const { isStreaming, sendMessage } = useCopilotStream();
+
+  // Persist active session to localStorage
+  useEffect(() => {
+    if (activeSessionId) {
+      localStorage.setItem(SESSION_KEY, activeSessionId);
+    }
+  }, [activeSessionId]);
+
+  // Fetch sessions
+  const sessionsQuery = trpc.copilot.listSessions.useQuery(
+    { limit: 30 },
+    { staleTime: 10_000 },
+  );
+
+  // Fetch active session turns
+  const sessionQuery = trpc.copilot.getSession.useQuery(
+    { sessionId: activeSessionId },
+    {
+      enabled: !!activeSessionId,
+      staleTime: 5_000,
+    },
+  );
+
+  // Load turns into messages when session data arrives
+  useEffect(() => {
+    if (sessionQuery.data?.turns) {
+      const msgs = sessionQuery.data.turns
+        .map(turnToMessage)
+        .filter((m): m is Message => m !== null);
+      setMessages(msgs);
+    }
+  }, [sessionQuery.data?.turns]);
+
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, isStreaming]);
 
-  const handleSend = (text?: string) => {
+  // tRPC mutations
+  const createSession = trpc.copilot.createSession.useMutation();
+  const confirmAction = trpc.copilot.confirmAction.useMutation();
+  const cancelAction  = trpc.copilot.cancelAction.useMutation();
+
+  const ensureSession = useCallback(async (context?: Record<string, unknown>): Promise<string> => {
+    if (activeSessionId) return activeSessionId;
+    const session = await createSession.mutateAsync({ context });
+    setActiveSessionId(session.id);
+    sessionsQuery.refetch();
+    return session.id;
+  }, [activeSessionId, createSession, sessionsQuery]);
+
+  const handleSend = useCallback(async (text?: string) => {
     const msg = text ?? input.trim();
-    if (!msg) return;
+    if (!msg || isStreaming) return;
     setInput('');
-    setIsEmpty(false);
+
     const userMsg: Message = {
-      id:        `m${Date.now()}`,
+      id:        `tmp-${Date.now()}`,
       role:      'user',
       text:      msg,
       timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages(prev => [...prev, userMsg]);
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const reply: Message = {
-        id:        `m${Date.now() + 1}`,
-        role:      'assistant',
-        text:      `Entendido. Estoy procesando tu consulta: "${msg}". Aquí hay información relevante que encontré.`,
-        citations: [
-          { entityType: 'propiedad', code: 'PAL-00201', label: 'Thames 1440' },
-        ],
-        timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, reply]);
-    }, 1800);
-  };
 
-  const updateActionCard = (messageId: string, status: ActionCard['status']) => {
+    // Placeholder streaming message
+    const streamMsgId = `stream-${Date.now()}`;
+    setMessages(prev => [...prev, {
+      id:          streamMsgId,
+      role:        'assistant',
+      text:        '',
+      timestamp:   new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+      isStreaming:  true,
+    }]);
+
+    try {
+      const sessionId = await ensureSession();
+      const result = await sendMessage(sessionId, msg, (streamedText) => {
+        setMessages(prev => prev.map(m =>
+          m.id === streamMsgId ? { ...m, text: streamedText } : m,
+        ));
+      });
+
+      // Finalize the streamed message
+      setMessages(prev => prev.map(m => {
+        if (m.id !== streamMsgId) return m;
+        const finalMsg: Message = {
+          ...m,
+          id:          result.turnId ?? streamMsgId,
+          text:        result.text,
+          isStreaming:  false,
+          citations:   result.citations.length > 0
+            ? mapStreamCitations(result.citations)
+            : undefined,
+        };
+        if (result.actionSuggestion) {
+          finalMsg.actionCard = {
+            type:    result.actionSuggestion.type,
+            summary: result.actionSuggestion.summary,
+            detail:  result.actionSuggestion.detail,
+            payload: result.actionSuggestion.payload,
+            status:  'pending',
+            turnId:  result.turnId,
+          };
+        }
+        return finalMsg;
+      }));
+
+      sessionsQuery.refetch();
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === streamMsgId
+          ? { ...m, text: 'Error al procesar tu mensaje. Intentá de nuevo.', isStreaming: false }
+          : m,
+      ));
+    }
+  }, [input, isStreaming, ensureSession, sendMessage, sessionsQuery]);
+
+  const handleActionConfirm = useCallback(async (messageId: string, turnId: string | null) => {
+    if (!turnId) return;
     setMessages(prev => prev.map(m =>
       m.id === messageId && m.actionCard
-        ? { ...m, actionCard: { ...m.actionCard, status } }
-        : m
+        ? { ...m, actionCard: { ...m.actionCard, status: 'confirmed' as const } }
+        : m,
     ));
-  };
+    try {
+      await confirmAction.mutateAsync({ turnId });
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId && m.actionCard
+          ? { ...m, actionCard: { ...m.actionCard, status: 'pending' as const } }
+          : m,
+      ));
+    }
+  }, [confirmAction]);
 
-  const handleNewSession = () => {
+  const handleActionCancel = useCallback(async (messageId: string, turnId: string | null) => {
+    if (!turnId) return;
+    setMessages(prev => prev.map(m =>
+      m.id === messageId && m.actionCard
+        ? { ...m, actionCard: { ...m.actionCard, status: 'cancelled' as const } }
+        : m,
+    ));
+    try {
+      await cancelAction.mutateAsync({ turnId });
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId && m.actionCard
+          ? { ...m, actionCard: { ...m.actionCard, status: 'pending' as const } }
+          : m,
+      ));
+    }
+  }, [cancelAction]);
+
+  const handleCitationClick = useCallback((c: Citation) => {
+    const routeFn = ENTITY_ROUTES[c.entityType];
+    if (routeFn) {
+      navigate({ to: routeFn(c.entityId) });
+    }
+  }, [navigate]);
+
+  const handleNewSession = useCallback(() => {
     setMessages([]);
-    setIsEmpty(true);
-    setActiveSession('');
-  };
+    setActiveSessionId('');
+    localStorage.removeItem(SESSION_KEY);
+    textareaRef.current?.focus();
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveSessionId(id);
+  }, []);
+
+  const sessions: SessionItem[] = (sessionsQuery.data?.items ?? []).map((s) => ({
+    id:        s.id,
+    title:     s.title,
+    turnCount: s.turnCount,
+    createdAt: String(s.createdAt),
+    updatedAt: String(s.updatedAt),
+  }));
+
+  const isEmpty = !activeSessionId && messages.length === 0;
 
   return (
     <div style={{
       display:        'flex',
-      flexDirection:  'column',
-      height:         '100vh',
+      height:         '100%',
       background:     C.bgBase,
       fontFamily:     F.body,
     }}>
-      {/* Demo mode toggle (wireframe-only) */}
-      <div style={{
-        background:  C.bgRaised,
-        borderBottom: `1px solid ${C.border}`,
-        padding:     '8px 20px',
-        display:     'flex',
-        alignItems:  'center',
-        gap:         16,
-        fontSize:    12,
-        fontFamily:  F.mono,
-        color:       C.textTertiary,
-      }}>
-        <span style={{ color: C.ai, fontWeight: 600 }}>✦ WIREFRAME · RENA-78</span>
-        <span style={{ marginLeft: 'auto' }}>Modo:</span>
-        {(['full', 'demo'] as const).map(m => (
+      <style>{`
+        @keyframes copilot-cursor {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0; }
+        }
+      `}</style>
+
+      {/* Session sidebar */}
+      <SessionSidebar
+        collapsed={sidebarCollapsed}
+        sessions={sessions}
+        activeSession={activeSessionId}
+        onSelect={handleSelectSession}
+        onNew={handleNewSession}
+        isLoading={sessionsQuery.isLoading}
+      />
+
+      {/* Main chat area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Topbar */}
+        <div style={{
+          padding:      '12px 20px',
+          borderBottom: `1px solid ${C.border}`,
+          display:      'flex',
+          alignItems:   'center',
+          gap:          12,
+          background:   C.bgBase,
+          flexShrink:   0,
+        }}>
           <button
-            key={m}
-            onClick={() => setViewMode(m)}
+            onClick={() => setSidebarCollapsed(c => !c)}
             style={{
-              padding:      '3px 10px',
+              background:   'transparent',
+              border:       `1px solid ${C.border}`,
               borderRadius: 6,
-              background:   viewMode === m ? C.ai : 'transparent',
-              border:       `1px solid ${viewMode === m ? C.ai : C.border}`,
-              color:        viewMode === m ? '#fff' : C.textTertiary,
+              color:        C.textSecondary,
               cursor:       'pointer',
-              fontFamily:   F.mono,
-              fontSize:     11,
+              padding:      '5px 8px',
+              fontSize:     14,
             }}
+            title={sidebarCollapsed ? 'Mostrar historial' : 'Ocultar historial'}
+            aria-label={sidebarCollapsed ? 'Mostrar historial' : 'Ocultar historial'}
           >
-            {m === 'full' ? 'Página completa' : 'Botón flotante'}
+            ☰
           </button>
-        ))}
-      </div>
-
-      {/* Full page layout */}
-      {viewMode === 'full' && (
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Session sidebar */}
-          <SessionSidebar
-            collapsed={sidebarCollapsed}
-            activeSession={activeSession}
-            onSelect={setActiveSession}
-            onNew={handleNewSession}
-          />
-
-          {/* Main chat area */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* Topbar */}
-            <div style={{
-              padding:      '12px 20px',
-              borderBottom: `1px solid ${C.border}`,
-              display:      'flex',
-              alignItems:   'center',
-              gap:          12,
-              background:   C.bgBase,
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16, color: C.ai }}>✦</span>
+            <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.textPrimary }}>
+              Copilot IA
+            </span>
+            <span style={{
+              padding:      '2px 8px',
+              borderRadius: 20,
+              background:   C.aiFaint,
+              color:        C.ai,
+              fontSize:     11,
+              fontFamily:   F.mono,
+              fontWeight:   600,
             }}>
-              <button
-                onClick={() => setSidebarCollapsed(c => !c)}
-                style={{
-                  background: 'transparent',
-                  border:     `1px solid ${C.border}`,
-                  borderRadius: 6,
-                  color:      C.textSecondary,
-                  cursor:     'pointer',
-                  padding:    '5px 8px',
-                  fontSize:   14,
-                }}
-                title={sidebarCollapsed ? 'Mostrar historial' : 'Ocultar historial'}
-              >
-                ☰
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16, color: C.ai }}>✦</span>
-                <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.textPrimary }}>
-                  Copilot IA
-                </span>
-                <span style={{
-                  padding:      '2px 8px',
-                  borderRadius: 20,
-                  background:   C.aiFaint,
-                  color:        C.ai,
-                  fontSize:     11,
-                  fontFamily:   F.mono,
-                  fontWeight:   600,
-                }}>
-                  BETA
-                </span>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div style={{
-              flex:       1,
-              overflowY:  'auto',
-              padding:    '24px 20px',
-              display:    'flex',
-              flexDirection: 'column',
-            }}>
-              <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                {isEmpty || messages.length === 0 ? (
-                  <EmptyState onPrompt={handleSend} />
-                ) : (
-                  <>
-                    {messages.map(msg => (
-                      <MessageBubble
-                        key={msg.id}
-                        message={msg}
-                        onActionConfirm={msg.actionCard ? () => updateActionCard(msg.id, 'confirmed') : undefined}
-                        onActionCancel={msg.actionCard  ? () => updateActionCard(msg.id, 'cancelled') : undefined}
-                        onActionEdit={msg.actionCard    ? () => updateActionCard(msg.id, 'editing')   : undefined}
-                      />
-                    ))}
-                    {isTyping && <TypingIndicator />}
-                    <div ref={messagesEndRef} />
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Input area */}
-            <div style={{
-              padding:      '16px 20px',
-              borderTop:    `1px solid ${C.border}`,
-              background:   C.bgBase,
-            }}>
-              <div style={{
-                maxWidth:     800,
-                margin:       '0 auto',
-                display:      'flex',
-                gap:          10,
-                alignItems:   'flex-end',
-              }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <textarea
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                    }}
-                    placeholder="Pregunta sobre propiedades, contactos, operaciones… (Enter para enviar)"
-                    rows={1}
-                    style={{
-                      width:        '100%',
-                      padding:      '12px 16px',
-                      borderRadius: 12,
-                      background:   C.bgRaised,
-                      border:       `1px solid ${C.border}`,
-                      color:        C.textPrimary,
-                      fontFamily:   F.body,
-                      fontSize:     14,
-                      outline:      'none',
-                      resize:       'none',
-                      boxSizing:    'border-box',
-                      lineHeight:   1.5,
-                    }}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = `${C.ai}60`; }}
-                    onBlur={e  => { (e.target as HTMLElement).style.borderColor = C.border; }}
-                  />
-                </div>
-                <button
-                  onClick={() => handleSend()}
-                  disabled={!input.trim()}
-                  style={{
-                    padding:      '12px 20px',
-                    borderRadius: 12,
-                    background:   input.trim() ? C.ai : C.bgElevated,
-                    border:       'none',
-                    color:        input.trim() ? '#fff' : C.textTertiary,
-                    cursor:       input.trim() ? 'pointer' : 'default',
-                    fontFamily:   F.body,
-                    fontSize:     16,
-                    transition:   'all 0.15s',
-                    flexShrink:   0,
-                  }}
-                >
-                  ↑
-                </button>
-              </div>
-              <div style={{
-                maxWidth:   800,
-                margin:     '6px auto 0',
-                fontSize:   11,
-                color:      C.textTertiary,
-                fontFamily: F.mono,
-                textAlign:  'right',
-              }}>
-                Enter para enviar · Shift+Enter nueva línea
-              </div>
-            </div>
+              BETA
+            </span>
           </div>
         </div>
-      )}
 
-      {/* Floating button demo */}
-      {viewMode === 'demo' && (
+        {/* Messages */}
         <div style={{
           flex:           1,
+          overflowY:      'auto',
+          padding:        '24px 20px',
           display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          color:          C.textTertiary,
-          fontFamily:     F.body,
-          fontSize:       14,
-          position:       'relative',
+          flexDirection:  'column',
         }}>
-          <div style={{ textAlign: 'center' }}>
-            <p>Vista de cualquier página de la app</p>
-            <p style={{ fontSize: 12, marginTop: 8 }}>El botón flotante aparece abajo a la derecha</p>
+          <div style={{
+            maxWidth:       800,
+            width:          '100%',
+            margin:         '0 auto',
+            flex:           1,
+            display:        'flex',
+            flexDirection:  'column',
+          }}>
+            {isEmpty ? (
+              <EmptyState onPrompt={handleSend} />
+            ) : (
+              <>
+                {messages.map(msg => (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    onCitationClick={handleCitationClick}
+                    onActionConfirm={
+                      msg.actionCard
+                        ? () => handleActionConfirm(msg.id, msg.actionCard!.turnId)
+                        : undefined
+                    }
+                    onActionCancel={
+                      msg.actionCard
+                        ? () => handleActionCancel(msg.id, msg.actionCard!.turnId)
+                        : undefined
+                    }
+                    onActionEdit={
+                      msg.actionCard
+                        ? () => setMessages(prev => prev.map(m =>
+                            m.id === msg.id && m.actionCard
+                              ? { ...m, actionCard: { ...m.actionCard, status: 'editing' as const } }
+                              : m,
+                          ))
+                        : undefined
+                    }
+                  />
+                ))}
+                {isStreaming && messages[messages.length - 1]?.text === '' && <TypingIndicator />}
+                <div ref={messagesEndRef} />
+              </>
+            )}
           </div>
-          {showCompact
-            ? <CompactSheet onClose={() => setShowCompact(false)} />
-            : <FloatingButton onClick={() => setShowCompact(true)} />
-          }
         </div>
-      )}
+
+        {/* Input area */}
+        <div style={{
+          padding:      '16px 20px',
+          borderTop:    `1px solid ${C.border}`,
+          background:   C.bgBase,
+          flexShrink:   0,
+        }}>
+          <div style={{
+            maxWidth:     800,
+            margin:       '0 auto',
+            display:      'flex',
+            gap:          10,
+            alignItems:   'flex-end',
+          }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Pregunta sobre propiedades, contactos, operaciones… (Enter para enviar)"
+                rows={1}
+                disabled={isStreaming}
+                style={{
+                  width:        '100%',
+                  padding:      '12px 16px',
+                  borderRadius: 12,
+                  background:   C.bgRaised,
+                  border:       `1px solid ${C.border}`,
+                  color:        C.textPrimary,
+                  fontFamily:   F.body,
+                  fontSize:     14,
+                  outline:      'none',
+                  resize:       'none',
+                  boxSizing:    'border-box',
+                  lineHeight:   1.5,
+                  opacity:      isStreaming ? 0.5 : 1,
+                }}
+                onFocus={e => { (e.target as HTMLElement).style.borderColor = `${C.ai}60`; }}
+                onBlur={e  => { (e.target as HTMLElement).style.borderColor = C.border; }}
+              />
+            </div>
+            <button
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isStreaming}
+              aria-label="Enviar mensaje"
+              style={{
+                padding:      '12px 20px',
+                borderRadius: 12,
+                background:   input.trim() && !isStreaming ? C.ai : C.bgElevated,
+                border:       'none',
+                color:        input.trim() && !isStreaming ? '#fff' : C.textTertiary,
+                cursor:       input.trim() && !isStreaming ? 'pointer' : 'default',
+                fontFamily:   F.body,
+                fontSize:     16,
+                transition:   'all 0.15s',
+                flexShrink:   0,
+              }}
+            >
+              ↑
+            </button>
+          </div>
+          <div style={{
+            maxWidth:   800,
+            margin:     '6px auto 0',
+            fontSize:   11,
+            color:      C.textTertiary,
+            fontFamily: F.mono,
+            textAlign:  'right',
+          }}>
+            Enter para enviar · Shift+Enter nueva línea
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
