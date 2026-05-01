@@ -1,7 +1,7 @@
 # Phase F Wireframes — Design Spec
 **Date:** 2026-05-01  
 **Author:** UX/UI Designer (Paperclip agent dd6be961)  
-**Issue:** RENA-79  
+**Issue:** RENA-78  
 **Status:** Delivered — 4 wireframe components across 3 modules
 
 ---
@@ -100,7 +100,7 @@ Two-panel layout:
 
 ### 2. CommandPalette
 **Trigger:** `⌘K` / `Ctrl+K` (global hotkey)  
-**File:** `apps/web/src/components/search/CommandPalette.tsx`
+**File:** `apps/web/src/pages/search/CommandPalette.tsx`
 
 #### Layout
 - Centered floating palette — 620px max-width, `top: 20%`
@@ -135,7 +135,7 @@ Per group:
 
 ### 3. SearchPage
 **Path:** `/search?q=...`  
-**File:** `apps/web/src/pages/search/SearchPage.tsx`
+**File:** `apps/web/src/pages/search/SearchResultsPage.tsx`
 
 #### Layout
 - Full-width page (max-width 1100px centered)
@@ -162,7 +162,7 @@ Per group:
 - 5 results per page
 
 #### CommandPalette integration
-- `⌘K` opens CommandPalette from SearchPage
+- `⌘K` opens CommandPalette from SearchResultsPage
 - `onOpenSearchPage` callback updates query in-page
 
 ---
@@ -274,10 +274,10 @@ All components render at full spec above.
 
 | Component | File | Lines |
 |---|---|---|
-| AI Copilot (full-page + floating) | `apps/web/src/pages/copilot/CopilotPage.tsx` | ~490 |
-| Command Palette | `apps/web/src/components/search/CommandPalette.tsx` | ~350 |
-| Search Page (full results) | `apps/web/src/pages/search/SearchPage.tsx` | ~370 |
-| AI Description Modal | `apps/web/src/pages/properties/AIDescriptionModal.tsx` | ~430 |
+| AI Copilot (full-page + floating) | `apps/web/src/pages/copilot/CopilotPage.tsx` | ~1074 |
+| Command Palette | `apps/web/src/pages/search/CommandPalette.tsx` | ~310 |
+| Search Page (full results) | `apps/web/src/pages/search/SearchResultsPage.tsx` | ~350 |
+| AI Description Modal | `apps/web/src/pages/properties/AIDescriptionModal.tsx` | ~750 |
 | This spec | `docs/superpowers/specs/2026-05-01-phase-f-wireframes-design.md` | — |
 
 ---

@@ -862,7 +862,7 @@ export default function CopilotPage() {
         fontFamily:  F.mono,
         color:       C.textTertiary,
       }}>
-        <span style={{ color: C.ai, fontWeight: 600 }}>✦ WIREFRAME · RENA-79</span>
+        <span style={{ color: C.ai, fontWeight: 600 }}>✦ WIREFRAME · RENA-78</span>
         <span style={{ marginLeft: 'auto' }}>Modo:</span>
         {(['full', 'demo'] as const).map(m => (
           <button

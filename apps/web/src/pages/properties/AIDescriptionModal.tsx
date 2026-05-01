@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -33,6 +33,59 @@ const F = {
 type Tone    = 'formal' | 'casual' | 'lujo';
 type Portal  = 'zonaprop' | 'argenprop' | 'mercadolibre' | 'inmuebles24';
 type GenStep = 'idle' | 'streaming' | 'done' | 'comparing';
+
+/* ─── Overwrite warning dialog ──────────────────────────────── */
+function OverwriteWarning({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 1100,
+        background: 'rgba(2,6,18,0.6)', backdropFilter: 'blur(2px)',
+      }} onClick={onCancel} />
+      <div style={{
+        position:    'fixed',
+        top:         '50%',
+        left:        '50%',
+        transform:   'translate(-50%, -50%)',
+        zIndex:      1101,
+        width:       380,
+        background:  '#0D1526',
+        border:      '1px solid #1F2D48',
+        borderRadius: 12,
+        padding:     24,
+        boxShadow:   '0 24px 64px rgba(0,0,0,0.7)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+            background: 'rgba(232,138,20,0.12)', border: '1px solid rgba(232,138,20,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+          }}>⚠️</div>
+          <div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15, color: '#EFF4FF' }}>
+              Reemplazar descripción existente
+            </div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#8DA0C0', marginTop: 4, lineHeight: 1.5 }}>
+              La descripción actual será reemplazada por la generada con IA. Esta acción no se puede deshacer.
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={onCancel} style={{
+            flex: 1, padding: '9px 0', borderRadius: 8,
+            background: 'transparent', border: '1px solid #1F2D48',
+            color: '#8DA0C0', fontFamily: "'DM Sans', sans-serif", fontSize: 13, cursor: 'pointer',
+          }}>Cancelar</button>
+          <button type="button" onClick={onConfirm} style={{
+            flex: 1, padding: '9px 0', borderRadius: 8,
+            background: '#E83B3B', border: 'none',
+            color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}>Sí, reemplazar</button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 /* ─── Mock content ──────────────────────────────────────────── */
 const EXISTING_DESCRIPTION = `Departamento de 3 ambientes en Belgrano. 95 m² totales, piso 4. Cuenta con cochera cubierta. Luminoso. Excelente ubicación.`;
@@ -160,10 +213,11 @@ function DiffView({ original, generated }: { original: string; generated: string
 
 /* ─── Props ─────────────────────────────────────────────────── */
 interface AIDescriptionModalProps {
-  open:      boolean;
-  onClose:   () => void;
-  onSave?:   (text: string, portal: Portal) => void;
-  propertyId?: string;
+  open:                boolean;
+  onClose:             () => void;
+  onSave?:             (text: string, portal: Portal) => void;
+  propertyId?:         string;
+  existingDescription?: string;
 }
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -172,13 +226,16 @@ export default function AIDescriptionModal({
   onClose,
   onSave,
   propertyId = 'BEL-00142',
+  existingDescription: existingProp,
 }: AIDescriptionModalProps) {
-  const [tone,        setTone]        = useState<Tone>('formal');
-  const [portal,      setPortal]      = useState<Portal>('zonaprop');
-  const [destacar,    setDestacar]    = useState('');
-  const [step,        setStep]        = useState<GenStep>('idle');
-  const [targetText,  setTargetText]  = useState('');
-  const [showDiff,    setShowDiff]    = useState(false);
+  const existingDescription = existingProp ?? EXISTING_DESCRIPTION;
+  const [tone,              setTone]              = useState<Tone>('formal');
+  const [portal,            setPortal]            = useState<Portal>('zonaprop');
+  const [destacar,          setDestacar]          = useState('');
+  const [step,              setStep]              = useState<GenStep>('idle');
+  const [targetText,        setTargetText]        = useState('');
+  const [showDiff,          setShowDiff]          = useState(false);
+  const [showOverwriteWarn, setShowOverwriteWarn] = useState(false);
 
   const { displayed: streamText, done: streamDone } = useStreamingText(
     targetText,
@@ -193,10 +250,10 @@ export default function AIDescriptionModal({
 
   useEffect(() => {
     if (!open) {
-      // Reset on close
       setStep('idle');
       setTargetText('');
       setShowDiff(false);
+      setShowOverwriteWarn(false);
     }
   }, [open]);
 
@@ -210,12 +267,21 @@ export default function AIDescriptionModal({
 
   const handleRegenerate = () => {
     setStep('streaming');
-    // Slight variation for demo
     setTargetText(GENERATED_DESCRIPTIONS[tone] + ' ');
     setShowDiff(false);
   };
 
   const handleSave = () => {
+    if (existingDescription) {
+      setShowOverwriteWarn(true);
+    } else {
+      onSave?.(streamText || targetText, portal);
+      onClose();
+    }
+  };
+
+  const handleConfirmOverwrite = () => {
+    setShowOverwriteWarn(false);
     onSave?.(streamText || targetText, portal);
     onClose();
   };
@@ -684,6 +750,13 @@ export default function AIDescriptionModal({
           50%       { opacity: 0; }
         }
       `}</style>
+
+      {showOverwriteWarn && (
+        <OverwriteWarning
+          onConfirm={handleConfirmOverwrite}
+          onCancel={() => setShowOverwriteWarn(false)}
+        />
+      )}
     </>
   );
 }
@@ -717,7 +790,7 @@ export function AIDescriptionDemo() {
         display:   'flex',
         alignItems: 'center',
       }}>
-        <span style={{ color: C.ai, fontWeight: 600 }}>✦ WIREFRAME · RENA-79 · AIDescriptionModal</span>
+        <span style={{ color: C.ai, fontWeight: 600 }}>✦ WIREFRAME · RENA-78 · AIDescriptionModal</span>
       </div>
 
       {/* Simulated property page context */}
