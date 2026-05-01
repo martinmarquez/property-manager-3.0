@@ -3,5 +3,9 @@
 export * from './router.js';
 export * from './descriptions/index.js';
 
+// Anthropic client factory
+export { createAnthropicClient } from './client.js';
+export type { AnthropicClient } from './client.js';
+
 // Copilot: classifier, generator, quota
 export * from './copilot/index.js';

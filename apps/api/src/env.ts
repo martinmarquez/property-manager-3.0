@@ -37,6 +37,10 @@ const envSchema = z.object({
   DOCUSIGN_SECRET_KEY: z.string().optional(),
   DOCUSIGN_ACCOUNT_ID: z.string().optional(),
   DOCUSIGN_WEBHOOK_SECRET: z.string().optional(),
+
+  // AI providers (Phase F)
+  ANTHROPIC_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 function parseEnv() {
