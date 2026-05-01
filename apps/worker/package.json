@@ -12,6 +12,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
     "@corredor/documents": "workspace:*",
@@ -19,7 +21,8 @@
     "bullmq": "^5.30.0",
     "csv-parse": "^5.6.0",
     "drizzle-orm": "^0.38.0",
-    "ioredis": "^5.4.0"
+    "ioredis": "^5.4.0",
+    "playwright-core": "^1.50.0"
   },
   "devDependencies": {
     "@corredor/ai": "workspace:*",

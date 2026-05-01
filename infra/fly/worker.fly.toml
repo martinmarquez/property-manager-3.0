@@ -7,6 +7,7 @@ primary_region = "gru"
 [env]
   NODE_ENV = "production"
 
+# 2 Playwright/Chromium instances need ~450 MB each; 1024 MB gives headroom.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "shared-cpu-2x"
+  memory = "1024mb"

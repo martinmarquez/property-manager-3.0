@@ -13,6 +13,18 @@ export interface EsignWebhookJobData {
   receivedAt: string;
 }
 
+export interface DocGenerateJobData {
+  tenantId: string;
+  documentId: string;
+  /** Fully rendered HTML to convert to PDF. */
+  htmlContent: string;
+}
+
+export interface DocGenerateJobResult {
+  presignedUrl: string;
+  objectKey: string;
+}
+
 // ---------------------------------------------------------------------------
 // Adapter interface
 // ---------------------------------------------------------------------------

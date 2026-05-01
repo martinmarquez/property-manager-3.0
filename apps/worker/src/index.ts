@@ -23,6 +23,7 @@ import Redis from 'ioredis';
 import { ImportCsvWorker } from './workers/import-csv.js';
 import { ImportContactsCsvWorker } from './workers/import-contacts-csv.js';
 import { DocSignWebhookWorker } from './workers/doc-sign-webhook.js';
+import { createDocGenerateWorker } from './workers/doc-generate.js';
 
 logger.info('worker starting');
 
@@ -47,8 +48,16 @@ const docSignWebhookWorker = new DocSignWebhookWorker(redis, databaseUrl, {
     : undefined,
 });
 
-logger.info('worker ready', { queues: ['import-csv', 'import-contacts-csv', 'doc-sign-webhook'] });
+const docGenerateWorker = createDocGenerateWorker(redis);
+if (!docGenerateWorker) {
+  logger.warn('doc-generate worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
+}
+
+const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook'];
+if (docGenerateWorker) activeQueues.push('doc-generate');
+logger.info('worker ready', { queues: activeQueues });
 
 void importCsvWorker;
 void importContactsCsvWorker;
 void docSignWebhookWorker;
+void docGenerateWorker;
