@@ -55,7 +55,6 @@ function selectModel(intent: IntentType): string {
 }
 
 function buildSystemPrompt(
-  tenantId: string,
   chunks: RetrievalResult[],
   locale: string,
 ): string {
@@ -73,8 +72,7 @@ Rules:
 - Only cite entities from the retrieved context below. Never fabricate property codes or contact names.
 - When you reference an entity, include its type and ID so the frontend can render a citation pill.
 - If the user asks to perform an action (send message, create task, schedule call), propose it as an action suggestion — do NOT execute it directly. Wait for user confirmation.
-- Format action suggestions as: [ACTION:type|summary|detail|payload_json]
-- Tenant ID: ${tenantId}${chunkContext}`;
+- Format action suggestions as: [ACTION:type|summary|detail|payload_json]${chunkContext}`;
 }
 
 function buildMessages(
@@ -143,7 +141,7 @@ export async function generateResponse(
 ): Promise<GenerateResult> {
   const model = selectModel(opts.intent);
   const locale = opts.locale ?? 'es-AR';
-  const system = buildSystemPrompt(opts.tenantId, opts.retrievedChunks, locale);
+  const system = buildSystemPrompt(opts.retrievedChunks, locale);
   const messages = buildMessages(opts.history, opts.message);
 
   const response = await client.messages.create({
@@ -173,7 +171,7 @@ export async function* generateResponseStream(
 ): AsyncGenerator<StreamEvent> {
   const model = selectModel(opts.intent);
   const locale = opts.locale ?? 'es-AR';
-  const system = buildSystemPrompt(opts.tenantId, opts.retrievedChunks, locale);
+  const system = buildSystemPrompt(opts.retrievedChunks, locale);
   const messages = buildMessages(opts.history, opts.message);
 
   const stream = client.messages.stream({

@@ -166,6 +166,17 @@ function formatAttributes(attrs: PropertyAttributes): string {
   return lines.join('\n');
 }
 
+// Strip Markdown heading markers and known prompt-override patterns from user-supplied text
+// before inserting into a system prompt. Defense against direct prompt injection via the
+// Destacar extra-instructions field.
+function sanitizeExtraInstructions(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\b(ignore|ignorá|forget|olvida|system\s*:|instrucciones del sistema)\b/gi, '')
+    .trim()
+    .slice(0, 500);
+}
+
 export function buildPrompt(
   attrs: PropertyAttributes,
   tone: Tone,
@@ -201,7 +212,10 @@ export function buildPrompt(
   ];
 
   if (extraInstructions) {
-    parts.push('', `## Instrucciones adicionales (Destacar)`, extraInstructions);
+    const safe = sanitizeExtraInstructions(extraInstructions);
+    if (safe) {
+      parts.push('', `Instrucciones adicionales del agente (Destacar):`, safe);
+    }
   }
 
   return parts.join('\n');
