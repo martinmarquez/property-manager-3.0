@@ -95,6 +95,64 @@ export interface ContactDeletedEvent {
   payload: { tenantId: string; contactId: string; userId: string };
 }
 
+export interface ContactImportedEvent {
+  type: "contact.imported";
+  payload: {
+    tenantId: string;
+    importJobId: string;
+    userId: string;
+    totalRows: number;
+    importedRows: number;
+    skippedRows: number;
+    failedRows: number;
+    sourceFormat: string;
+  };
+}
+
+export interface ContactDsrDeleteEvent {
+  type: "contact.dsr_delete";
+  payload: { tenantId: string; contactId: string; dsrRequestId: string; userId: string };
+}
+
+export interface ContactDsrAccessEvent {
+  type: "contact.dsr_access";
+  payload: { tenantId: string; contactId: string; dsrRequestId: string; userId: string };
+}
+
+// ---------------------------------------------------------------------------
+// Inquiry events
+// ---------------------------------------------------------------------------
+
+export interface InquiryCreatedEvent {
+  type: "inquiry.created";
+  payload: { tenantId: string; inquiryId: string; contactId: string; userId: string };
+}
+
+export interface InquiryUpdatedEvent {
+  type: "inquiry.updated";
+  payload: {
+    tenantId: string;
+    inquiryId: string;
+    userId: string;
+    changedFields: string[];
+  };
+}
+
+export interface InquiryDeletedEvent {
+  type: "inquiry.deleted";
+  payload: { tenantId: string; inquiryId: string; userId: string };
+}
+
+export interface InquiryMatchComputedEvent {
+  type: "inquiry.match_computed";
+  payload: {
+    tenantId: string;
+    inquiryId: string;
+    matchCount: number;
+    newHighScoreMatches: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Lead events
 // ---------------------------------------------------------------------------
@@ -199,6 +257,22 @@ export interface ListingSyncFailedEvent {
 }
 
 // ---------------------------------------------------------------------------
+// AI Description events
+// ---------------------------------------------------------------------------
+
+export interface PropertyDescriptionGeneratedEvent {
+  type: "property_description.generated";
+  payload: {
+    tenantId: string;
+    propertyId: string;
+    descriptionId: string;
+    userId: string;
+    tone: string;
+    portal: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Document events
 // ---------------------------------------------------------------------------
 
@@ -251,6 +325,13 @@ export type DomainEvent =
   | ContactUpdatedEvent
   | ContactMergedEvent
   | ContactDeletedEvent
+  | ContactImportedEvent
+  | ContactDsrDeleteEvent
+  | ContactDsrAccessEvent
+  | InquiryCreatedEvent
+  | InquiryUpdatedEvent
+  | InquiryDeletedEvent
+  | InquiryMatchComputedEvent
   | LeadCreatedEvent
   | LeadStageMovedEvent
   | LeadWonEvent
@@ -261,6 +342,7 @@ export type DomainEvent =
   | ListingPublishedEvent
   | ListingUnpublishedEvent
   | ListingSyncFailedEvent
+  | PropertyDescriptionGeneratedEvent
   | DocumentSignedEvent
   | DocumentExpiredEvent
   | UserCreatedEvent

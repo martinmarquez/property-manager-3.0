@@ -35,6 +35,8 @@ import { env } from './env.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 import { createContext } from './trpc.js';
 import { appRouter } from './router.js';
+import { createEsignWebhookRoutes } from './routes/webhooks-esign.js';
+import { createCopilotStreamRoutes } from './routes/copilot-stream.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
 const db = createDb(env.DATABASE_URL);
@@ -107,6 +109,35 @@ app.get('/health', async (c) => {
     healthy ? 200 : 503,
   );
 });
+
+// ── E-sign provider webhooks (no auth — HMAC-verified) ───────────────────
+app.route('/webhooks/esign', createEsignWebhookRoutes(redis, {
+  SIGNATURIT_WEBHOOK_SECRET: env.SIGNATURIT_WEBHOOK_SECRET,
+  DOCUSIGN_WEBHOOK_SECRET: env.DOCUSIGN_WEBHOOK_SECRET,
+}));
+
+// ── Copilot SSE streaming (outside tRPC — needs raw SSE response) ────────
+app.use(
+  '/api/copilot/*',
+  cors({
+    origin: (origin) => {
+      const allowed = [
+        'https://app.corredor.ar',
+        'http://localhost:5173',
+      ];
+      return allowed.includes(origin ?? '') ? origin : null;
+    },
+    allowHeaders: ['Content-Type', 'x-csrf-token', 'x-request-id'],
+    allowMethods: ['POST', 'OPTIONS'],
+    credentials: true,
+    maxAge: 600,
+  }),
+);
+app.route('/api/copilot', createCopilotStreamRoutes({
+  db: db as any,
+  redis,
+  anthropicApiKey: env.ANTHROPIC_API_KEY,
+}));
 
 // ── tRPC router ────────────────────────────────────────────────────────────
 // @hono/trpc-server passes (trpcOpts, honoContext) to createContext

@@ -34,10 +34,12 @@ const SoftDeleteInput = z.object({
   propertyId: z.string().uuid(),
   reason: z.enum(propertyDeletionReasonEnum.enumValues),
   note: z.string().max(500).optional(),
+  version: z.number().int().min(1).optional(),
 });
 
 const RestoreInput = z.object({
   propertyId: z.string().uuid(),
+  version: z.number().int().min(1).optional(),
 });
 
 const ListTrashInput = z.object({
@@ -65,6 +67,7 @@ const BulkEditPatch = z.object({
 const BulkEditInput = z.object({
   propertyIds: z.array(z.string().uuid()).min(1).max(1000),
   patch: BulkEditPatch,
+  versions: z.record(z.string().uuid(), z.number().int().min(1)).optional(),
 });
 
 const GetHistoryInput = z.object({
@@ -110,11 +113,15 @@ export const propertiesRouter = router({
         eq(property.tenantId, tenantId),
         isNull(property.deletedAt),
       ),
-      columns: { id: true },
+      columns: { id: true, version: true },
     });
 
     if (!existing) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+    }
+
+    if (input.version !== undefined && existing.version !== input.version) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
     }
 
     const now = new Date();
@@ -158,11 +165,15 @@ export const propertiesRouter = router({
         eq(property.tenantId, tenantId),
         isNotNull(property.deletedAt),
       ),
-      columns: { id: true, deletedAt: true },
+      columns: { id: true, deletedAt: true, version: true },
     });
 
     if (!existing) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found or not deleted' });
+    }
+
+    if (input.version !== undefined && existing.version !== input.version) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'stale_version' });
     }
 
     const now = new Date();
@@ -217,7 +228,7 @@ export const propertiesRouter = router({
   // -------------------------------------------------------------------------
   bulkEdit: protectedProcedure.input(BulkEditInput).mutation(async ({ ctx, input }) => {
     const { db, tenantId, userId } = ctx as AuthenticatedContext;
-    const { propertyIds, patch } = input;
+    const { propertyIds, patch, versions } = input;
     const now = new Date();
 
     // Build scalar update set
@@ -243,6 +254,7 @@ export const propertiesRouter = router({
           status: property.status,
           featured: property.featured,
           branchId: property.branchId,
+          version: property.version,
         })
         .from(property)
         .where(
@@ -251,6 +263,15 @@ export const propertiesRouter = router({
             inArray(property.id, propertyIds),
           ),
         );
+
+      if (versions) {
+        const staleIds = currentRows
+          .filter((row) => versions[row.id] !== undefined && row.version !== versions[row.id])
+          .map((row) => row.id);
+        if (staleIds.length > 0) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'stale_version', cause: { staleIds } });
+        }
+      }
 
       // Perform bulk update
       await db

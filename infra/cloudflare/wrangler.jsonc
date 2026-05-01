@@ -3,6 +3,7 @@
   // See ADR-002 for topology decisions
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "corredor-media-prod" },
-    { "binding": "DOCS", "bucket_name": "corredor-docs-prod" }
+    { "binding": "DOCUMENTS", "bucket_name": "corredor-documents-prod" },
+    { "binding": "DOCUMENTS_STAGING", "bucket_name": "corredor-documents-staging", "preview_bucket_name": "corredor-documents-staging" }
   ]
 }

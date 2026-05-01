@@ -31,6 +31,7 @@ export const QUEUE_NAMES = {
   // AI pipeline — medium priority
   AI_EMBED: "ai-embed",
   AI_CHUNK_UPSERT: "ai-chunk-upsert",
+  RAG_INGEST: "rag-ingest",
 
   // Document — medium priority
   DOC_GENERATE: "doc-generate",
@@ -129,6 +130,7 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.INBOX_SEND]:       { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 10 },
   [QUEUE_NAMES.AI_EMBED]:         { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
   [QUEUE_NAMES.AI_CHUNK_UPSERT]:  { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
+  [QUEUE_NAMES.RAG_INGEST]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.DOC_GENERATE]:     { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.DOC_SIGN_WEBHOOK]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
   [QUEUE_NAMES.IMPORT_CSV]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },

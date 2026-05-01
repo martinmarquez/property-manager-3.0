@@ -1,0 +1,12 @@
+app = "corredor-worker-staging"
+primary_region = "gru"
+
+[build]
+  dockerfile = "apps/worker/Dockerfile"
+
+[env]
+  NODE_ENV = "staging"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

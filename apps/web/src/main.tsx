@@ -41,6 +41,10 @@ import { PipelineFunnelPage } from './pages/pipelines/PipelineFunnelPage.js';
 import { CalendarPage } from './pages/calendar/CalendarPage.js';
 import { InquiryListPage } from './pages/inquiries/InquiryListPage.js';
 import { InquiryDetailPage } from './pages/inquiries/InquiryDetailPage.js';
+import SearchPage from './pages/search/SearchPage.js';
+import CommandPalette from './components/search/CommandPalette.js';
+import CopilotPage from './pages/copilot/CopilotPage.js';
+import CopilotFloat from './components/copilot/CopilotFloat.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -75,11 +79,37 @@ const MOCK_ORG: OrganizationData = {
   foundingYear: '',
 };
 
-// ─── Root layout (wraps all authenticated routes) ────────────────────────────
+// ─── Root layout (wraps all authenticated routes) ─��──────────────────────────
 function AuthenticatedLayout() {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen(p => !p);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
   return (
     <AppShell user={MOCK_USER}>
       <Outlet />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onNavigate={href => {
+          setPaletteOpen(false);
+          router.navigate({ to: href });
+        }}
+        onOpenSearchPage={q => {
+          setPaletteOpen(false);
+          router.navigate({ to: '/search', search: { q } });
+        }}
+      />
+      <CopilotFloat />
     </AppShell>
   );
 }
@@ -200,6 +230,15 @@ const propertyNewRoute = createRoute({
   path: '/properties/new',
   component: function PropertyNewRoute() {
     return <PropertyFormPage />;
+  },
+});
+
+const propertyDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/properties/$propertyId',
+  component: function PropertyDetailRoute() {
+    const { propertyId } = propertyDetailRoute.useParams();
+    return <PropertyFormPage propertyId={propertyId} />;
   },
 });
 
@@ -362,6 +401,28 @@ const inquiryDetailRoute = createRoute({
   },
 });
 
+// ─── Search route ──────────────────────────────────────────────────────────
+const searchRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/search',
+  component: function SearchRoute() {
+    return (
+      <SearchPage
+        onNavigate={href => router.navigate({ to: href })}
+      />
+    );
+  },
+});
+
+// ─── Copilot route ─────────────────────────────────────────────────────────
+const copilotRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/copilot',
+  component: function CopilotRoute() {
+    return <CopilotPage />;
+  },
+});
+
 const notFoundMessages = defineMessages({
   title:   { id: 'notFound.title' },
   message: { id: 'notFound.message' },
@@ -410,6 +471,7 @@ const routeTree = rootRoute.addChildren([
     dashboardRoute,
     propertiesRoute,
     propertyNewRoute,
+    propertyDetailRoute,
     propertyEditRoute,
     contactsRoute,
     contactNewRoute,
@@ -424,6 +486,8 @@ const routeTree = rootRoute.addChildren([
     calendarRoute,
     inquiriesRoute,
     inquiryDetailRoute,
+    searchRoute,
+    copilotRoute,
     settingsRoute.addChildren([
       settingsIndexRoute,
       organizationSettingsRoute,

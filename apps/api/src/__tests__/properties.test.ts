@@ -73,6 +73,7 @@ vi.mock('@corredor/db', () => ({
     status: 'status',
     featured: 'featured',
     branchId: 'branch_id',
+    version: 'version',
   },
   propertyHistory: {
     id: 'id',
@@ -121,24 +122,24 @@ vi.mock('ioredis', () => {
   return { default: Redis };
 });
 
-vi.mock('@corredor/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@corredor/core')>();
-  return {
-    ...actual,
-    checkRateLimit: vi.fn().mockResolvedValue({
-      allowed: true,
-      limit: 100,
-      remaining: 99,
-      resetAt: Math.floor(Date.now() / 1000) + 60,
-      retryAfterSeconds: 0,
-    }),
-    // createQueue is called in startImport — stub it
-    createQueue: vi.fn().mockReturnValue({
-      add: vi.fn().mockResolvedValue({ id: 'job-1' }),
-      close: vi.fn().mockResolvedValue(undefined),
-    }),
-  };
-});
+vi.mock('@corredor/core', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({
+    allowed: true,
+    limit: 100,
+    remaining: 99,
+    resetAt: Math.floor(Date.now() / 1000) + 60,
+    retryAfterSeconds: 0,
+  }),
+  RateLimitPresets: {
+    API_WRITE_AUTHENTICATED: { windowMs: 60000, maxRequests: 100 },
+    API_READ_AUTHENTICATED: { windowMs: 60000, maxRequests: 200 },
+  },
+  createQueue: vi.fn().mockReturnValue({
+    add: vi.fn().mockResolvedValue({ id: 'job-1' }),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+  QUEUE_NAMES: { IMPORT_CSV: 'import-csv' },
+}));
 
 // Override setup.ts bullmq stub to also include Queue
 vi.mock('bullmq', () => ({
@@ -458,5 +459,171 @@ describe('properties.getImport', () => {
     await expect(
       caller.properties.getImport({ importJobId: IMPORT_JOB_ID }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Optimistic locking tests — RENA-70
+// ---------------------------------------------------------------------------
+
+describe('properties.softDelete — optimistic locking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentTx = mockTx();
+    mockDb.transaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(currentTx),
+    );
+  });
+
+  it('succeeds when supplied version matches DB version', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      version: 3,
+    });
+
+    const caller = await buildCaller();
+    const result = await caller.properties.softDelete({
+      propertyId: PROPERTY_ID,
+      reason: 'duplicate',
+      version: 3,
+    });
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it('throws CONFLICT (409) when supplied version does not match', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      version: 5,
+    });
+
+    const caller = await buildCaller();
+    await expect(
+      caller.properties.softDelete({ propertyId: PROPERTY_ID, reason: 'duplicate', version: 3 }),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: 'stale_version' });
+  });
+
+  it('skips version check when version is omitted (backwards-compatible)', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      version: 7,
+    });
+
+    const caller = await buildCaller();
+    const result = await caller.properties.softDelete({
+      propertyId: PROPERTY_ID,
+      reason: 'other',
+    });
+
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe('properties.restore — optimistic locking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentTx = mockTx();
+    mockDb.transaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(currentTx),
+    );
+  });
+
+  it('succeeds when supplied version matches DB version', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      deletedAt: new Date('2026-01-01'),
+      version: 2,
+    });
+
+    const caller = await buildCaller();
+    const result = await caller.properties.restore({ propertyId: PROPERTY_ID, version: 2 });
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it('throws CONFLICT (409) when supplied version does not match', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      deletedAt: new Date('2026-01-01'),
+      version: 4,
+    });
+
+    const caller = await buildCaller();
+    await expect(
+      caller.properties.restore({ propertyId: PROPERTY_ID, version: 2 }),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: 'stale_version' });
+  });
+
+  it('skips version check when version is omitted', async () => {
+    currentTx.query.property.findFirst.mockResolvedValueOnce({
+      id: PROPERTY_ID,
+      deletedAt: new Date('2026-01-01'),
+      version: 9,
+    });
+
+    const caller = await buildCaller();
+    const result = await caller.properties.restore({ propertyId: PROPERTY_ID });
+
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe('properties.bulkEdit — optimistic locking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentTx = mockTx();
+    currentTx.select.mockReturnValue(currentTx);
+    currentTx.from.mockReturnValue(currentTx);
+    currentTx.update.mockReturnValue(currentTx);
+    currentTx.set.mockReturnValue(currentTx);
+    mockDb.transaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(currentTx),
+    );
+  });
+
+  it('succeeds when all supplied versions match', async () => {
+    currentTx.where.mockResolvedValueOnce([
+      { id: PROPERTY_ID, status: 'active', featured: false, branchId: null, version: 3 },
+    ]);
+
+    const caller = await buildCaller();
+    const result = await caller.properties.bulkEdit({
+      propertyIds: [PROPERTY_ID],
+      patch: { status: 'reserved' },
+      versions: { [PROPERTY_ID]: 3 },
+    });
+
+    expect(result).toEqual({ updatedCount: 1 });
+  });
+
+  it('throws CONFLICT (409) when any version mismatches', async () => {
+    const ID_2 = '00000000-0000-0000-0000-000000000099';
+    currentTx.where.mockResolvedValueOnce([
+      { id: PROPERTY_ID, status: 'active', featured: false, branchId: null, version: 3 },
+      { id: ID_2, status: 'active', featured: true, branchId: null, version: 5 },
+    ]);
+
+    const caller = await buildCaller();
+    await expect(
+      caller.properties.bulkEdit({
+        propertyIds: [PROPERTY_ID, ID_2],
+        patch: { status: 'sold' },
+        versions: { [PROPERTY_ID]: 3, [ID_2]: 2 },
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: 'stale_version' });
+  });
+
+  it('skips version check when versions map is omitted', async () => {
+    currentTx.where.mockResolvedValueOnce([
+      { id: PROPERTY_ID, status: 'active', featured: false, branchId: null, version: 10 },
+    ]);
+
+    const caller = await buildCaller();
+    const result = await caller.properties.bulkEdit({
+      propertyIds: [PROPERTY_ID],
+      patch: { featured: true },
+    });
+
+    expect(result).toEqual({ updatedCount: 1 });
   });
 });

@@ -33,6 +33,7 @@ const msgs = defineMessages({
   fieldLabel:  { id: 'contacts.segments.criterion.field' },
   opLabel:     { id: 'contacts.segments.criterion.op' },
   valueLabel:  { id: 'contacts.segments.criterion.value' },
+  fieldNotAvailable: { id: 'contacts.segments.criterion.notAvailable' },
   back:        { id: 'contacts.detail.back' },
 });
 
@@ -54,6 +55,8 @@ const OP_OPTIONS = [
   { value: 'lte', label: '<=' },
   { value: 'in', label: 'in' },
 ];
+
+const UNAVAILABLE_FIELDS = new Set(['last_activity', 'operation_interest', 'has_open_leads']);
 
 interface Criterion {
   field: string;
@@ -180,39 +183,46 @@ export function SegmentBuilderPage() {
 
             {/* Criteria rows */}
             {criteria.map((c, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <select
-                  value={c.field}
-                  onChange={(e) => updateCriterion(idx, { field: e.target.value })}
-                  style={{ ...inputStyle, flex: 1 }}
-                >
-                  {FIELD_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                <select
-                  value={c.op}
-                  onChange={(e) => updateCriterion(idx, { op: e.target.value })}
-                  style={{ ...inputStyle, width: 80, flex: 'none' }}
-                >
-                  {OP_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                <input
-                  value={c.value}
-                  onChange={(e) => updateCriterion(idx, { value: e.target.value })}
-                  placeholder={intl.formatMessage(msgs.valueLabel)}
-                  style={{ ...inputStyle, flex: 2 }}
-                />
-                {criteria.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeCriterion(idx)}
-                    style={{ ...outlineBtn, padding: '6px 8px', color: '#EF4444' }}
+              <div key={idx} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select
+                    value={c.field}
+                    onChange={(e) => updateCriterion(idx, { field: e.target.value })}
+                    style={{ ...inputStyle, flex: 1 }}
                   >
-                    &times;
-                  </button>
+                    {FIELD_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={c.op}
+                    onChange={(e) => updateCriterion(idx, { op: e.target.value })}
+                    style={{ ...inputStyle, width: 80, flex: 'none' }}
+                  >
+                    {OP_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={c.value}
+                    onChange={(e) => updateCriterion(idx, { value: e.target.value })}
+                    placeholder={intl.formatMessage(msgs.valueLabel)}
+                    style={{ ...inputStyle, flex: 2 }}
+                  />
+                  {criteria.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCriterion(idx)}
+                      style={{ ...outlineBtn, padding: '6px 8px', color: '#EF4444' }}
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+                {UNAVAILABLE_FIELDS.has(c.field) && (
+                  <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 4, paddingLeft: 4 }}>
+                    ⚠ {intl.formatMessage(msgs.fieldNotAvailable)}
+                  </div>
                 )}
               </div>
             ))}

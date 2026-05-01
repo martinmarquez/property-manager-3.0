@@ -257,3 +257,14 @@ export const protectedProcedure = t.procedure
   .use(rateLimitMiddleware)
   .use(auditLogMiddleware)
   .use(txMiddleware);
+
+/**
+ * Like protectedProcedure but without the transaction wrapper.
+ * Use for long-running operations (e.g. LLM calls) that should not hold
+ * a DB connection open. The handler must manage its own DB access.
+ */
+export const protectedProcedureNoTx = t.procedure
+  .use(tenantMiddleware)
+  .use(rbacMiddleware)
+  .use(rateLimitMiddleware)
+  .use(auditLogMiddleware);
