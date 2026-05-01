@@ -257,6 +257,22 @@ export interface ListingSyncFailedEvent {
 }
 
 // ---------------------------------------------------------------------------
+// AI Description events
+// ---------------------------------------------------------------------------
+
+export interface PropertyDescriptionGeneratedEvent {
+  type: "property_description.generated";
+  payload: {
+    tenantId: string;
+    propertyId: string;
+    descriptionId: string;
+    userId: string;
+    tone: string;
+    portal: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Document events
 // ---------------------------------------------------------------------------
 
@@ -326,6 +342,7 @@ export type DomainEvent =
   | ListingPublishedEvent
   | ListingUnpublishedEvent
   | ListingSyncFailedEvent
+  | PropertyDescriptionGeneratedEvent
   | DocumentSignedEvent
   | DocumentExpiredEvent
   | UserCreatedEvent

@@ -15,6 +15,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@corredor/ai": "workspace:*",
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
     "@corredor/documents": "workspace:*",
