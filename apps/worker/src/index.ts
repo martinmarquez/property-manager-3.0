@@ -54,9 +54,9 @@ if (!docGenerateWorker) {
   logger.warn('doc-generate worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
 }
 
-// Phase F: RAG ingest worker (stub — implementation pending RENA-F feature work)
+// Phase F: RAG ingest worker — chunk → embed → upsert pipeline
 const ragIngestWorker = process.env['OPENAI_API_KEY']
-  ? new RagIngestWorker(redis)
+  ? new RagIngestWorker(redis, databaseUrl, process.env['OPENAI_API_KEY'])
   : null;
 if (!ragIngestWorker) {
   logger.warn('rag-ingest worker disabled — OPENAI_API_KEY not set');

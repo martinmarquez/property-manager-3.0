@@ -11,5 +11,6 @@ export * from './leads.js';
 // export * from './inbox.js';
 export * from './documents.js';
 // export * from './portals.js';
-// export * from './ai.js';
+export * from './ai.js';
+export * from './analytics-ai.js';
 // export * from './billing.js';

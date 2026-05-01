@@ -5,6 +5,7 @@ import { propertiesRouter } from './routers/properties.js';
 import { contactsRouter } from './routers/contacts.js';
 import { documentsRouter } from './routers/documents.js';
 import { esignRouter } from './routers/esign.js';
+import { ragRouter } from './routers/rag.js';
 
 /**
  * Root tRPC router.
@@ -28,6 +29,7 @@ export const appRouter = router({
   contacts:   contactsRouter,
   documents:  documentsRouter,
   esign:      esignRouter,
+  rag:        ragRouter,
 });
 
 export type AppRouter = typeof appRouter;

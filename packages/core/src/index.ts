@@ -92,6 +92,23 @@ export type {
 // Analytics event taxonomy and KPI helpers
 export * from './analytics/index.js';
 
+// RAG pipeline
+export {
+  chunkEntity,
+  Embedder,
+  retrieve,
+} from './rag/index.js';
+export type {
+  EntityType,
+  Chunk,
+  ChunkInput,
+  EmbedResult,
+  EmbedderOptions,
+  RetrievalResult,
+  RetrieveOptions,
+  SqlClient,
+} from './rag/index.js';
+
 // Middleware
 export {
   securityHeaders,
