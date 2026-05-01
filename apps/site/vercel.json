@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "installCommand": "echo 'deps installed by CI'",
+  "buildCommand": "cd ../.. && pnpm --filter @corredor/site... build"
+}
