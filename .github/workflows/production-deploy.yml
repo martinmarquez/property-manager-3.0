@@ -15,13 +15,15 @@ jobs:
     strategy:
       matrix:
         node-version: [22]
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -53,7 +55,7 @@ jobs:
           SENTRY_RELEASE: ${{ github.sha }}
 
       - name: Upload source maps — API
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
         run: |
           pnpm dlx @sentry/cli sourcemaps inject apps/api/dist
           pnpm dlx @sentry/cli sourcemaps upload \
@@ -67,7 +69,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Upload source maps — Worker
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
         run: |
           pnpm dlx @sentry/cli sourcemaps inject apps/worker/dist
           pnpm dlx @sentry/cli sourcemaps upload \
@@ -92,8 +94,6 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
