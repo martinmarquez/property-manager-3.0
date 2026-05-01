@@ -294,6 +294,16 @@ export const RateLimitPresets = {
   } satisfies Omit<RateLimitConfig, "keyExtractor">,
 
   /**
+   * OpenAI Embeddings API — 3000 RPM (Tier 2, text-embedding-3-small)
+   * Use with a global key, not per-user: checkRateLimit(redis, "ratelimit:openai_embed:global", RateLimitPresets.OPENAI_EMBED)
+   */
+  OPENAI_EMBED: {
+    scope: "openai_embed",
+    capacity: 3000,
+    refillRate: 3000 / 60,
+  } satisfies Omit<RateLimitConfig, "keyExtractor">,
+
+  /**
    * Webhook ingestion (portal) — 100 req/min per portal
    */
   WEBHOOK_PORTAL: {

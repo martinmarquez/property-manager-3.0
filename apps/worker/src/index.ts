@@ -24,6 +24,7 @@ import { ImportCsvWorker } from './workers/import-csv.js';
 import { ImportContactsCsvWorker } from './workers/import-contacts-csv.js';
 import { DocSignWebhookWorker } from './workers/doc-sign-webhook.js';
 import { createDocGenerateWorker } from './workers/doc-generate.js';
+import { RagIngestWorker } from './workers/rag-ingest.js';
 
 logger.info('worker starting');
 
@@ -53,11 +54,21 @@ if (!docGenerateWorker) {
   logger.warn('doc-generate worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
 }
 
+// Phase F: RAG ingest worker (stub — implementation pending RENA-F feature work)
+const ragIngestWorker = process.env['OPENAI_API_KEY']
+  ? new RagIngestWorker(redis)
+  : null;
+if (!ragIngestWorker) {
+  logger.warn('rag-ingest worker disabled — OPENAI_API_KEY not set');
+}
+
 const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook'];
 if (docGenerateWorker) activeQueues.push('doc-generate');
+if (ragIngestWorker) activeQueues.push('rag-ingest');
 logger.info('worker ready', { queues: activeQueues });
 
 void importCsvWorker;
 void importContactsCsvWorker;
 void docSignWebhookWorker;
 void docGenerateWorker;
+void ragIngestWorker;
