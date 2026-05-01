@@ -54,7 +54,9 @@ export type Permission =
   // AI features
   | 'ai:use'
   // API keys
-  | 'api_keys:manage';
+  | 'api_keys:manage'
+  // Data Subject Requests — Ley 25.326 (admin+ only)
+  | 'dsr:manage';
 
 // ---------------------------------------------------------------------------
 // Roles
@@ -178,6 +180,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reports:export',
     'ai:use',
     'api_keys:manage',
+    'dsr:manage',
   ],
 
   owner: [
@@ -207,6 +210,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reports:export',
     'ai:use',
     'api_keys:manage',
+    'dsr:manage',
   ],
 };
 

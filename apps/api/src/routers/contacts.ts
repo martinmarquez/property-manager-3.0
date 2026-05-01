@@ -47,6 +47,7 @@ import {
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
+import { requirePermission } from '../lib/auth/rbac.js';
 import {
   scoreDuplicateFields,
   createQueue,
@@ -680,6 +681,7 @@ const dsrRouter = router({
       notes:     z.string().max(2000).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx, 'dsr:manage');
       const { db, tenantId, userId } = ctx;
 
       const c = await db.query.contact.findFirst({
@@ -706,6 +708,7 @@ const dsrRouter = router({
   process: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx, 'dsr:manage');
       const { db, tenantId, userId } = ctx;
 
       const dsr = await db.query.dsrRequest.findFirst({
@@ -782,6 +785,7 @@ const dsrRouter = router({
       reason: z.string().min(1).max(2000),
     }))
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx, 'dsr:manage');
       const { db, tenantId } = ctx;
       const dsr = await db.query.dsrRequest.findFirst({
         where: and(eq(dsrRequest.id, input.id), eq(dsrRequest.tenantId, tenantId)),
