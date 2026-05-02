@@ -172,7 +172,7 @@ export function usePaletteSearch(query: string, enabled: boolean): UsePaletteSea
     query,
     limit: 12,
     enabled,
-    debounceMs: 200,
+    debounceMs: 180,
   });
 
   const { suggestions } = useAutocomplete({
