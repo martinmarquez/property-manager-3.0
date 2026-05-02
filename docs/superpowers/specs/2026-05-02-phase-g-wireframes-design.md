@@ -1,7 +1,7 @@
 # Phase G Wireframes — Design Spec
 **Date:** 2026-05-02  
 **Author:** UX/UI Designer (Paperclip agent dd6be961)  
-**Issue:** RENA-115  
+**Issue:** RENA-119  
 **Status:** Delivered — wireframe specs + components for all 4 Phase G modules
 
 ---
@@ -48,16 +48,50 @@ Inherited from Phase E/F. No additions for Phase G.
 
 | Module | File | Route | Status |
 |---|---|---|---|
-| Sitio | `apps/web/src/pages/site/SiteEditorPage.tsx` | `/site/pages/:slug/edit` | ✅ Exists |
-| Sitio | `apps/web/src/pages/site/SitePagesPage.tsx` | `/site/pages` | ✅ Exists |
-| Sitio | `apps/web/src/pages/site/SiteDomainsPage.tsx` | `/site/domains` | ✅ Exists |
-| Sitio | `apps/web/src/pages/site/SiteFormsPage.tsx` | `/site/forms` | ✅ Exists |
-| Reportes | `apps/web/src/pages/reports/ReportsPage.tsx` | `/reports` | ✅ Exists |
-| Reportes | `apps/web/src/pages/reports/ReportViewPage.tsx` | `/reports/:slug` | ✅ Exists |
-| Reportes | `apps/web/src/pages/reports/ReportsDashboard.tsx` | `/reports/dashboard` | ✅ Exists |
-| Billing | `apps/web/src/pages/settings/billing/BillingPage.tsx` | `/settings/billing` | ✅ Created (RENA-115) |
-| Tasaciones | `apps/web/src/pages/appraisals/AppraisalListPage.tsx` | `/appraisals` | ✅ Created (RENA-115) |
-| Tasaciones | `apps/web/src/pages/appraisals/AppraisalWizardPage.tsx` | `/appraisals/new` | ✅ Created (RENA-115) |
+| Sitio | `apps/web/src/pages/site/SiteEditorPage.tsx` | `/site/pages/:slug/edit` | ✅ RENA-119 |
+| Sitio | `apps/web/src/pages/site/SitePagesListPage.tsx` | `/site` | ✅ RENA-119 (tabbed: páginas/temas/dominio/formularios) |
+| Sitio | `apps/web/src/pages/site/SiteDomainsPage.tsx` | `/site/domains` | ✅ RENA-119 |
+| Sitio | `apps/web/src/pages/site/SiteFormsPage.tsx` | `/site/forms` | ✅ RENA-119 |
+| Reportes | `apps/web/src/pages/reports/ReportsIndexPage.tsx` | `/reports` | ✅ RENA-119 (22-report grid) |
+| Reportes | `apps/web/src/pages/reports/ReportDetailPage.tsx` | `/reports/:slug` | ✅ RENA-119 (enhanced: self-contained tokens, 5 chart types) |
+| Reportes | `apps/web/src/pages/reports/ReportViewPage.tsx` | `/reports/:slug/view` | ✅ RENA-119 |
+| Reportes | `apps/web/src/pages/reports/ReportsDashboard.tsx` | (embedded) | ✅ RENA-119 |
+| Billing | `apps/web/src/pages/settings/billing/BillingPage.tsx` | `/settings/billing` | ✅ RENA-119 |
+| Tasaciones | `apps/web/src/pages/appraisals/AppraisalListPage.tsx` | `/appraisals` | ✅ RENA-119 |
+| Tasaciones | `apps/web/src/pages/appraisals/AppraisalWizardPage.tsx` | `/appraisals/new` | ✅ RENA-119 |
+| Tasaciones | `apps/web/src/pages/appraisals/NewAppraisalWizard.tsx` | (embedded) | ✅ RENA-119 (5-step wizard) |
+
+---
+
+## i18n Keys Added
+
+All Phase G keys are namespaced under `analytics.*`, `appraisals.*`, `billing.*`, and `site.*` in `packages/core/src/i18n/messages/`. New key groups:
+
+| Namespace | Description |
+|---|---|
+| `analytics.chart.*` | Chart labels (average, count, noData, trend, vs, period…) |
+| `analytics.digest.*` | Digest email scheduler (enable, frequency, recipients, save, sendTest…) |
+| `analytics.export.*` | CSV/Excel/PDF export states (btn, csv, excel, generating, success…) |
+| `analytics.report.*` | Per-report titles and descriptions for all 22 dashboards |
+| `appraisals.*` | Appraisal wizard steps, status labels, comp selection, AI narrative |
+| `billing.*` | Plan names, payment methods, invoice states, AFIP labels |
+| `site.*` | Page editor, block palette, theme selector, domain wizard, forms inbox |
+
+Keys are present in: `en.json`, `es.json`, `es-AR.json`, `es-MX.json`, `pt-BR.json`.
+
+---
+
+## Help Center Articles Delivered
+
+Phase G help content in `docs/help-center/es/`:
+
+| File | Topic |
+|---|---|
+| `sitio-constructor-web.md` | Complete website builder guide — blocks, themes, custom domain + SSL, publishing |
+| `facturacion-preguntas-frecuentes.md` | Billing FAQ — trial, upgrade/downgrade, Stripe/MP, AFIP CAE, cancellation |
+| `reportes-y-analitica.md` | Analytics tutorials — report navigation, filters, CSV/Excel export, digest setup |
+| `tasaciones.md` | Appraisal guide — 4-step wizard, PostGIS comp search, AI narrative, PDF download |
+| `planes-y-precios.md` | Plans and pricing — feature matrix, plan selection guide, limits FAQ |
 
 ---
 

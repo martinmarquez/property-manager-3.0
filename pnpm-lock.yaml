@@ -271,6 +271,9 @@ importers:
       '@trpc/react-query':
         specifier: ^11
         version: 11.16.0(@tanstack/react-query@5.99.2(react@19.2.5))(@trpc/client@11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.2.5)
       maplibre-gl:
         specifier: ^4.7.0
         version: 4.7.1
@@ -412,6 +415,9 @@ importers:
       '@corredor/db':
         specifier: workspace:*
         version: link:../db
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

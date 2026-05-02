@@ -112,7 +112,7 @@ function MiniSparkline({ data, color }: { data: SparklineData; color: string }) 
           strokeLinejoin="round"
         />
         {(() => {
-          const last = pts[pts.length - 1];
+          const last = pts[pts.length - 1] ?? min;
           const lx = W;
           const ly = H - 4 - ((last - min) / range) * (H - 8);
           return <circle cx={lx} cy={ly} r={2.5} fill={color} />;
