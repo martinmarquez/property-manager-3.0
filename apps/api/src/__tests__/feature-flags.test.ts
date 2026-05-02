@@ -62,4 +62,15 @@ describe('checkFeatureFlag', () => {
       expect((e as FeatureDisabledError).statusCode).toBe(403);
     }
   });
+
+  it('error includes upgradePrompt string', async () => {
+    const db = createMockDb([]);
+    try {
+      await checkFeatureFlag(db, tenantId, 'ai_copilot');
+      expect.unreachable('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(FeatureDisabledError);
+      expect((e as FeatureDisabledError).upgradePrompt).toContain('upgrade');
+    }
+  });
 });

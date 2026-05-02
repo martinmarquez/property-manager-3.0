@@ -134,7 +134,10 @@ export const propertyDescriptionRouter = router({
         await checkFeatureFlag(db, tenantId, 'ai_descriptions');
       } catch (e) {
         if (e instanceof FeatureDisabledError) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: e.message });
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `${e.message}. ${e.upgradePrompt}`,
+          });
         }
         throw e;
       }

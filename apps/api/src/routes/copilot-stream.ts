@@ -105,7 +105,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
       await checkFeatureFlag(deps.db, tenantId, 'ai_copilot');
     } catch (e) {
       if (e instanceof FeatureDisabledError) {
-        return c.json({ error: e.message }, 403);
+        return c.json({ error: e.message, upgradePrompt: e.upgradePrompt }, 403);
       }
       throw e;
     }

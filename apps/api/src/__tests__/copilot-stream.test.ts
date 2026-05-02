@@ -36,6 +36,8 @@ vi.mock('../lib/feature-flags.js', () => ({
   checkFeatureFlag: vi.fn().mockResolvedValue(undefined),
   FeatureDisabledError: class extends Error {
     readonly statusCode = 403 as const;
+    readonly upgradePrompt =
+      'This feature is not included in your current plan. Contact your account manager or upgrade to enable it.';
   },
 }));
 
@@ -223,5 +225,88 @@ describe('POST /copilot/stream/turn — firstTokenMs instrumentation', () => {
     expect(insertedRow).toHaveProperty('firstTokenMs');
     expect(typeof insertedRow['firstTokenMs']).toBe('number');
     expect(insertedRow['firstTokenMs']).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('POST /copilot/stream/turn — feature flag gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 403 with upgrade prompt when ai_copilot flag is disabled', async () => {
+    const { checkFeatureFlag } = await import('../lib/feature-flags.js');
+    const { FeatureDisabledError } = await import('../lib/feature-flags.js');
+    vi.mocked(checkFeatureFlag).mockRejectedValueOnce(
+      new FeatureDisabledError('ai_copilot'),
+    );
+
+    const { createCopilotStreamRoutes } = await import('../routes/copilot-stream.js');
+
+    const redis = createMockRedis();
+    const db = createMockDb();
+
+    const copilotApp = createCopilotStreamRoutes({
+      db: db as never,
+      redis,
+      anthropicApiKey: 'test-key',
+      openaiApiKey: undefined,
+      databaseUrl: 'postgresql://test',
+    });
+
+    const app = new Hono();
+    app.route('/copilot/stream', copilotApp);
+
+    const res = await app.request('/copilot/stream/turn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `session=${SESSION_ID}`,
+      },
+      body: JSON.stringify({
+        sessionId: COP_SESSION_ID,
+        message: 'Hello copilot',
+      }),
+    });
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body).toHaveProperty('error');
+    expect(body).toHaveProperty('upgradePrompt');
+    expect(body.error).toContain('ai_copilot');
+  });
+
+  it('passes through when ai_copilot flag is enabled', async () => {
+    const { checkFeatureFlag } = await import('../lib/feature-flags.js');
+    vi.mocked(checkFeatureFlag).mockResolvedValueOnce(undefined);
+
+    const { createCopilotStreamRoutes } = await import('../routes/copilot-stream.js');
+
+    const redis = createMockRedis();
+    const db = createMockDb();
+
+    const copilotApp = createCopilotStreamRoutes({
+      db: db as never,
+      redis,
+      anthropicApiKey: 'test-key',
+      openaiApiKey: undefined,
+      databaseUrl: 'postgresql://test',
+    });
+
+    const app = new Hono();
+    app.route('/copilot/stream', copilotApp);
+
+    const res = await app.request('/copilot/stream/turn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `session=${SESSION_ID}`,
+      },
+      body: JSON.stringify({
+        sessionId: COP_SESSION_ID,
+        message: 'Hello copilot',
+      }),
+    });
+
+    expect(res.status).toBe(200);
   });
 });

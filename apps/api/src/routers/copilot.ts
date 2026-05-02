@@ -178,7 +178,10 @@ export const copilotRouter = router({
         await checkFeatureFlag(db, tenantId, 'ai_copilot');
       } catch (e) {
         if (e instanceof FeatureDisabledError) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: e.message });
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `${e.message}. ${e.upgradePrompt}`,
+          });
         }
         throw e;
       }

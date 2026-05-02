@@ -4,6 +4,8 @@ import type { AnyDb } from '../trpc.js';
 
 export class FeatureDisabledError extends Error {
   readonly statusCode = 403 as const;
+  readonly upgradePrompt =
+    'This feature is not included in your current plan. Contact your account manager or upgrade to enable it.';
   constructor(flagKey: string) {
     super(`Feature '${flagKey}' is not enabled for this tenant`);
     this.name = 'FeatureDisabledError';
