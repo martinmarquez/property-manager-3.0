@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { GalleryEditor, type MediaItem } from './GalleryEditor.js';
 import { usePropertyDraft } from './usePropertyDraft.js';
 import AIDescriptionModal from './AIDescriptionModal.js';
+import { useAiDescriptionEnabled } from '../../hooks/useAiDescriptionEnabled.js';
 import type { OperationKind, PropertyStatus, PropertyTypeName } from '../../routes/properties/-types.js';
 
 /* ─── Design tokens ─── */
@@ -491,6 +492,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const aiDescriptionEnabled = useAiDescriptionEnabled();
   const [tagInput, setTagInput] = useState('');
 
   const { saveDraft, loadDraft, clearDraft, hasDraft } = usePropertyDraft<DraftPayload>(draftKey);
@@ -1233,30 +1235,32 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                   >
                     {intl.formatMessage(msg.fieldDescription)}
                   </label>
-                  <button
-                    type="button"
-                    onClick={propertyId ? handleAiGenerate : undefined}
-                    disabled={!propertyId}
-                    title={!propertyId ? intl.formatMessage(msg.fieldAiGenerateSaveFirst) : undefined}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      border: `1px solid ${propertyId ? 'rgba(126,58,242,0.4)' : 'rgba(126,58,242,0.15)'}`,
-                      background: `rgba(126,58,242,${propertyId ? '0.12' : '0.05'})`,
-                      color: propertyId ? '#9B59FF' : 'rgba(155,89,255,0.4)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: propertyId ? 'pointer' : 'default',
-                      fontFamily: F.body,
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <span style={{ fontSize: 10 }}>✦</span>
-                    {intl.formatMessage(msg.fieldAiGenerate)}
-                  </button>
+                  {aiDescriptionEnabled && (
+                    <button
+                      type="button"
+                      onClick={propertyId ? handleAiGenerate : undefined}
+                      disabled={!propertyId}
+                      title={!propertyId ? intl.formatMessage(msg.fieldAiGenerateSaveFirst) : undefined}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: `1px solid ${propertyId ? 'rgba(126,58,242,0.4)' : 'rgba(126,58,242,0.15)'}`,
+                        background: `rgba(126,58,242,${propertyId ? '0.12' : '0.05'})`,
+                        color: propertyId ? '#9B59FF' : 'rgba(155,89,255,0.4)',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: propertyId ? 'pointer' : 'default',
+                        fontFamily: F.body,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <span style={{ fontSize: 10 }}>✦</span>
+                      {intl.formatMessage(msg.fieldAiGenerate)}
+                    </button>
+                  )}
                 </div>
                 <textarea
                   value={form.description}
@@ -1537,7 +1541,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         select option { background: #0D1526; color: #EFF4FF; }
       `}</style>
 
-      {propertyId && (
+      {aiDescriptionEnabled && propertyId && (
         <AIDescriptionModal
           open={showAiModal}
           onClose={() => setShowAiModal(false)}
