@@ -108,6 +108,30 @@ export const analyticsEventTypeEnum = pgEnum('analytics_event_type', [
   'subscription.downgraded',
   'subscription.cancelled',
   'subscription.renewed',
+  // Phase G — Website builder (Sitio)
+  'site.page_published',
+  'site.page_unpublished',
+  'site.page_viewed',
+  'site.form_submitted',
+  'site.custom_domain_connected',
+  'site.theme_changed',
+  'site.block_added',
+  // Phase G — Appraisals (Tasaciones)
+  'appraisal.created',
+  'appraisal.comp_searched',
+  'appraisal.ai_narrative_generated',
+  'appraisal.pdf_downloaded',
+  'appraisal.shared',
+  // Phase G — Report adoption
+  'report.viewed',
+  'report.filter_applied',
+  'report.exported',
+  'report.pinned',
+  'report.digest_scheduled',
+  // Phase G — Billing
+  'billing.checkout_started',
+  'billing.checkout_completed',
+  'billing.payment_failed',
 ]);
 
 export const analyticsEntityTypeEnum = pgEnum('analytics_entity_type', [
@@ -122,6 +146,10 @@ export const analyticsEntityTypeEnum = pgEnum('analytics_entity_type', [
   'tenant',
   'referral',
   'subscription',
+  // Phase G
+  'site',
+  'appraisal',
+  'report',
 ]);
 
 export const kpiDimensionTypeEnum = pgEnum('kpi_dimension_type', [
@@ -188,6 +216,28 @@ export const kpiMetricTypeEnum = pgEnum('kpi_metric_type', [
   'referral_k_factor',
   'referrals_sent_count',
   'referrals_converted_count',
+  // Phase G — Website builder (Sitio)
+  'site_pages_published_count',
+  'site_form_submissions_count',
+  'site_custom_domains_count',
+  'site_page_views_count',
+  // Phase G — Appraisals
+  'appraisals_created_count',
+  'appraisal_comp_searches_count',
+  'appraisal_ai_narrative_rate',
+  'appraisal_pdf_downloads_count',
+  // Phase G — Report adoption
+  'report_views_count',
+  'report_exports_count',
+  'report_digest_subscriptions_count',
+  // Phase G — Billing (platform-level)
+  'billing_mrr_amount',
+  'billing_arr_amount',
+  'billing_arpu_amount',
+  'billing_churn_rate',
+  'billing_trial_conversion_rate',
+  'billing_active_subscriptions_count',
+  'billing_trials_active_count',
 ]);
 
 // ---------------------------------------------------------------------------

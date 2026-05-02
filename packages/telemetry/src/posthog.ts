@@ -122,5 +122,136 @@ export function trackDescriptionSaved(props: {
   track('description_saved', props);
 }
 
+// ---------------------------------------------------------------------------
+// Phase G — Website builder (Sitio)
+// ---------------------------------------------------------------------------
+
+export function trackSitePagePublished(props: {
+  siteId: string;
+  pageSlug: string;
+  hasCustomDomain: boolean;
+}): void {
+  track('site_page_published', props);
+}
+
+export function trackSiteFormSubmitted(props: {
+  siteId: string;
+  formType: string;
+  pageSlug: string;
+}): void {
+  track('site_form_submitted', props);
+}
+
+export function trackSiteCustomDomainConnected(props: {
+  siteId: string;
+}): void {
+  track('site_custom_domain_connected', props);
+}
+
+export function trackSiteThemeChanged(props: {
+  siteId: string;
+  themeId: string;
+}): void {
+  track('site_theme_changed', props);
+}
+
+export function trackSiteBlockAdded(props: {
+  siteId: string;
+  blockType: string;
+}): void {
+  track('site_block_added', props);
+}
+
+// ---------------------------------------------------------------------------
+// Phase G — Appraisals (Tasaciones)
+// ---------------------------------------------------------------------------
+
+export function trackAppraisalCreated(props: {
+  appraisalId: string;
+  propertyType: string;
+  neighborhoodId?: string;
+}): void {
+  track('appraisal_created', props);
+}
+
+export function trackAppraisalCompSearch(props: {
+  appraisalId: string;
+  radiusMeters: number;
+  resultCount: number;
+  latencyMs: number;
+}): void {
+  track('appraisal_comp_searched', props);
+}
+
+export function trackAppraisalAiNarrative(props: {
+  appraisalId: string;
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  accepted: boolean;
+}): void {
+  track('appraisal_ai_narrative_generated', props);
+}
+
+export function trackAppraisalPdfDownloaded(props: {
+  appraisalId: string;
+  shared: boolean;
+}): void {
+  track('appraisal_pdf_downloaded', props);
+}
+
+// ---------------------------------------------------------------------------
+// Phase G — Report adoption
+// ---------------------------------------------------------------------------
+
+export function trackReportViewed(props: {
+  reportId: string;
+  reportTitle: string;
+  defaultDays: number;
+}): void {
+  track('report_viewed', props);
+}
+
+export function trackReportExported(props: {
+  reportId: string;
+  format: 'csv' | 'xlsx' | 'pdf';
+}): void {
+  track('report_exported', props);
+}
+
+export function trackReportDigestScheduled(props: {
+  reportId: string;
+  cadence: 'daily' | 'weekly' | 'monthly';
+}): void {
+  track('report_digest_scheduled', props);
+}
+
+// ---------------------------------------------------------------------------
+// Phase G — Billing / subscription
+// ---------------------------------------------------------------------------
+
+export function trackBillingCheckoutStarted(props: {
+  planCode: string;
+  billingInterval: 'monthly' | 'annual';
+  currency: 'ARS' | 'USD';
+}): void {
+  track('billing_checkout_started', props);
+}
+
+export function trackPlanChanged(props: {
+  fromPlan: string;
+  toPlan: string;
+  direction: 'upgrade' | 'downgrade' | 'cancel';
+}): void {
+  track('plan_changed', props);
+}
+
+export function trackTrialConverted(props: {
+  trialDays: number;
+  toPlan: string;
+}): void {
+  track('trial_converted', props);
+}
+
 // Re-export PostHog React hook for feature flags
 export { useFeatureFlagEnabled as useFeatureFlag } from 'posthog-js/react';

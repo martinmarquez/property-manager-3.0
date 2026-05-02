@@ -11,6 +11,7 @@ import { searchRouter } from './routers/search.js';
 import { copilotRouter } from './routers/copilot.js';
 import { leadsRouter } from './routers/leads.js';
 import { pipelinesRouter } from './routers/pipelines.js';
+import { analyticsRouter } from './routers/analytics.js';
 
 /**
  * Root tRPC router.
@@ -30,6 +31,7 @@ import { pipelinesRouter } from './routers/pipelines.js';
  * Phase B+ routers added here as modules are implemented:
  *   leads.*  pipelines.*  inbox.*
  *   portals.*   calendar.*  billing.*
+ *   analytics.*             — Phase G: billing dashboard, appraisal usage, report adoption, site metrics
  */
 export const appRouter = router({
   system:              healthRouter,
@@ -44,6 +46,7 @@ export const appRouter = router({
   copilot:             copilotRouter,
   leads:               leadsRouter,
   pipelines:           pipelinesRouter,
+  analytics:           analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;

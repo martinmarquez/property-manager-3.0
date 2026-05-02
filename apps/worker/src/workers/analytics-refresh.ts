@@ -74,6 +74,14 @@ export class AnalyticsRefreshWorker extends BaseWorker<AnalyticsRefreshJobData, 
       sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_description_metrics`,
     );
 
+    // Phase G materialized views — billing metrics (platform-level, not per-tenant)
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_billing_metrics`,
+    );
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_plan_distribution`,
+    );
+
     this.logger.info('analytics.refresh.done', {
       snapshotDate,
       tenantCount: tenantIds.length,
@@ -750,6 +758,144 @@ export class AnalyticsRefreshWorker extends BaseWorker<AnalyticsRefreshJobData, 
         { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'description_save_rate',          value: Number(saveRate.toFixed(2)) },
         { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'description_avg_generation_ms',  value: Number(descStats?.avgLatency ?? 0) },
       );
+    }
+
+    // ------------------------------------------------------------------
+    // Phase G — Site (website builder) metrics
+    // ------------------------------------------------------------------
+
+    const siteEventMetrics: { event: string; metric: string }[] = [
+      { event: 'site.page_published',          metric: 'site_pages_published_count' },
+      { event: 'site.form_submitted',          metric: 'site_form_submissions_count' },
+      { event: 'site.custom_domain_connected', metric: 'site_custom_domains_count' },
+      { event: 'site.page_viewed',             metric: 'site_page_views_count' },
+    ];
+
+    for (const { event, metric } of siteEventMetrics) {
+      const [siteRow] = await tx
+        .select({ n: sql<number>`COUNT(*)::int` })
+        .from(analyticsEvent)
+        .where(
+          and(
+            eq(analyticsEvent.tenantId, tenantId),
+            eq(analyticsEvent.eventType, event as never),
+            sql`${analyticsEvent.occurredAt}::date = ${snapshotDate}::date`,
+          ),
+        );
+
+      const val = siteRow?.n ?? 0;
+      if (val > 0) {
+        rows.push({
+          dimensionType: 'agency',
+          dimensionId:    null,
+          dimensionLabel: null,
+          metric,
+          value:          val,
+        });
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Phase G — Appraisal metrics
+    // ------------------------------------------------------------------
+
+    const appraisalEventMetrics: { event: string; metric: string }[] = [
+      { event: 'appraisal.created',              metric: 'appraisals_created_count' },
+      { event: 'appraisal.comp_searched',         metric: 'appraisal_comp_searches_count' },
+      { event: 'appraisal.pdf_downloaded',        metric: 'appraisal_pdf_downloads_count' },
+    ];
+
+    for (const { event, metric } of appraisalEventMetrics) {
+      const [apprRow] = await tx
+        .select({ n: sql<number>`COUNT(*)::int` })
+        .from(analyticsEvent)
+        .where(
+          and(
+            eq(analyticsEvent.tenantId, tenantId),
+            eq(analyticsEvent.eventType, event as never),
+            sql`${analyticsEvent.occurredAt}::date = ${snapshotDate}::date`,
+          ),
+        );
+
+      const val = apprRow?.n ?? 0;
+      if (val > 0) {
+        rows.push({
+          dimensionType: 'agency',
+          dimensionId:    null,
+          dimensionLabel: null,
+          metric,
+          value:          val,
+        });
+      }
+    }
+
+    // AI narrative adoption rate: narratives_generated / appraisals_created
+    const [appraisalsCreated] = await tx
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(analyticsEvent)
+      .where(
+        and(
+          eq(analyticsEvent.tenantId, tenantId),
+          eq(analyticsEvent.eventType, 'appraisal.created' as never),
+          sql`${analyticsEvent.occurredAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const [narrativesGenerated] = await tx
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(analyticsEvent)
+      .where(
+        and(
+          eq(analyticsEvent.tenantId, tenantId),
+          eq(analyticsEvent.eventType, 'appraisal.ai_narrative_generated' as never),
+          sql`${analyticsEvent.occurredAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const createdCount = appraisalsCreated?.n ?? 0;
+    const narrativeCount = narrativesGenerated?.n ?? 0;
+    if (createdCount > 0) {
+      rows.push({
+        dimensionType: 'agency',
+        dimensionId:    null,
+        dimensionLabel: null,
+        metric:         'appraisal_ai_narrative_rate',
+        value:          Number(((narrativeCount / createdCount) * 100).toFixed(2)),
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // Phase G — Report adoption metrics
+    // ------------------------------------------------------------------
+
+    const reportEventMetrics: { event: string; metric: string }[] = [
+      { event: 'report.viewed',           metric: 'report_views_count' },
+      { event: 'report.exported',         metric: 'report_exports_count' },
+      { event: 'report.digest_scheduled', metric: 'report_digest_subscriptions_count' },
+    ];
+
+    for (const { event, metric } of reportEventMetrics) {
+      const [repRow] = await tx
+        .select({ n: sql<number>`COUNT(*)::int` })
+        .from(analyticsEvent)
+        .where(
+          and(
+            eq(analyticsEvent.tenantId, tenantId),
+            eq(analyticsEvent.eventType, event as never),
+            sql`${analyticsEvent.occurredAt}::date = ${snapshotDate}::date`,
+          ),
+        );
+
+      const val = repRow?.n ?? 0;
+      if (val > 0) {
+        rows.push({
+          dimensionType: 'agency',
+          dimensionId:    null,
+          dimensionLabel: null,
+          metric,
+          value:          val,
+        });
+      }
     }
 
     return rows;
