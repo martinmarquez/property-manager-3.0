@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore, useRef } from 'react';
 import {
   useSearchQuery,
   useEntityCounts,
@@ -152,10 +152,23 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
   const [activeFilter, setActiveFilter] = useState<EntityType | undefined>(initialEntityType);
   const [cursor, setCursor] = useState(0);
   const isCompact = useIsCompact();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Sync URL params → internal state when navigating to /search with a new query from ⌘K
   useEffect(() => { setQuery(initialQuery); }, [initialQuery]);
   useEffect(() => { setActiveFilter(initialEntityType); }, [initialEntityType]);
+
+  // '/' shortcut: focus search input (as advertised in the keyboard hints panel)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '/' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   const { results, total, hasMore, isLoading, isFetching, phase } = useSearchQuery({
     query,
@@ -247,6 +260,7 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
               <path d="M12.5 12.5 L16 16" stroke={C.textTertiary} strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <input
+              ref={searchInputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Buscar en todas las entidades…"
