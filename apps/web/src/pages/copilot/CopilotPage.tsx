@@ -2,96 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { trpc } from '../../trpc.js';
 import { useCopilotStream } from '../../hooks/useCopilotStream.js';
+import { useMediaQuery, BREAKPOINTS } from '../../hooks/useMediaQuery.js';
 import type { StreamCitation, StreamActionSuggestion } from '../../hooks/useCopilotStream.js';
-
-/* ─── Design tokens ─────────────────────────────────────────── */
-const C = {
-  bgBase:        '#070D1A',
-  bgRaised:      '#0D1526',
-  bgElevated:    '#131E33',
-  bgOverlay:     '#121D33',
-  bgSubtle:      '#162035',
-  border:        '#1F2D48',
-  borderHover:   '#2A3D5C',
-  brand:         '#1654d9',
-  brandLight:    '#4669ff',
-  brandFaint:    'rgba(22,84,217,0.12)',
-  textPrimary:   '#EFF4FF',
-  textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
-  success:       '#18A659',
-  successFaint:  'rgba(24,166,89,0.12)',
-  warning:       '#E88A14',
-  ai:            '#7E3AF2',
-  aiFaint:       'rgba(126,58,242,0.12)',
-  aiLight:       '#9B59FF',
-};
-
-const F = {
-  display: "'Syne', system-ui, sans-serif",
-  body:    "'DM Sans', system-ui, sans-serif",
-  mono:    "'DM Mono', monospace",
-};
-
-/* ─── Types ─────────────────────────────────────────────────── */
-type EntityType = 'property' | 'contact' | 'deal' | 'document' | 'task';
-
-interface Citation {
-  entityType: EntityType;
-  entityId: string;
-  code: string;
-  label: string;
-}
-
-interface ActionCard {
-  type: 'send_message' | 'create_task';
-  summary: string;
-  detail: string;
-  payload: Record<string, unknown>;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'editing';
-  turnId: string | null;
-}
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  citations?: Citation[];
-  actionCard?: ActionCard;
-  timestamp: string;
-  isStreaming?: boolean;
-}
-
-const SUGGESTED_PROMPTS = [
-  'Ver propiedades disponibles en Palermo',
-  'Cuántos leads no contactados tengo esta semana',
-  'Resumé el pipeline del mes actual',
-  'Buscar contactos con consultas sobre 3 ambientes',
-];
-
-const SESSION_KEY = 'copilot:activeSession';
-
-/* ─── Entity helpers ───────────────────────────────────────── */
-const ENTITY_ICONS: Record<string, string> = {
-  property:  '🏠',
-  contact:   '👤',
-  deal:      '📋',
-  document:  '📄',
-  task:      '✅',
-};
-
-const ENTITY_ROUTES: Record<string, (id: string) => string> = {
-  property:  (id) => `/properties/${id}/edit`,
-  contact:   (id) => `/contacts/${id}`,
-  deal:      (id) => `/pipelines?deal=${id}`,
-  document:  (id) => `/documents/${id}`,
-  task:      (id) => `/calendar?task=${id}`,
-};
-
-const ACTION_ICONS: Record<string, string> = {
-  send_message: '✉️',
-  create_task:  '✅',
-};
+import {
+  C, F,
+  ENTITY_ICONS, ENTITY_ROUTES, ACTION_ICONS,
+  SUGGESTED_PROMPTS, SESSION_KEY,
+} from '../../components/copilot/tokens.js';
+import type { Citation, ActionCard, Message, EntityType } from '../../components/copilot/tokens.js';
 
 /* ─── Markdown renderer ───────────────────────────────────── */
 function renderMarkdown(text: string): React.ReactNode[] {
@@ -285,7 +203,7 @@ function ActionConfirmCard({
             fontWeight:   600,
             cursor:       'pointer',
           }}>
-            Enviar
+            Confirmar
           </button>
           <button onClick={onEdit} style={{
             padding:      '6px 16px',
@@ -375,12 +293,6 @@ function TypingIndicator() {
           />
         ))}
       </div>
-      <style>{`
-        @keyframes copilot-bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30%            { transform: translateY(-6px); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -407,6 +319,7 @@ function MessageBubble({
       alignItems:     'flex-start',
       gap:            12,
       marginBottom:   20,
+      animation:      'copilot-fadeIn 0.25s ease-out',
     }}>
       {!isUser && (
         <div style={{
@@ -441,12 +354,12 @@ function MessageBubble({
           {isUser ? message.text : renderMarkdown(message.text)}
           {message.isStreaming && (
             <span style={{
-              display:    'inline-block',
-              width:      6,
-              height:     16,
-              background: C.ai,
-              marginLeft: 2,
-              animation:  'copilot-cursor 0.8s infinite',
+              display:       'inline-block',
+              width:         6,
+              height:        16,
+              background:    C.ai,
+              marginLeft:    2,
+              animation:     'copilot-cursor 0.8s infinite',
               verticalAlign: 'text-bottom',
             }} />
           )}
@@ -512,7 +425,7 @@ function MessageBubble({
   );
 }
 
-function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
+function EmptyState({ onPrompt, isMobile }: { onPrompt: (p: string) => void; isMobile: boolean }) {
   return (
     <div style={{
       display:        'flex',
@@ -520,7 +433,7 @@ function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
       alignItems:     'center',
       justifyContent: 'center',
       flex:           1,
-      padding:        48,
+      padding:        isMobile ? 24 : 48,
       gap:            32,
     }}>
       <div style={{
@@ -541,7 +454,7 @@ function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
       <div style={{ textAlign: 'center' }}>
         <h2 style={{
           fontFamily: F.display,
-          fontSize:   22,
+          fontSize:   isMobile ? 18 : 22,
           fontWeight: 700,
           color:      C.textPrimary,
           margin:     0,
@@ -560,7 +473,7 @@ function EmptyState({ onPrompt }: { onPrompt: (p: string) => void }) {
 
       <div style={{
         display:             'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
         gap:                 12,
         width:               '100%',
         maxWidth:            560,
@@ -639,35 +552,40 @@ function SessionSidebar({
   activeSession,
   onSelect,
   onNew,
+  onClose,
   isLoading,
+  isOverlay,
 }: {
   collapsed: boolean;
   sessions: SessionItem[];
   activeSession: string;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onClose: () => void;
   isLoading: boolean;
+  isOverlay: boolean;
 }) {
-  if (collapsed) return null;
+  if (collapsed && !isOverlay) return null;
 
   const groups = groupSessionsByDate(sessions);
 
-  return (
+  const sidebar = (
     <div style={{
       width:          280,
       flexShrink:     0,
       background:     C.bgRaised,
-      borderRight:    `1px solid ${C.border}`,
+      borderRight:    isOverlay ? 'none' : `1px solid ${C.border}`,
       display:        'flex',
       flexDirection:  'column',
       overflowY:      'auto',
       height:         '100%',
+      animation:      isOverlay ? 'copilot-slideIn 0.2s ease-out' : undefined,
     }}>
-      <div style={{ padding: '16px 16px 8px' }}>
+      <div style={{ padding: '16px 16px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           onClick={onNew}
           style={{
-            width:        '100%',
+            flex:         1,
             padding:      '10px 16px',
             borderRadius: 8,
             background:   C.brandFaint,
@@ -685,6 +603,24 @@ function SessionSidebar({
           <span>+</span>
           <span>Nueva conversación</span>
         </button>
+        {isOverlay && (
+          <button
+            onClick={onClose}
+            aria-label="Cerrar historial"
+            style={{
+              background:   'transparent',
+              border:       `1px solid ${C.border}`,
+              borderRadius: 6,
+              color:        C.textSecondary,
+              cursor:       'pointer',
+              padding:      '8px 10px',
+              fontSize:     14,
+              flexShrink:   0,
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div style={{ padding: '8px 0', flex: 1, overflowY: 'auto' }}>
@@ -716,7 +652,10 @@ function SessionSidebar({
             {groupSessions.map(session => (
               <button
                 key={session.id}
-                onClick={() => onSelect(session.id)}
+                onClick={() => {
+                  onSelect(session.id);
+                  if (isOverlay) onClose();
+                }}
                 style={{
                   width:        '100%',
                   padding:      '10px 16px',
@@ -763,6 +702,35 @@ function SessionSidebar({
         ))}
       </div>
     </div>
+  );
+
+  if (!isOverlay) return sidebar;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position:   'fixed',
+          inset:      0,
+          background: 'rgba(7,13,26,0.7)',
+          zIndex:     100,
+          animation:  'copilot-fadeIn 0.15s ease-out',
+        }}
+      />
+      {/* Floating sidebar */}
+      <div style={{
+        position:     'fixed',
+        top:          0,
+        left:         0,
+        bottom:       0,
+        zIndex:       101,
+        boxShadow:    `4px 0 32px rgba(0,0,0,0.5)`,
+      }}>
+        {sidebar}
+      </div>
+    </>
   );
 }
 
@@ -816,8 +784,12 @@ function mapStreamCitations(citations: StreamCitation[]): Citation[] {
 
 export default function CopilotPage() {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
+  const isTablet = useMediaQuery(BREAKPOINTS.tablet);
+  const useOverlaySidebar = isMobile || isTablet;
+
   const [input, setInput]                       = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(useOverlaySidebar);
   const [activeSessionId, setActiveSessionId]   = useState<string>(
     () => localStorage.getItem(SESSION_KEY) ?? '',
   );
@@ -827,20 +799,22 @@ export default function CopilotPage() {
 
   const { isStreaming, sendMessage } = useCopilotStream();
 
-  // Persist active session to localStorage
+  // Collapse sidebar when switching to mobile/tablet
+  useEffect(() => {
+    if (useOverlaySidebar) setSidebarCollapsed(true);
+  }, [useOverlaySidebar]);
+
   useEffect(() => {
     if (activeSessionId) {
       localStorage.setItem(SESSION_KEY, activeSessionId);
     }
   }, [activeSessionId]);
 
-  // Fetch sessions
   const sessionsQuery = trpc.copilot.listSessions.useQuery(
     { limit: 30 },
     { staleTime: 10_000 },
   );
 
-  // Fetch active session turns
   const sessionQuery = trpc.copilot.getSession.useQuery(
     { sessionId: activeSessionId },
     {
@@ -849,7 +823,6 @@ export default function CopilotPage() {
     },
   );
 
-  // Load turns into messages when session data arrives
   useEffect(() => {
     if (sessionQuery.data?.turns) {
       const msgs = sessionQuery.data.turns
@@ -859,12 +832,10 @@ export default function CopilotPage() {
     }
   }, [sessionQuery.data?.turns]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 
-  // tRPC mutations
   const createSession = trpc.copilot.createSession.useMutation();
   const confirmAction = trpc.copilot.confirmAction.useMutation();
   const cancelAction  = trpc.copilot.cancelAction.useMutation();
@@ -890,7 +861,6 @@ export default function CopilotPage() {
     };
     setMessages(prev => [...prev, userMsg]);
 
-    // Placeholder streaming message
     const streamMsgId = `stream-${Date.now()}`;
     setMessages(prev => [...prev, {
       id:          streamMsgId,
@@ -908,7 +878,6 @@ export default function CopilotPage() {
         ));
       });
 
-      // Finalize the streamed message
       setMessages(prev => prev.map(m => {
         if (m.id !== streamMsgId) return m;
         const finalMsg: Message = {
@@ -1013,29 +982,59 @@ export default function CopilotPage() {
       height:         '100%',
       background:     C.bgBase,
       fontFamily:     F.body,
+      position:       'relative',
     }}>
       <style>{`
         @keyframes copilot-cursor {
           0%, 100% { opacity: 1; }
           50%      { opacity: 0; }
         }
+        @keyframes copilot-bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30%            { transform: translateY(-6px); opacity: 1; }
+        }
+        @keyframes copilot-fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes copilot-slideIn {
+          from { transform: translateX(-100%); }
+          to   { transform: translateX(0); }
+        }
       `}</style>
 
-      {/* Session sidebar */}
-      <SessionSidebar
-        collapsed={sidebarCollapsed}
-        sessions={sessions}
-        activeSession={activeSessionId}
-        onSelect={handleSelectSession}
-        onNew={handleNewSession}
-        isLoading={sessionsQuery.isLoading}
-      />
+      {/* Session sidebar — inline on desktop, overlay on tablet/mobile */}
+      {!useOverlaySidebar && (
+        <SessionSidebar
+          collapsed={sidebarCollapsed}
+          sessions={sessions}
+          activeSession={activeSessionId}
+          onSelect={handleSelectSession}
+          onNew={handleNewSession}
+          onClose={() => setSidebarCollapsed(true)}
+          isLoading={sessionsQuery.isLoading}
+          isOverlay={false}
+        />
+      )}
+
+      {useOverlaySidebar && !sidebarCollapsed && (
+        <SessionSidebar
+          collapsed={false}
+          sessions={sessions}
+          activeSession={activeSessionId}
+          onSelect={handleSelectSession}
+          onNew={handleNewSession}
+          onClose={() => setSidebarCollapsed(true)}
+          isLoading={sessionsQuery.isLoading}
+          isOverlay={true}
+        />
+      )}
 
       {/* Main chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {/* Topbar */}
         <div style={{
-          padding:      '12px 20px',
+          padding:      isMobile ? '10px 12px' : '12px 20px',
           borderBottom: `1px solid ${C.border}`,
           display:      'flex',
           alignItems:   'center',
@@ -1061,7 +1060,7 @@ export default function CopilotPage() {
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16, color: C.ai }}>✦</span>
-            <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.textPrimary }}>
+            <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: isMobile ? 14 : 16, color: C.textPrimary }}>
               Copilot IA
             </span>
             <span style={{
@@ -1082,7 +1081,7 @@ export default function CopilotPage() {
         <div style={{
           flex:           1,
           overflowY:      'auto',
-          padding:        '24px 20px',
+          padding:        isMobile ? '16px 12px' : '24px 20px',
           display:        'flex',
           flexDirection:  'column',
         }}>
@@ -1095,7 +1094,7 @@ export default function CopilotPage() {
             flexDirection:  'column',
           }}>
             {isEmpty ? (
-              <EmptyState onPrompt={handleSend} />
+              <EmptyState onPrompt={handleSend} isMobile={isMobile} />
             ) : (
               <>
                 {messages.map(msg => (
@@ -1133,7 +1132,7 @@ export default function CopilotPage() {
 
         {/* Input area */}
         <div style={{
-          padding:      '16px 20px',
+          padding:      isMobile ? '12px' : '16px 20px',
           borderTop:    `1px solid ${C.border}`,
           background:   C.bgBase,
           flexShrink:   0,
@@ -1156,7 +1155,9 @@ export default function CopilotPage() {
                     handleSend();
                   }
                 }}
-                placeholder="Pregunta sobre propiedades, contactos, operaciones… (Enter para enviar)"
+                placeholder={isMobile
+                  ? 'Pregunta algo…'
+                  : 'Pregunta sobre propiedades, contactos, operaciones… (Enter para enviar)'}
                 rows={1}
                 disabled={isStreaming}
                 style={{
@@ -1198,16 +1199,18 @@ export default function CopilotPage() {
               ↑
             </button>
           </div>
-          <div style={{
-            maxWidth:   800,
-            margin:     '6px auto 0',
-            fontSize:   11,
-            color:      C.textTertiary,
-            fontFamily: F.mono,
-            textAlign:  'right',
-          }}>
-            Enter para enviar · Shift+Enter nueva línea
-          </div>
+          {!isMobile && (
+            <div style={{
+              maxWidth:   800,
+              margin:     '6px auto 0',
+              fontSize:   11,
+              color:      C.textTertiary,
+              fontFamily: F.mono,
+              textAlign:  'right',
+            }}>
+              Enter para enviar · Shift+Enter nueva línea
+            </div>
+          )}
         </div>
       </div>
     </div>

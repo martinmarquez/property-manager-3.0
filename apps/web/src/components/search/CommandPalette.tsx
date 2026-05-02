@@ -53,7 +53,7 @@ interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   onNavigate?: (href: string) => void;
-  onOpenSearchPage?: (query: string) => void;
+  onOpenSearchPage?: (query: string, entityType?: EntityType) => void;
 }
 
 export default function CommandPalette({
@@ -169,7 +169,7 @@ export default function CommandPalette({
           position: 'fixed',
           inset: 0,
           background: C.bgOverlay,
-          backdropFilter: 'blur(6px)',
+          backdropFilter: 'blur(4px)',
           zIndex: 9990,
           animation: 'palette-fade-in 0.15s ease-out',
         }}
@@ -177,21 +177,22 @@ export default function CommandPalette({
 
       {/* Palette */}
       <div
+        data-cmd-palette
         role="combobox"
-        aria-expanded={results.length > 0 || suggestions.length > 0}
+        aria-expanded={true}
         aria-haspopup="listbox"
         aria-label="Búsqueda rápida"
         style={{
           position: 'fixed',
-          top: '18%',
+          top: '20%',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
-          maxWidth: 640,
+          maxWidth: 620,
           background: C.bgRaised,
           border: `1px solid ${C.border}`,
           borderRadius: 16,
-          boxShadow: '0 40px 100px rgba(0,0,0,0.75), 0 0 0 1px rgba(22,84,217,0.08)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(22,84,217,0.08)',
           zIndex: 9991,
           overflow: 'hidden',
           animation: 'palette-slide-in 0.2s cubic-bezier(0.16,1,0.3,1)',
@@ -204,7 +205,7 @@ export default function CommandPalette({
           alignItems: 'center',
           gap: 12,
           padding: '14px 18px',
-          borderBottom: `1px solid ${C.border}`,
+          borderBottom: showEmpty ? 'none' : `1px solid ${C.border}`,
         }}>
           {isLoading ? (
             <div style={{ width: 18, height: 18, flexShrink: 0, animation: 'palette-spin 0.8s linear infinite' }}>
@@ -450,7 +451,7 @@ export default function CommandPalette({
                   {config.label}
                   {items.length >= 3 && (
                     <button
-                      onClick={() => { onOpenSearchPage?.(`${query}&type=${entityType}`); onClose(); }}
+                      onClick={() => { onOpenSearchPage?.(query, entityType); onClose(); }}
                       style={{
                         marginLeft: 'auto',
                         background: 'none',
@@ -636,6 +637,13 @@ export default function CommandPalette({
         @keyframes palette-slide-in {
           from { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.97); }
           to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
+        @media (max-width: 767px) {
+          [data-cmd-palette] {
+            max-width: calc(100% - 32px) !important;
+            top: 10% !important;
+            border-radius: 12px !important;
+          }
         }
       `}</style>
     </>

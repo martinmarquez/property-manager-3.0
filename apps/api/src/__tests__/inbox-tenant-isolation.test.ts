@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TRPCError } from '@trpc/server';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -195,9 +194,12 @@ async function buildCaller() {
   const caller = testRouter.createCaller({
     c,
     requestId: 'test-request-id',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db: mockDb as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     redis: redis as any,
     sessionId: 'sess-1',
+    queues: {},
   });
 
   return caller;
@@ -330,6 +332,7 @@ describe('inbox — RENA-73 tenantId defense-in-depth', () => {
       const caller = await buildCaller();
 
       // We need the queues on context for the send path
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (mockDb as any).queues = {};
 
       try {

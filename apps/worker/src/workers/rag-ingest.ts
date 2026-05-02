@@ -68,6 +68,7 @@ export class RagIngestWorker extends BaseWorker<RagIngestJobData, void> {
     );
 
     await this.db.transaction(async (tx) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await setTenantContext(tx as any, tenantId);
 
       await tx.delete(aiEmbedding).where(
@@ -110,6 +111,7 @@ export class RagIngestWorker extends BaseWorker<RagIngestJobData, void> {
     entityId: string,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await setTenantContext(tx as any, tenantId);
       await tx.delete(aiEmbedding).where(
         and(
@@ -176,6 +178,7 @@ export class RagIngestWorker extends BaseWorker<RagIngestJobData, void> {
           WHERE id = ${entityId} AND tenant_id = ${tenantId} AND deleted_at IS NULL
           LIMIT 1`,
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = (result as any).rows?.[0];
     if (!row?.notes) return null;
     return {
@@ -194,6 +197,7 @@ export class RagIngestWorker extends BaseWorker<RagIngestJobData, void> {
           WHERE id = ${entityId} AND tenant_id = ${tenantId} AND deleted_at IS NULL
           LIMIT 1`,
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = (result as any).rows?.[0];
     if (!row) return null;
     return { content: '', pageNumber: 1 };
@@ -209,6 +213,7 @@ export class RagIngestWorker extends BaseWorker<RagIngestJobData, void> {
           WHERE id = ${entityId} AND tenant_id = ${tenantId}
           LIMIT 1`,
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = (result as any).rows?.[0];
     if (!row) return null;
     return row;

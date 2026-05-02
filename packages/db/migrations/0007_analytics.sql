@@ -192,10 +192,11 @@ CREATE TABLE kpi_snapshot_daily (
   metric          kpi_metric_type     NOT NULL,
   value           numeric(18, 4)      NOT NULL DEFAULT 0,
   metadata        jsonb               NOT NULL DEFAULT '{}'::jsonb,
-  created_at      timestamptz         NOT NULL DEFAULT now(),
-  CONSTRAINT kpi_snapshot_daily_uniq
-    UNIQUE (tenant_id, snapshot_date, dimension_type, COALESCE(dimension_id, '00000000-0000-0000-0000-000000000000'::uuid), metric)
+  created_at      timestamptz         NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX kpi_snapshot_daily_uniq
+  ON kpi_snapshot_daily (tenant_id, snapshot_date, dimension_type, COALESCE(dimension_id, '00000000-0000-0000-0000-000000000000'::uuid), metric);
 
 -- Date-range dashboard queries
 CREATE INDEX kpi_snapshot_daily_tenant_date_idx

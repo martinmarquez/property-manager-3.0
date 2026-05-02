@@ -1,4 +1,3 @@
-import type Anthropic from '@anthropic-ai/sdk';
 import type { IntentType } from './copilot/classifier.js';
 
 export type Provider = 'anthropic' | 'openai' | 'gemini';

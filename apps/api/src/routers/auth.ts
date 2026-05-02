@@ -155,8 +155,8 @@ const RemoveCredentialInput = z.object({ credentialId: z.string().min(1) });
 // Shared: create session + audit
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function buildSessionAndCookie(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ctx: any,
   opts: { tenantId: string; userId: string; roles: string[]; ip: string; ua: string },
 ): Promise<string> {
@@ -426,7 +426,6 @@ export const authRouter = router({
   logout: publicProcedure.mutation(async ({ ctx }) => {
     const { sessionId, redis, db, c } = ctx;
     const ip = getIp(c);
-    const ua = getUserAgent(c);
 
     if (sessionId) {
       await destroySession(redis, sessionId);

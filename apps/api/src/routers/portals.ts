@@ -17,13 +17,12 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import {
-  eq, and, isNull, desc, inArray, gte,
+  eq, and, isNull, desc, gte,
 } from 'drizzle-orm';
 import {
   portalConnection,
   propertyPortalPublication,
   portalSyncLog,
-  portalTypeEnum,
 } from '@corredor/db';
 import { QUEUE_NAMES } from '@corredor/core';
 import { encryptCredentials, portalIdSchema } from '@corredor/portals';
@@ -228,7 +227,7 @@ const publicationsRouter = router({
         })
         .returning();
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_PUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_PUBLISH];
       if (queue) {
         await queue.add('publish', {
           publicationId: pub!.id,
@@ -265,7 +264,7 @@ const publicationsRouter = router({
         })
         .where(eq(propertyPortalPublication.id, input.publicationId));
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_UNPUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_UNPUBLISH];
       if (queue) {
         await queue.add('unpublish', {
           publicationId: input.publicationId,
@@ -309,7 +308,7 @@ const publicationsRouter = router({
         })))
         .returning();
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_PUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_PUBLISH];
       if (queue) {
         for (const pub of pubs) {
           await queue.add('publish', {

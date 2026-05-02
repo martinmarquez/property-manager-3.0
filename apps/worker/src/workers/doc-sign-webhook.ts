@@ -12,8 +12,6 @@ import { BaseWorker, QUEUE_NAMES } from '@corredor/core';
 import type Redis from 'ioredis';
 import {
   type EsignWebhookJobData,
-  type WebhookEvent,
-  type SignatureAdapter,
   SignaturitAdapter,
   DocuSignAdapter,
   registerAdapter,

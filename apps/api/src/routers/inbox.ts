@@ -393,7 +393,7 @@ export const inboxRouter = router({
           eq(conversation.tenantId, ctx.tenantId),
         ));
 
-      const queue = ctx.queues['inbox-send'];
+      const queue = ctx.queues?.['inbox-send'];
       if (queue) {
         await queue.add('send', {
           messageId:  msg!.id,

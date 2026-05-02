@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { eq, and, isNull, desc, sql, asc } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import {
   property,
   propertyListing,
   propertyAiDescription,
   descriptionGenerationLog,
 } from '@corredor/db';
-import { createQueue, QUEUE_NAMES } from '@corredor/core';
+import { createQueue, QUEUE_NAMES, checkRateLimit, RateLimitPresets } from '@corredor/core';
 import {
   generateDescription,
   generateInputSchema,
@@ -16,6 +16,7 @@ import {
 import { router, protectedProcedure, protectedProcedureNoTx } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
 import { env } from '../env.js';
+import { checkFeatureFlag, FeatureDisabledError } from '../lib/feature-flags.js';
 
 const MAX_DRAFTS = 5;
 
@@ -128,6 +129,19 @@ export const propertyDescriptionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { tenantId, userId, db, redis } = ctx as AuthenticatedContext;
 
+      // Feature-flag gate
+      try {
+        await checkFeatureFlag(db, tenantId, 'ai_descriptions');
+      } catch (e) {
+        if (e instanceof FeatureDisabledError) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `${e.message}. ${e.upgradePrompt}`,
+          });
+        }
+        throw e;
+      }
+
       if (!env.ANTHROPIC_API_KEY) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
@@ -138,6 +152,16 @@ export const propertyDescriptionRouter = router({
       const attrs = await fetchPropertyAttributes(db, tenantId, input.propertyId);
       if (!attrs) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+      }
+
+      // AI-specific rate limit (20 req/min per user) — tighter than the general write limit
+      const aiRateLimitKey = `ratelimit:${RateLimitPresets.AI_REQUESTS.scope}:user:${tenantId}:${userId}`;
+      const aiRateResult = await checkRateLimit(redis, aiRateLimitKey, RateLimitPresets.AI_REQUESTS);
+      if (!aiRateResult.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `AI generation rate limit exceeded. Retry in ${aiRateResult.retryAfterSeconds}s`,
+        });
       }
 
       const startMs = Date.now();

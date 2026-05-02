@@ -73,6 +73,9 @@ const m = defineMessages({
   draftsDelete:       { id: 'aiDescription.drafts.delete' },
   draftsActive:       { id: 'aiDescription.drafts.active' },
   draftSaved:         { id: 'aiDescription.draft.saved' },
+  diffCurrent:        { id: 'aiDescription.diff.current' },
+  diffGenerated:      { id: 'aiDescription.diff.generated' },
+  close:              { id: 'aiDescription.close' },
 });
 
 /* ─── Tone / Portal config ─────────────────────────────────── */
@@ -190,9 +193,9 @@ function OverwriteWarning({
 }
 
 /* ─── Diff view ────────────────────────────────────────────── */
-function DiffView({ original, generated }: { original: string; generated: string }) {
+function DiffView({ original, generated, intl }: { original: string; generated: string; intl: ReturnType<typeof useIntl> }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 }} data-ai-diff>
       <div>
         <div style={{
           padding: '6px 12px', borderRadius: '8px 8px 0 0',
@@ -200,13 +203,13 @@ function DiffView({ original, generated }: { original: string; generated: string
           fontFamily: F.mono, fontSize: 11, fontWeight: 600,
           color: C.textTertiary, letterSpacing: '0.05em', textTransform: 'uppercase' as const,
         }}>
-          Descripción actual
+          {intl.formatMessage(m.diffCurrent)}
         </div>
         <div style={{
           padding: 14, borderRadius: '0 0 8px 8px',
           background: C.errorFaint, border: `1px solid ${C.error}25`,
           fontFamily: F.body, fontSize: 13, color: C.textSecondary,
-          lineHeight: 1.6, minHeight: 120,
+          lineHeight: 1.6, minHeight: 120, whiteSpace: 'pre-wrap' as const,
         }}>
           {original}
         </div>
@@ -220,13 +223,13 @@ function DiffView({ original, generated }: { original: string; generated: string
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span>✦</span>
-          Descripción generada por IA
+          {intl.formatMessage(m.diffGenerated)}
         </div>
         <div style={{
           padding: 14, borderRadius: '0 0 8px 8px',
           background: C.aiFaint, border: `1px solid ${C.ai}30`,
           fontFamily: F.body, fontSize: 13, color: C.textPrimary,
-          lineHeight: 1.6, minHeight: 120,
+          lineHeight: 1.6, minHeight: 120, whiteSpace: 'pre-wrap' as const,
         }}>
           {generated}
         </div>
@@ -259,6 +262,9 @@ function DraftRow({
   const isActive = !draft.isDraft;
   const date = new Date(draft.createdAt);
   const portalLabel = PORTAL_OPTIONS.find(p => p.key === draft.targetPortal)?.label ?? draft.targetPortal ?? 'General';
+  const toneLabel = TONE_MSG[draft.tone as Tone]
+    ? intl.formatMessage(m[TONE_MSG[draft.tone as Tone].label])
+    : draft.tone;
 
   return (
     <div style={{
@@ -273,7 +279,7 @@ function DraftRow({
           color: C.textTertiary, textTransform: 'uppercase' as const,
           letterSpacing: '0.05em',
         }}>
-          {draft.tone} · {portalLabel}
+          {toneLabel} · {portalLabel}
         </span>
         <span style={{
           fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
@@ -356,6 +362,7 @@ export default function AIDescriptionModal({
   const [showDrafts, setShowDrafts]       = useState(false);
   const [genError, setGenError]           = useState('');
   const [savedToast, setSavedToast]       = useState(false);
+  const [deletingId, setDeletingId]       = useState<string | null>(null);
 
   const [genMeta, setGenMeta] = useState<{
     model: string;
@@ -364,12 +371,12 @@ export default function AIDescriptionModal({
   } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // tRPC mutations
   const generateMut  = trpc.propertyDescription.generate.useMutation();
   const saveMut      = trpc.propertyDescription.save.useMutation();
   const deleteMut    = trpc.propertyDescription.delete.useMutation();
-  const setActiveMut = trpc.propertyDescription.setActive.useMutation();
 
   // tRPC query for drafts
   const draftsQuery = trpc.propertyDescription.list.useQuery(
@@ -403,7 +410,34 @@ export default function AIDescriptionModal({
       setGenError('');
       setSavedToast(false);
       setGenMeta(null);
+      setDeletingId(null);
     }
+  }, [open]);
+
+  // Escape key to close (blocked during generation/streaming)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showOverwrite && step !== 'generating' && step !== 'streaming') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose, showOverwrite, step]);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // Focus modal on open, restore focus on close
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => modalRef.current?.focus());
+    return () => { prev?.focus(); };
   }, [open]);
 
   // Auto-resize textarea
@@ -479,18 +513,13 @@ export default function AIDescriptionModal({
   }, [handleSave]);
 
   const handleDeleteDraft = useCallback(async (id: string) => {
+    setDeletingId(id);
     try {
       await deleteMut.mutateAsync({ id });
       draftsQuery.refetch();
     } catch { /* swallow */ }
+    setDeletingId(null);
   }, [deleteMut, draftsQuery]);
-
-  const handleSetActive = useCallback(async (id: string) => {
-    try {
-      await setActiveMut.mutateAsync({ id });
-      draftsQuery.refetch();
-    } catch { /* swallow */ }
-  }, [setActiveMut, draftsQuery]);
 
   const handleUseDraft = useCallback((body: string) => {
     setEditableText(body);
@@ -508,28 +537,32 @@ export default function AIDescriptionModal({
     <>
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={isWorking ? undefined : onClose}
         style={{
           position: 'fixed', inset: 0,
           background: C.bgOverlay, backdropFilter: 'blur(4px)',
-          zIndex: 1000,
+          zIndex: 1000, cursor: isWorking ? 'default' : 'pointer',
         }}
       />
 
       {/* Modal */}
       <div
+        ref={modalRef}
         role="dialog"
+        aria-modal="true"
         aria-label={intl.formatMessage(m.title)}
+        tabIndex={-1}
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '100%', maxWidth: 700, maxHeight: '90vh',
+          width: '100%', maxWidth: 680, maxHeight: '90vh',
           overflowY: 'auto',
           background: C.bgRaised,
           border: `1px solid ${C.border}`, borderRadius: 16,
           boxShadow: `0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px ${C.ai}15`,
           zIndex: 1001,
         }}
+        data-ai-modal
       >
         {/* ── Header ── */}
         <div style={{
@@ -591,12 +624,15 @@ export default function AIDescriptionModal({
 
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
+            onClick={isWorking ? undefined : onClose}
+            disabled={isWorking}
+            aria-label={intl.formatMessage(m.close)}
             style={{
               background: 'transparent', border: 'none',
-              color: C.textTertiary, cursor: 'pointer',
+              color: C.textTertiary,
+              cursor: isWorking ? 'default' : 'pointer',
               fontSize: 18, padding: 6, lineHeight: 1, borderRadius: 6,
+              opacity: isWorking ? 0.3 : 1,
             }}
           >
             ✕
@@ -633,7 +669,7 @@ export default function AIDescriptionModal({
                       draft={draft}
                       onUse={() => handleUseDraft(draft.body)}
                       onDelete={() => handleDeleteDraft(draft.id)}
-                      deleting={deleteMut.isPending}
+                      deleting={deletingId === draft.id}
                       intl={intl}
                     />
                   ))}
@@ -855,19 +891,31 @@ export default function AIDescriptionModal({
 
               {step === 'streaming' ? (
                 /* Read-only streaming preview */
-                <div style={{
-                  padding: 16, borderRadius: 10,
-                  background: C.aiFaint, border: `1px solid ${C.ai}30`,
-                  fontFamily: F.body, fontSize: 13, color: C.textPrimary,
-                  lineHeight: 1.7, minHeight: 100, position: 'relative' as const,
-                }}>
-                  {displayText}
-                  <span style={{
-                    display: 'inline-block', width: 2, height: 14,
-                    background: C.ai, marginLeft: 2, verticalAlign: 'text-bottom',
-                    animation: 'ai-desc-cursor 0.8s step-end infinite',
-                  }} />
-                </div>
+                <>
+                  <div style={{
+                    padding: 16, borderRadius: 10,
+                    background: C.aiFaint, border: `1px solid ${C.ai}30`,
+                    fontFamily: F.body, fontSize: 13, color: C.textPrimary,
+                    lineHeight: 1.7, minHeight: 100, position: 'relative' as const,
+                    whiteSpace: 'pre-wrap' as const,
+                  }}>
+                    {displayText}
+                    <span style={{
+                      display: 'inline-block', width: 2, height: 14,
+                      background: C.ai, marginLeft: 2, verticalAlign: 'text-bottom',
+                      animation: 'ai-desc-cursor 0.8s step-end infinite',
+                    }} />
+                  </div>
+                  <div style={{
+                    display: 'flex', justifyContent: 'flex-end', marginTop: 4,
+                  }}>
+                    <span style={{
+                      fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
+                    }}>
+                      {intl.formatMessage(m.charCount, { count: displayText.length })}
+                    </span>
+                  </div>
+                </>
               ) : (
                 /* Editable textarea in done state */
                 <>
@@ -933,7 +981,7 @@ export default function AIDescriptionModal({
                   {intl.formatMessage(m.comparisonBack)}
                 </button>
               </div>
-              <DiffView original={existingDescription} generated={editableText} />
+              <DiffView original={existingDescription} generated={editableText} intl={intl} />
             </div>
           )}
 
@@ -996,12 +1044,14 @@ export default function AIDescriptionModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={isWorking ? undefined : onClose}
+            disabled={isWorking}
             style={{
               marginLeft: 'auto', padding: '10px 18px', borderRadius: 8,
               background: 'transparent', border: 'none',
               color: C.textTertiary, fontFamily: F.body, fontSize: 14,
-              cursor: 'pointer',
+              cursor: isWorking ? 'default' : 'pointer',
+              opacity: isWorking ? 0.5 : 1,
             }}
           >
             {intl.formatMessage(m.cancel)}
@@ -1021,6 +1071,20 @@ export default function AIDescriptionModal({
         @keyframes ai-desc-spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        [data-ai-diff] { grid-template-columns: 1fr 1fr; }
+        @media (max-width: 767px) {
+          [data-ai-diff] { grid-template-columns: 1fr !important; }
+          [data-ai-modal] {
+            top: 0 !important;
+            left: 0 !important;
+            transform: none !important;
+            max-width: 100% !important;
+            max-height: 100vh !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+            border: none !important;
+          }
         }
       `}</style>
 

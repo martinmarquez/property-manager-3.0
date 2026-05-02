@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const executeCalls: unknown[][] = [];
 
 function makeMockSelectChain() {
-  const chain: Record<string, unknown> = {};
+  const chain: Record<string | symbol, unknown> = {};
   chain.from = vi.fn().mockReturnValue(chain);
   chain.where = vi.fn().mockReturnValue(chain);
   chain.groupBy = vi.fn().mockReturnValue(Promise.resolve([]));
@@ -43,6 +43,28 @@ vi.mock('@corredor/db', () => ({
   lead:     { deletedAt: { name: 'deleted_at' }, wonAt: { name: 'won_at' }, lostAt: { name: 'lost_at' } },
   property: { deletedAt: { name: 'deleted_at' }, status: { name: 'status' } },
   tenant:   { id: { name: 'id' }, deletedAt: { name: 'deleted_at' } },
+  copilotTurn: {
+    tenantId:  { name: 'tenant_id' },
+    createdAt: { name: 'created_at' },
+    totalMs:   { name: 'total_ms' },
+  },
+  copilotSession: {
+    tenantId:  { name: 'tenant_id' },
+    createdAt: { name: 'created_at' },
+    userId:    { name: 'user_id' },
+  },
+  aiEmbeddingLog: {
+    tenantId:  { name: 'tenant_id' },
+    createdAt: { name: 'created_at' },
+  },
+  searchQueryLog: {
+    tenantId:  { name: 'tenant_id' },
+    createdAt: { name: 'created_at' },
+  },
+  descriptionGenerationLog: {
+    tenantId:  { name: 'tenant_id' },
+    createdAt: { name: 'created_at' },
+  },
 }));
 
 vi.mock('@corredor/core', () => ({

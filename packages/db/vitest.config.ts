@@ -1,5 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
+const hasTestDb = Boolean(
+  process.env['TEST_DATABASE_URL'] ??
+  process.env['DATABASE_URL_UNPOOLED'] ??
+  process.env['DATABASE_URL'],
+);
+
 export default defineConfig({
   test: {
     globals: false,
@@ -10,6 +16,12 @@ export default defineConfig({
     // Load env vars before tests run
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts'],
+    // Skip integration tests in CI when no database URL is configured
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      ...(hasTestDb ? [] : ['tests/**/*.integration.test.ts']),
+    ],
     // Run integration tests serially to avoid RLS context collisions
     pool: 'forks',
     poolOptions: {

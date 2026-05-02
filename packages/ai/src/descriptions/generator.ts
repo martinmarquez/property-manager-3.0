@@ -29,12 +29,14 @@ const MAX_TOKENS = 2048;
 
 async function callLLM(
   client: Anthropic,
-  systemPrompt: string,
+  system: string,
+  userMessage: string,
 ): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    messages: [{ role: 'user', content: systemPrompt }],
+    system,
+    messages: [{ role: 'user', content: userMessage }],
   });
 
   const text = response.content
@@ -53,8 +55,8 @@ async function callLLM(
 export async function generateDescription(opts: DescriptionGenerateOptions): Promise<DescriptionGenerateResult> {
   const client = new Anthropic({ apiKey: opts.anthropicApiKey });
 
-  const prompt = buildPrompt(opts.attrs, opts.tone, opts.portal, opts.extraInstructions);
-  const first = await callLLM(client, prompt);
+  const { system, user } = buildPrompt(opts.attrs, opts.tone, opts.portal, opts.extraInstructions);
+  const first = await callLLM(client, system, user);
 
   if (opts.portal === 'general' || isWithinPortalLength(first.text, opts.portal)) {
     return {
@@ -66,9 +68,8 @@ export async function generateDescription(opts: DescriptionGenerateOptions): Pro
     };
   }
 
-  // Retry once with explicit length constraint reminder
-  const retryPrompt = buildRetryPrompt(prompt, first.text, opts.portal);
-  const second = await callLLM(client, retryPrompt);
+  const retryUser = buildRetryPrompt(user, first.text, opts.portal);
+  const second = await callLLM(client, system, retryUser);
 
   return {
     body: second.text,

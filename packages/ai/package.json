@@ -10,7 +10,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:classifier": "tsx src/copilot/__tests__/classifier.eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@corredor/config": "workspace:*",
     "@corredor/db": "workspace:*",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

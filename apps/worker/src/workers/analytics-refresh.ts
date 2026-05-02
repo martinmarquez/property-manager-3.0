@@ -6,6 +6,11 @@ import {
   lead,
   property,
   tenant,
+  copilotSession,
+  copilotTurn,
+  aiEmbeddingLog,
+  searchQueryLog,
+  descriptionGenerationLog,
 } from '@corredor/db';
 import { createNodeDb } from '@corredor/db';
 import { BaseWorker, QUEUE_NAMES } from '@corredor/core';
@@ -53,6 +58,20 @@ export class AnalyticsRefreshWorker extends BaseWorker<AnalyticsRefreshJobData, 
 
     await this.db.execute(
       sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_active_properties_by_tenant`,
+    );
+
+    // Phase F materialized views — refresh nightly after KPI rollup
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ai_usage_value`,
+    );
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ai_cost_by_tenant`,
+    );
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_search_analytics`,
+    );
+    await this.db.execute(
+      sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_description_metrics`,
     );
 
     this.logger.info('analytics.refresh.done', {
@@ -543,6 +562,194 @@ export class AnalyticsRefreshWorker extends BaseWorker<AnalyticsRefreshJobData, 
           value:          r.n,
         });
       }
+    }
+
+    // ------------------------------------------------------------------
+    // Phase F — Copilot usage metrics
+    // ------------------------------------------------------------------
+
+    const [copilotQueries] = await tx
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(copilotTurn)
+      .where(
+        and(
+          eq(copilotTurn.tenantId, tenantId),
+          sql`${copilotTurn.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const [copilotSessions] = await tx
+      .select({ n: sql<number>`COUNT(DISTINCT id)::int` })
+      .from(copilotSession)
+      .where(
+        and(
+          eq(copilotSession.tenantId, tenantId),
+          sql`${copilotSession.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const [copilotUniqueUsers] = await tx
+      .select({ n: sql<number>`COUNT(DISTINCT user_id)::int` })
+      .from(copilotSession)
+      .where(
+        and(
+          eq(copilotSession.tenantId, tenantId),
+          sql`${copilotSession.createdAt}::date = ${snapshotDate}::date`,
+          isNotNull(copilotSession.userId),
+        ),
+      );
+
+    const [copilotTokens] = await tx
+      .select({
+        inputTotal:  sql<number>`COALESCE(SUM(input_tokens), 0)::bigint`,
+        outputTotal: sql<number>`COALESCE(SUM(output_tokens), 0)::bigint`,
+      })
+      .from(copilotTurn)
+      .where(
+        and(
+          eq(copilotTurn.tenantId, tenantId),
+          sql`${copilotTurn.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const [copilotConfirmRate] = await tx
+      .select({
+        rate: sql<number>`
+          ROUND(
+            100.0 * COUNT(*) FILTER (WHERE action_confirmed = true)
+            / NULLIF(COUNT(*) FILTER (WHERE action_confirmed IS NOT NULL), 0),
+            2
+          )::numeric`,
+      })
+      .from(copilotTurn)
+      .where(
+        and(
+          eq(copilotTurn.tenantId, tenantId),
+          sql`${copilotTurn.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const [copilotAvgMs] = await tx
+      .select({
+        avgMs: sql<number>`ROUND(AVG(total_ms), 2)::numeric`,
+      })
+      .from(copilotTurn)
+      .where(
+        and(
+          eq(copilotTurn.tenantId, tenantId),
+          sql`${copilotTurn.createdAt}::date = ${snapshotDate}::date`,
+          isNotNull(copilotTurn.totalMs),
+        ),
+      );
+
+    const queriesCount = copilotQueries?.n ?? 0;
+
+    if (queriesCount > 0) {
+      rows.push(
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_queries_count',            value: queriesCount },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_sessions_count',           value: copilotSessions?.n ?? 0 },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_unique_users_count',       value: copilotUniqueUsers?.n ?? 0 },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_tokens_input_total',       value: Number(copilotTokens?.inputTotal ?? 0) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_tokens_output_total',      value: Number(copilotTokens?.outputTotal ?? 0) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_action_confirmation_rate', value: Number(copilotConfirmRate?.rate ?? 0) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'copilot_avg_response_ms',          value: Number(copilotAvgMs?.avgMs ?? 0) },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Phase F — AI cost metrics (embedding + LLM)
+    // ------------------------------------------------------------------
+
+    const [embeddingTokens] = await tx
+      .select({ n: sql<number>`COALESCE(SUM(token_count), 0)::bigint` })
+      .from(aiEmbeddingLog)
+      .where(
+        and(
+          eq(aiEmbeddingLog.tenantId, tenantId),
+          sql`${aiEmbeddingLog.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const embedTokens  = Number(embeddingTokens?.n ?? 0);
+    const inputTokens  = Number(copilotTokens?.inputTotal ?? 0);
+    const outputTokens = Number(copilotTokens?.outputTotal ?? 0);
+    // cost model: text-embedding-3-small $0.02/1M; claude-sonnet-4-6 $3/$15 per 1M
+    const embeddingCost = (embedTokens / 1_000_000) * 0.02;
+    const llmCost       = (inputTokens / 1_000_000) * 3.0 + (outputTokens / 1_000_000) * 15.0;
+
+    if (embedTokens > 0 || inputTokens > 0) {
+      rows.push(
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'ai_embedding_cost_usd', value: Number(embeddingCost.toFixed(6)) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'ai_llm_cost_usd',       value: Number(llmCost.toFixed(6)) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'ai_total_cost_usd',     value: Number((embeddingCost + llmCost).toFixed(6)) },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Phase F — Search analytics
+    // ------------------------------------------------------------------
+
+    const [searchStats] = await tx
+      .select({
+        total:        sql<number>`COUNT(*)::int`,
+        zeroResults:  sql<number>`COUNT(*) FILTER (WHERE result_count = 0)::int`,
+        clicked:      sql<number>`COUNT(*) FILTER (WHERE clicked_rank IS NOT NULL)::int`,
+      })
+      .from(searchQueryLog)
+      .where(
+        and(
+          eq(searchQueryLog.tenantId, tenantId),
+          sql`${searchQueryLog.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const totalSearches = searchStats?.total ?? 0;
+
+    if (totalSearches > 0) {
+      const zeroResultRate = totalSearches > 0
+        ? ((searchStats?.zeroResults ?? 0) / totalSearches) * 100
+        : 0;
+      const ctr = totalSearches > 0
+        ? ((searchStats?.clicked ?? 0) / totalSearches) * 100
+        : 0;
+
+      rows.push(
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'search_queries_count',    value: totalSearches },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'search_zero_result_rate', value: Number(zeroResultRate.toFixed(2)) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'search_click_through_rate', value: Number(ctr.toFixed(2)) },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Phase F — Description generation metrics
+    // ------------------------------------------------------------------
+
+    const [descStats] = await tx
+      .select({
+        total:     sql<number>`COUNT(*)::int`,
+        saved:     sql<number>`COUNT(*) FILTER (WHERE saved = true)::int`,
+        avgLatency: sql<number>`ROUND(AVG(latency_ms), 2)::numeric`,
+      })
+      .from(descriptionGenerationLog)
+      .where(
+        and(
+          eq(descriptionGenerationLog.tenantId, tenantId),
+          sql`${descriptionGenerationLog.createdAt}::date = ${snapshotDate}::date`,
+        ),
+      );
+
+    const totalDescs = descStats?.total ?? 0;
+
+    if (totalDescs > 0) {
+      const saveRate = totalDescs > 0
+        ? ((descStats?.saved ?? 0) / totalDescs) * 100
+        : 0;
+
+      rows.push(
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'descriptions_generated_count',  value: totalDescs },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'description_save_rate',          value: Number(saveRate.toFixed(2)) },
+        { dimensionType: 'agency', dimensionId: null, dimensionLabel: null, metric: 'description_avg_generation_ms',  value: Number(descStats?.avgLatency ?? 0) },
+      );
     }
 
     return rows;

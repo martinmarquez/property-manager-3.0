@@ -13,14 +13,24 @@
  * Application queries must always go through setTenantContext().
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../schema/index.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(__dirname, '../../../../');
+config({ path: resolve(repoRoot, '.env.local') });
+config({ path: resolve(repoRoot, '.env') });
+config();
+
 const DATABASE_URL =
-  process.env['DATABASE_URL_UNPOOLED'] ?? process.env['DATABASE_URL'];
+  process.env['DATABASE_URL_UNPOOLED']?.includes('REPLACE_ME')
+    ? process.env['DATABASE_URL']
+    : (process.env['DATABASE_URL_UNPOOLED'] ?? process.env['DATABASE_URL']);
 
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL or DATABASE_URL_UNPOOLED is required for seed');

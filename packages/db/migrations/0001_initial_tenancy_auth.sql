@@ -15,6 +15,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ---------------------------------------------------------------------------
 -- tenant
@@ -439,5 +440,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO app_user;
 
--- Allow neondb_owner to impersonate app_user (needed for SET LOCAL ROLE in tests)
-GRANT app_user TO neondb_owner;
+-- Allow neondb_owner to impersonate app_user (Neon only; no-op on local Docker)
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'neondb_owner') THEN
+    EXECUTE 'GRANT app_user TO neondb_owner';
+  END IF;
+END $$;

@@ -29,8 +29,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check required secrets
+        id: secrets-check
+        run: |
+          if [ -z "$NEON_PROJECT_ID" ] || [ -z "$NEON_API_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::NEON_PROJECT_ID or NEON_API_KEY not set — skipping preview deploy. Configure secrets to enable."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+
       - name: Create Neon branch
         id: neon-branch
+        if: steps.secrets-check.outputs.skip != 'true'
         run: |
           OUTPUT=$(./infra/neon/branch.sh ${{ github.event.pull_request.number }})
           echo "$OUTPUT"
@@ -40,15 +54,18 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
 
       - name: Run Drizzle migrations on preview branch
+        if: steps.secrets-check.outputs.skip != 'true'
         run: pnpm --filter @corredor/db migrate
         env:
           DATABASE_URL: ${{ steps.neon-branch.outputs.db_url_pooled }}
           DIRECT_DATABASE_URL: ${{ steps.neon-branch.outputs.db_url }}
 
       - name: Set up Fly.io CLI
+        if: steps.secrets-check.outputs.skip != 'true'
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy API to Fly.io (preview)
+        if: steps.secrets-check.outputs.skip != 'true'
         run: |
           APP_NAME="corredor-api-pr-${{ github.event.pull_request.number }}"
           flyctl deploy \
@@ -65,6 +82,7 @@ jobs:
 
       - name: Deploy Web to Cloudflare Pages (preview)
         id: cf-pages-web
+        if: steps.secrets-check.outputs.skip != 'true'
         run: |
           pnpm --filter @corredor/web build
           pnpm dlx wrangler pages deploy apps/web/dist \
@@ -77,6 +95,7 @@ jobs:
 
       - name: Deploy Admin to Cloudflare Pages (preview)
         id: cf-pages-admin
+        if: steps.secrets-check.outputs.skip != 'true'
         run: |
           pnpm --filter @corredor/admin build
           pnpm dlx wrangler pages deploy apps/admin/dist \
@@ -89,6 +108,7 @@ jobs:
 
       - name: Deploy Site to Vercel (preview)
         id: vercel-site
+        if: steps.secrets-check.outputs.skip != 'true'
         run: |
           cd apps/site
           DEPLOY_URL=$(pnpm dlx vercel pull --yes --environment=preview --token="${VERCEL_TOKEN}" 2>&1 && \

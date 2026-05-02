@@ -56,7 +56,7 @@ interface FusionEntry {
   exactRefMatch: boolean;
 }
 
-interface SearchResult {
+export interface SearchResult {
   entityType: 'property' | 'contact' | 'lead' | 'document';
   entityId: string;
   title: string;
@@ -66,7 +66,7 @@ interface SearchResult {
   matchedOn: string;
 }
 
-interface AutocompleteResult {
+export interface AutocompleteResult {
   label: string;
   entityType: 'property' | 'contact' | 'lead' | 'document';
   entityId: string;
@@ -333,6 +333,7 @@ export const searchRouter = router({
         const builder = trgmBuilders[t];
         if (!builder) return Promise.resolve([] as TrgmRow[]);
         return db.execute(builder(tenantId, q)).then(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (r: any) => (r.rows ?? []) as TrgmRow[],
           () => [] as TrgmRow[],
         );
@@ -349,6 +350,7 @@ export const searchRouter = router({
       const semanticPromise = db
         .execute(semanticSearchQuery(tenantId, q, aiEntityTypes))
         .then(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (r: any) => (r.rows ?? []) as SemanticRow[],
           () => [] as SemanticRow[],
         );
@@ -473,6 +475,7 @@ export const searchRouter = router({
           const builder = acBuilders[t];
           if (!builder) return Promise.resolve([] as Array<{ entity_type: string; entity_id: string; label: string; secondary_label: string | null; sim: number }>);
           return db.execute(builder(tenantId, q)).then(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (r: any) =>
               (r.rows ?? []) as Array<{
                 entity_type: string;

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { eq, and, isNull, sql } from 'drizzle-orm';
-import { property, aiEmbedding } from '@corredor/db';
+import { property } from '@corredor/db';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
@@ -104,6 +104,7 @@ export const ragRouter = router({
           ORDER BY entity_type`,
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = (result as any).rows ?? [];
     return {
       embeddings: rows as Array<{ entity_type: string; count: number }>,

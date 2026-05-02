@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable,
+  verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -94,7 +103,7 @@ function StepIndicator({ step, total }: { step: number; total: number }) {
   );
 }
 
-/* ─── Signer row (drag hint with order handles) ──────────────── */
+/* ─── Signer row (real dnd-kit sortable) ─────────────────────── */
 function SignerDraftRow({
   signer,
   onUpdate,
@@ -106,15 +115,32 @@ function SignerDraftRow({
   onRemove: (id: string) => void;
   flowKind: FlowKind;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: signer.id });
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 10,
-      padding: '14px 0', borderBottom: `1px solid ${C.border}`,
-    }}>
+    <div
+      ref={setNodeRef}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '14px 0', borderBottom: `1px solid ${C.border}`,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
       {/* Drag handle + order */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, paddingTop: 8 }}>
         {flowKind === 'sequential' && (
-          <div style={{ cursor: 'grab', color: C.textTertiary, fontSize: 12, lineHeight: 1 }}>⠿</div>
+          <div
+            {...attributes}
+            {...listeners}
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+              color: C.textTertiary, fontSize: 12, lineHeight: 1,
+              touchAction: 'none',
+            }}
+          >⠿</div>
         )}
         <span style={{
           width: 22, height: 22, borderRadius: '50%',
@@ -230,6 +256,22 @@ function StepSigners({
   onSignersChange: (s: SignerDraft[]) => void;
   onFlowKindChange: (k: FlowKind) => void;
 }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIdx = signers.findIndex(s => s.id === active.id);
+      const newIdx = signers.findIndex(s => s.id === over.id);
+      onSignersChange(
+        arrayMove(signers, oldIdx, newIdx).map((s, i) => ({ ...s, order: i + 1 })),
+      );
+    }
+  };
+
   const updateSigner = (id: string, patch: Partial<SignerDraft>) =>
     onSignersChange(signers.map(s => s.id === id ? { ...s, ...patch } : s));
 
@@ -290,16 +332,20 @@ function StepSigners({
         </div>
       )}
 
-      {/* Signer list */}
-      {signers.map(s => (
-        <SignerDraftRow
-          key={s.id}
-          signer={s}
-          onUpdate={updateSigner}
-          onRemove={removeSigner}
-          flowKind={flowKind}
-        />
-      ))}
+      {/* Signer list — real dnd-kit sortable */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={signers.map(s => s.id)} strategy={verticalListSortingStrategy}>
+          {signers.map(s => (
+            <SignerDraftRow
+              key={s.id}
+              signer={s}
+              onUpdate={updateSigner}
+              onRemove={removeSigner}
+              flowKind={flowKind}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       {/* Add signer */}
       <button

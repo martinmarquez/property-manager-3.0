@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore, useRef } from 'react';
 import {
   useSearchQuery,
+  useEntityCounts,
   saveRecentSearch,
   ENTITY_DISPLAY,
   ENTITY_HREF,
@@ -27,8 +28,17 @@ const F = {
   mono:    "'DM Mono', monospace",
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 const ENTITY_TYPES: EntityType[] = ['property', 'contact', 'lead', 'document'];
+
+const TABLET_MQ = '(max-width: 1023px)';
+function useIsCompact() {
+  return useSyncExternalStore(
+    (cb) => { const mql = matchMedia(TABLET_MQ); mql.addEventListener('change', cb); return () => mql.removeEventListener('change', cb); },
+    () => matchMedia(TABLET_MQ).matches,
+    () => false,
+  );
+}
 
 function Highlight({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>;
@@ -132,14 +142,33 @@ function ResultCard({ result, query, onNavigate }: { result: SearchResult; query
 
 interface SearchPageProps {
   initialQuery?: string;
+  initialEntityType?: EntityType;
   onNavigate?: (href: string) => void;
   onOpenPalette?: () => void;
 }
 
-export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalette }: SearchPageProps) {
+export default function SearchPage({ initialQuery = '', initialEntityType, onNavigate, onOpenPalette }: SearchPageProps) {
   const [query, setQuery] = useState(initialQuery);
-  const [activeFilter, setActiveFilter] = useState<EntityType | undefined>(undefined);
+  const [activeFilter, setActiveFilter] = useState<EntityType | undefined>(initialEntityType);
   const [cursor, setCursor] = useState(0);
+  const isCompact = useIsCompact();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync URL params → internal state when navigating to /search with a new query from ⌘K
+  useEffect(() => { setQuery(initialQuery); }, [initialQuery]);
+  useEffect(() => { setActiveFilter(initialEntityType); }, [initialEntityType]);
+
+  // '/' shortcut: focus search input (as advertised in the keyboard hints panel)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '/' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   const { results, total, hasMore, isLoading, isFetching, phase } = useSearchQuery({
     query,
@@ -149,10 +178,12 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
     debounceMs: 300,
   });
 
+  const entityCounts = useEntityCounts(query, 300);
+
   // Reset pagination on query/filter change
   useEffect(() => { setCursor(0); }, [query, activeFilter]);
 
-  // Sync URL query param
+  // Sync URL query + type params
   useEffect(() => {
     const url = new URL(window.location.href);
     if (query) {
@@ -160,15 +191,13 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
     } else {
       url.searchParams.delete('q');
     }
+    if (activeFilter) {
+      url.searchParams.set('type', activeFilter);
+    } else {
+      url.searchParams.delete('type');
+    }
     window.history.replaceState({}, '', url.toString());
-  }, [query]);
-
-  // Read initial query from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    if (q && !initialQuery) setQuery(q);
-  }, []);
+  }, [query, activeFilter]);
 
   const handleNavigate = useCallback((href: string) => {
     saveRecentSearch(query);
@@ -195,7 +224,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
               color: C.textPrimary,
               margin: 0,
             }}>
-              Búsqueda
+              Resultados de búsqueda
             </h1>
             {onOpenPalette && (
               <button
@@ -231,6 +260,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
               <path d="M12.5 12.5 L16 16" stroke={C.textTertiary} strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <input
+              ref={searchInputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Buscar en todas las entidades…"
@@ -278,18 +308,82 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
         </div>
       </div>
 
+      {/* Compact filter chips (tablet/mobile) */}
+      {isCompact && (
+        <div style={{
+          padding: '12px 16px',
+          borderBottom: `1px solid ${C.border}`,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <div style={{ display: 'flex', gap: 8, minWidth: 'max-content' }}>
+            <button
+              onClick={() => setActiveFilter(undefined)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 20,
+                background: !activeFilter ? `${C.brand}20` : C.bgElevated,
+                border: !activeFilter ? `1px solid ${C.brand}50` : `1px solid ${C.border}`,
+                color: !activeFilter ? C.textPrimary : C.textSecondary,
+                fontFamily: F.body,
+                fontSize: 12,
+                fontWeight: !activeFilter ? 600 : 400,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              Todos {query && <span style={{ fontFamily: F.mono, fontSize: 10 }}>({total})</span>}
+            </button>
+            {ENTITY_TYPES.map(et => {
+              const config = ENTITY_DISPLAY[et];
+              const isActive = activeFilter === et;
+              return (
+                <button
+                  key={et}
+                  onClick={() => setActiveFilter(isActive ? undefined : et)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    background: isActive ? `${config.color}20` : C.bgElevated,
+                    border: isActive ? `1px solid ${config.color}50` : `1px solid ${C.border}`,
+                    color: isActive ? C.textPrimary : C.textSecondary,
+                    fontFamily: F.body,
+                    fontSize: 12,
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{config.icon}</span>
+                  {config.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       <div style={{
         maxWidth: 1100,
         margin: '0 auto',
-        padding: '24px 32px',
+        padding: isCompact ? '16px' : '24px 32px',
         display: 'flex',
         gap: 28,
         alignItems: 'flex-start',
       }}>
-        {/* Left sidebar: filter chips */}
+        {/* Left sidebar: filter chips (desktop only) */}
+        {!isCompact && (
         <div style={{
-          width: 220,
+          width: 240,
           flexShrink: 0,
           position: 'sticky',
           top: 24,
@@ -303,11 +397,10 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
             color: C.textTertiary,
             marginBottom: 10,
           }}>
-            Tipo de entidad
+            Filtrar por tipo
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* "All" chip */}
             <button
               onClick={() => setActiveFilter(undefined)}
               style={{
@@ -362,7 +455,10 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
                     padding: '9px 12px',
                     borderRadius: 8,
                     background: isActive ? `${config.color}15` : 'transparent',
-                    border: isActive ? `1px solid ${config.color}40` : '1px solid transparent',
+                    borderTop: isActive ? `1px solid ${config.color}40` : '1px solid transparent',
+                    borderRight: isActive ? `1px solid ${config.color}40` : '1px solid transparent',
+                    borderBottom: isActive ? `1px solid ${config.color}40` : '1px solid transparent',
+                    borderLeft: isActive ? `2px solid ${config.color}` : '1px solid transparent',
                     cursor: 'pointer',
                     textAlign: 'left',
                     transition: 'all 0.15s',
@@ -384,10 +480,46 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
                   }}>
                     {config.label}
                   </span>
+                  {query && entityCounts[et] != null && (
+                    <span style={{
+                      padding: '1px 7px',
+                      borderRadius: 20,
+                      background: isActive ? config.color : C.bgElevated,
+                      color: isActive ? '#fff' : C.textTertiary,
+                      fontFamily: F.mono,
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}>
+                      {entityCounts[et]}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
+
+          {activeFilter && (
+            <button
+              onClick={() => setActiveFilter(undefined)}
+              style={{
+                marginTop: 10,
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'transparent',
+                border: `1px solid ${C.border}`,
+                color: C.textTertiary,
+                fontFamily: F.body,
+                fontSize: 12,
+                cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = C.textPrimary; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = C.textTertiary; }}
+            >
+              Quitar filtros
+            </button>
+          )}
 
           {/* Keyboard hints */}
           <div style={{
@@ -408,7 +540,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
             }}>
               Atajos
             </div>
-            {[['⌘K', 'Paleta rápida'], ['Tab', 'Filtrar tipo']].map(([key, label]) => (
+            {[['⌘K', 'Paleta rápida'], ['/', 'Buscar']].map(([key, label]) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
                 <kbd style={{
                   padding: '2px 6px',
@@ -424,6 +556,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
             ))}
           </div>
         </div>
+        )}
 
         {/* Results list */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -506,60 +639,87 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 24,
-            }}>
-              <button
-                onClick={() => setCursor(c => Math.max(0, c - PAGE_SIZE))}
-                disabled={cursor === 0}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: `1px solid ${C.border}`,
-                  color: cursor === 0 ? C.textTertiary : C.textSecondary,
-                  cursor: cursor === 0 ? 'default' : 'pointer',
-                  fontFamily: F.body,
-                  fontSize: 13,
-                  opacity: cursor === 0 ? 0.5 : 1,
-                }}
-              >
-                ← Anterior
-              </button>
+          {totalPages > 1 && (() => {
+            const pages: number[] = [];
+            const maxVisible = 5;
+            let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            const end = Math.min(totalPages, start + maxVisible - 1);
+            if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+            for (let p = start; p <= end; p++) pages.push(p);
 
-              <span style={{
-                fontFamily: F.mono,
-                fontSize: 12,
-                color: C.textSecondary,
-                padding: '0 8px',
+            return (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 24,
               }}>
-                {currentPage} / {totalPages}
-              </span>
+                <button
+                  onClick={() => setCursor(c => Math.max(0, c - PAGE_SIZE))}
+                  disabled={cursor === 0}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 8,
+                    background: 'transparent',
+                    border: `1px solid ${C.border}`,
+                    color: cursor === 0 ? C.textTertiary : C.textSecondary,
+                    cursor: cursor === 0 ? 'default' : 'pointer',
+                    fontFamily: F.body,
+                    fontSize: 13,
+                    opacity: cursor === 0 ? 0.5 : 1,
+                  }}
+                >
+                  ←
+                </button>
 
-              <button
-                onClick={() => setCursor(c => c + PAGE_SIZE)}
-                disabled={!hasMore}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: `1px solid ${C.border}`,
-                  color: !hasMore ? C.textTertiary : C.textSecondary,
-                  cursor: !hasMore ? 'default' : 'pointer',
-                  fontFamily: F.body,
-                  fontSize: 13,
-                  opacity: !hasMore ? 0.5 : 1,
-                }}
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+                {pages.map(p => {
+                  const isCurrentPage = p === currentPage;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setCursor((p - 1) * PAGE_SIZE)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: isCurrentPage ? C.brand : 'transparent',
+                        border: isCurrentPage ? 'none' : `1px solid ${C.border}`,
+                        color: isCurrentPage ? '#fff' : C.textSecondary,
+                        cursor: isCurrentPage ? 'default' : 'pointer',
+                        fontFamily: F.mono,
+                        fontSize: 13,
+                        fontWeight: isCurrentPage ? 700 : 400,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCursor(c => c + PAGE_SIZE)}
+                  disabled={!hasMore}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 8,
+                    background: 'transparent',
+                    border: `1px solid ${C.border}`,
+                    color: !hasMore ? C.textTertiary : C.textSecondary,
+                    cursor: !hasMore ? 'default' : 'pointer',
+                    fontFamily: F.body,
+                    fontSize: 13,
+                    opacity: !hasMore ? 0.5 : 1,
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

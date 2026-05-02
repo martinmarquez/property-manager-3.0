@@ -134,9 +134,12 @@ app.use(
   }),
 );
 app.route('/api/copilot', createCopilotStreamRoutes({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: db as any,
   redis,
   anthropicApiKey: env.ANTHROPIC_API_KEY,
+  openaiApiKey: env.OPENAI_API_KEY,
+  databaseUrl: env.DATABASE_URL,
 }));
 
 // ── tRPC router ────────────────────────────────────────────────────────────

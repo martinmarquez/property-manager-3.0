@@ -9,7 +9,7 @@ import {
 
 // ATTR_DEPLOYMENT_ENVIRONMENT_NAME is in the incubating spec; use the string directly.
 const ATTR_DEPLOYMENT_ENVIRONMENT_NAME = 'deployment.environment.name' as const;
-import { trace, context, SpanStatusCode, type Attributes, type Span } from '@opentelemetry/api';
+import { trace, SpanStatusCode, type Attributes, type Span } from '@opentelemetry/api';
 
 export interface OtelConfig {
   serviceName: string;

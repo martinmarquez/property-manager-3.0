@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { Context as HonoContext } from 'hono';
 import type { Redis } from 'ioredis';
+import type { Queue } from 'bullmq';
 import { ZodError } from 'zod';
 import { createDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
 import { checkRateLimit, RateLimitPresets } from '@corredor/core';
@@ -30,6 +31,13 @@ export interface TRPCContext {
   redis: Redis;
   /** Session ID from cookie (may be undefined for unauthenticated requests). */
   sessionId: string | undefined;
+  /**
+   * Pre-initialized BullMQ queues keyed by queue name.
+   * Always present (defaults to `{}`); populated when queues are co-located with the API.
+   * Procedures guard with `if (queue)` before enqueuing.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queues: Record<string, Queue<any, any, string> | undefined>;
 }
 
 /** Context available after tenantMiddleware. */
@@ -49,15 +57,18 @@ export interface CreateContextOptions {
   c: HonoContext;
   db: AnyDb;
   redis: Redis;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queues?: Record<string, Queue<any, any, string> | undefined>;
 }
 
-export function createContext({ c, db, redis }: CreateContextOptions): TRPCContext {
+export function createContext({ c, db, redis, queues }: CreateContextOptions): TRPCContext {
   return {
     c,
     requestId: (c.get('requestId') as string | undefined) ?? crypto.randomUUID(),
     db,
     redis,
     sessionId: getSessionId(c),
+    queues: queues ?? {},
   };
 }
 
@@ -119,6 +130,7 @@ const tenantMiddleware = middleware(async ({ ctx, next }) => {
       userId: session.userId,
       roles: session.roles,
       sessionId,
+      queues: ctx.queues,
     } satisfies AuthenticatedContext,
   });
 });

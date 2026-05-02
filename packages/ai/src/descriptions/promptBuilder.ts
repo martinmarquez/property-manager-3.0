@@ -177,12 +177,17 @@ function sanitizeExtraInstructions(text: string): string {
     .slice(0, 500);
 }
 
+export interface PromptParts {
+  system: string;
+  user: string;
+}
+
 export function buildPrompt(
   attrs: PropertyAttributes,
   tone: Tone,
   portal: Portal,
   extraInstructions?: string,
-): string {
+): PromptParts {
   const constraint = PORTAL_LENGTH[portal];
   const lengthInstruction = constraint
     ? `La descripción debe tener entre ${constraint.min} y ${constraint.max} caracteres.`
@@ -190,9 +195,9 @@ export function buildPrompt(
 
   const portalLabel = portal === 'general' ? 'uso general' : portal;
 
-  const parts = [
+  const system = [
     `Sos un redactor inmobiliario experto en el mercado argentino.`,
-    `Generá una descripción de propiedad para publicar en ${portalLabel}.`,
+    `Generás descripciones de propiedades para publicar en portales inmobiliarios.`,
     '',
     `## Tono`,
     TONE_INSTRUCTIONS[tone],
@@ -200,35 +205,39 @@ export function buildPrompt(
     `## Largo`,
     lengthInstruction,
     '',
-    `## Datos de la propiedad`,
-    formatAttributes(attrs),
-    '',
     `## Reglas`,
     `- Usá SOLO los datos proporcionados. No inventes información que no esté en los atributos.`,
     `- No menciones el código de referencia ni datos internos.`,
     `- Escribí en español rioplatense (argentino).`,
     `- No uses hashtags ni emojis.`,
     `- Devolvé SOLO el texto de la descripción, sin títulos ni encabezados.`,
+  ].join('\n');
+
+  const userParts = [
+    `Generá una descripción de propiedad para publicar en ${portalLabel}.`,
+    '',
+    `## Datos de la propiedad`,
+    formatAttributes(attrs),
   ];
 
   if (extraInstructions) {
     const safe = sanitizeExtraInstructions(extraInstructions);
     if (safe) {
-      parts.push('', `Instrucciones adicionales del agente (Destacar):`, safe);
+      userParts.push('', `Instrucciones adicionales del agente (Destacar):`, safe);
     }
   }
 
-  return parts.join('\n');
+  return { system, user: userParts.join('\n') };
 }
 
 export function buildRetryPrompt(
-  originalPrompt: string,
+  originalUser: string,
   generatedText: string,
   portal: Portal,
 ): string {
   const constraint = PORTAL_LENGTH[portal]!;
   return [
-    originalPrompt,
+    originalUser,
     '',
     `## Corrección de largo`,
     `La descripción anterior tenía ${generatedText.length} caracteres pero el rango permitido es ${constraint.min}–${constraint.max}.`,

@@ -158,6 +158,39 @@ export function useAutocomplete({
   };
 }
 
+// ─── useEntityCounts (parallel per-type queries for sidebar badges) ─────────
+
+const ALL_ENTITY_TYPES: EntityType[] = ['property', 'contact', 'lead', 'document'];
+
+export function useEntityCounts(query: string, debounceMs = 300): Record<EntityType, number | undefined> {
+  const debouncedQuery = useDebounce(query, debounceMs);
+  const shouldFetch = debouncedQuery.trim().length >= 1;
+
+  const property = trpc.search.query.useQuery(
+    { q: debouncedQuery, entityType: 'property' as const, limit: 1, cursor: 0 },
+    { enabled: shouldFetch, staleTime: 60_000 },
+  );
+  const contact = trpc.search.query.useQuery(
+    { q: debouncedQuery, entityType: 'contact' as const, limit: 1, cursor: 0 },
+    { enabled: shouldFetch, staleTime: 60_000 },
+  );
+  const lead = trpc.search.query.useQuery(
+    { q: debouncedQuery, entityType: 'lead' as const, limit: 1, cursor: 0 },
+    { enabled: shouldFetch, staleTime: 60_000 },
+  );
+  const document = trpc.search.query.useQuery(
+    { q: debouncedQuery, entityType: 'document' as const, limit: 1, cursor: 0 },
+    { enabled: shouldFetch, staleTime: 60_000 },
+  );
+
+  return {
+    property: property.data?.total,
+    contact: contact.data?.total,
+    lead: lead.data?.total,
+    document: document.data?.total,
+  };
+}
+
 // ─── usePaletteSearch (optimized for command palette with two-phase) ────────
 
 interface UsePaletteSearchResult {
@@ -172,7 +205,7 @@ export function usePaletteSearch(query: string, enabled: boolean): UsePaletteSea
     query,
     limit: 12,
     enabled,
-    debounceMs: 200,
+    debounceMs: 180,
   });
 
   const { suggestions } = useAutocomplete({

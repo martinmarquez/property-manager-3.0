@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { useEditor, EditorContent as TiptapEditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -240,8 +242,8 @@ function VarPill({ path, onClick }: { path: string; onClick?: () => void }) {
   );
 }
 
-function EditorContent() {
-  /* Rendered as a styled div that mimics a WYSIWYG editor with var pills */
+function EditorArea({ editor }: { editor: ReturnType<typeof useEditor> }) {
+  if (!editor) return null;
   return (
     <div
       style={{
@@ -249,10 +251,9 @@ function EditorContent() {
         fontFamily: F.body, fontSize: 15, lineHeight: 1.7,
         color: C.textPrimary,
       }}
-      dangerouslySetInnerHTML={{ __html: SAMPLE_CONTENT.replace(/\{\{([^}]+)\}\}/g, (_, path) =>
-        `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:${C.brandFaint};border:1px solid ${C.brand}40;color:${C.brandLight};font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;">{{${path}}}</span>`
-      ) }}
-    />
+    >
+      <TiptapEditorContent editor={editor} />
+    </div>
   );
 }
 
@@ -575,8 +576,8 @@ function PreviewPanel() {
         </h1>
 
         <p>En la ciudad de <strong>Buenos Aires</strong>, a los <strong>25 de abril de 2026</strong>, entre:</p>
-        <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678; en adelante "EL VENDEDOR".</p>
-        <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789; en adelante "EL COMPRADOR".</p>
+        <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678; en adelante &ldquo;EL VENDEDOR&rdquo;.</p>
+        <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789; en adelante &ldquo;EL COMPRADOR&rdquo;.</p>
         <p>Se conviene la siguiente reserva de compraventa del inmueble ubicado en <strong>Av. Corrientes 1234, CABA</strong> (Ref: CAP-0142).</p>
         <p><strong>PRECIO:</strong> La operación se pactó en la suma de <strong>USD 250.000</strong>, moneda de los Estados Unidos de América.</p>
         <p><strong>SEÑA:</strong> En este acto el COMPRADOR entrega la suma de USD 11.000 en concepto de seña y principio de ejecución del contrato, en los términos del artículo 1060 del C.C.C.N.</p>
@@ -745,6 +746,16 @@ export function TemplateEditorPage({ templateId: _templateId }: TemplateEditorPa
   const [tab, setTab] = useState<Tab>('editor');
   const [showClausePicker, setShowClausePicker] = useState(false);
   const [showVarBrowser, setShowVarBrowser] = useState(true);
+
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: SAMPLE_CONTENT.replace(/\{\{([^}]+)\}\}/g, (_, path) =>
+      `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:${C.brandFaint};border:1px solid ${C.brand}40;color:${C.brandLight};font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;" contenteditable="false">{{${path}}}</span>`
+    ),
+    editorProps: {
+      attributes: { style: 'outline:none;' },
+    },
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [validationErrors] = useState<string[]>([
@@ -889,7 +900,7 @@ export function TemplateEditorPage({ templateId: _templateId }: TemplateEditorPa
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               <EditorToolbar onClause={() => setShowClausePicker(true)} />
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                <EditorContent />
+                <EditorArea editor={editor} />
               </div>
             </div>
 
@@ -900,7 +911,11 @@ export function TemplateEditorPage({ templateId: _templateId }: TemplateEditorPa
                 background: C.bgRaised, display: 'flex', flexDirection: 'column',
                 flexShrink: 0, overflow: 'hidden',
               }}>
-                <VariableBrowserPanel onInsert={path => console.log('insert:', path)} />
+                <VariableBrowserPanel onInsert={path => {
+                  editor?.chain().focus().insertContent(
+                    `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:${C.brandFaint};border:1px solid ${C.brand}40;color:${C.brandLight};font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;" contenteditable="false">{{${path}}}</span>`
+                  ).run();
+                }} />
               </div>
             )}
           </>

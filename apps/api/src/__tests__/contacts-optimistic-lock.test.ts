@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TRPCError } from '@trpc/server';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -212,6 +211,7 @@ async function buildCaller() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     redis: redis as any,
     sessionId: 'sess-1',
+    queues: {},
   });
 
   return caller;

@@ -15,7 +15,7 @@
  *   - Session rotation on each request
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks (declared before any import from the API layer)
@@ -207,6 +207,7 @@ describe('RBAC', () => {
       tenantId: 'tid',
       userId: 'uid',
       roles: ['read-only'],
+      queues: {},
     };
 
     expect(() => requirePermission(ctx, 'billing:manage')).toThrowError(TRPCError);

@@ -38,9 +38,10 @@ async function callOpenAIEmbeddings(
 
   if (!response.ok) {
     const body = await response.text();
-    const err = new Error(`OpenAI embeddings error ${response.status}: ${body}`);
-    (err as any).status = response.status;
-    throw err;
+    throw Object.assign(
+      new Error(`OpenAI embeddings error ${response.status}: ${body}`),
+      { status: response.status },
+    );
   }
 
   const json = (await response.json()) as {
@@ -112,8 +113,9 @@ export class Embedder {
           embedding,
           tokenCount: tokensPerText,
         }));
-      } catch (err: any) {
-        if (err.status === 429 || err.status === 503 || err.status === 500) {
+      } catch (err) {
+        const status = typeof err === 'object' && err !== null && 'status' in err ? (err as { status: number }).status : 0;
+        if (status === 429 || status === 503 || status === 500) {
           const backoffMs = Math.min(1000 * Math.pow(2, attempt), 60_000);
           const jitter = Math.random() * backoffMs * 0.1;
           await sleep(backoffMs + jitter);

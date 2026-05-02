@@ -1,4 +1,12 @@
 import React, { useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -174,7 +182,7 @@ function SignerRow({ signer, showReminder, docStatus }: { signer: Signer; showRe
         )}
         {signer.declinedReason && (
           <div style={{ fontSize: 11, color: C.error, marginTop: 4 }}>
-            Rechazó: "{signer.declinedReason}"
+            Rechazó: &ldquo;{signer.declinedReason}&rdquo;
           </div>
         )}
       </div>
@@ -375,11 +383,12 @@ function DocumentQA() {
   );
 }
 
-/* ─── PDF Viewer mock ────────────────────────────────────────── */
-function PDFViewerMock({ status }: { status: DocStatus }) {
+/* ─── PDF Viewer — real react-pdf when url provided, mock otherwise ─ */
+function PDFViewer({ status, url }: { status: DocStatus; url?: string }) {
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const totalPages = 3;
+  const [numPages, setNumPages] = useState(3);
+  const totalPages = numPages;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: C.bgSubtle }}>
@@ -425,6 +434,21 @@ function PDFViewerMock({ status }: { status: DocStatus }) {
 
       {/* PDF page */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', justifyContent: 'center' }}>
+        {url ? (
+          <Document
+            file={url}
+            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+            loading={<div style={{ color: C.textSecondary, padding: 40 }}>Cargando PDF…</div>}
+            error={<div style={{ color: C.error, padding: 40 }}>Error al cargar el PDF.</div>}
+          >
+            <Page
+              pageNumber={page}
+              width={794 * zoom / 100}
+              renderTextLayer
+              renderAnnotationLayer
+            />
+          </Document>
+        ) : (
         <div style={{
           width: `${794 * zoom / 100}px`,
           minHeight: `${1123 * zoom / 100}px`,
@@ -455,8 +479,8 @@ function PDFViewerMock({ status }: { status: DocStatus }) {
 
           {page === 1 && <>
             <p>En la ciudad de <strong>Buenos Aires</strong>, a los <strong>25 de abril de 2026</strong>, entre:</p>
-            <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678, con domicilio en Av. del Libertador 5000, CABA; en adelante "EL VENDEDOR".</p>
-            <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789, con domicilio en Thames 2200, Palermo; en adelante "EL COMPRADOR".</p>
+            <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678, con domicilio en Av. del Libertador 5000, CABA; en adelante &ldquo;EL VENDEDOR&rdquo;.</p>
+            <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789, con domicilio en Thames 2200, Palermo; en adelante &ldquo;EL COMPRADOR&rdquo;.</p>
             <p>Convienen lo siguiente con relación al inmueble sito en <strong>Av. Corrientes 1234, CABA</strong> (Matrícula 1-12345, Folio Real 8765, Tomo 234, Folio 45).</p>
             <p><strong>ARTÍCULO 1 — PRECIO Y CONDICIONES DE PAGO.</strong> La operación se pactó en la suma de <strong>USD 250.000 (dólares estadounidenses doscientos cincuenta mil)</strong>, que el COMPRADOR pagará al VENDEDOR de la siguiente forma:</p>
             <p>a) USD 11.000 entregados en concepto de seña al suscribirse la Reserva de fecha 10/04/2026; b) USD 50.000 al firmarse el presente instrumento; c) USD 189.000 saldo de precio en el acto de escritura.</p>
@@ -504,6 +528,7 @@ function PDFViewerMock({ status }: { status: DocStatus }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
@@ -667,6 +692,8 @@ function MetadataPanel({
 /* ─── Main component ─────────────────────────────────────────── */
 export interface DocumentViewerPageProps {
   documentId: string;
+  /** Signed R2/storage URL — renders real PDF via react-pdf when provided */
+  pdfUrl?: string;
   /** For wireframe demo, pass a status */
   previewStatus?: DocStatus;
   onSendForSign?: () => void;
@@ -674,6 +701,7 @@ export interface DocumentViewerPageProps {
 
 export function DocumentViewerPage({
   documentId: _id,
+  pdfUrl,
   previewStatus = 'pendiente_firma',
   onSendForSign,
 }: DocumentViewerPageProps) {
@@ -737,7 +765,7 @@ export function DocumentViewerPage({
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left: PDF viewer */}
         <div style={{ flex: '0 0 62%', overflow: 'hidden', borderRight: `1px solid ${C.border}` }}>
-          <PDFViewerMock status={status} />
+          <PDFViewer status={status} url={pdfUrl} />
         </div>
 
         {/* Right: metadata + actions */}

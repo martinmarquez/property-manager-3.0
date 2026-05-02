@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type Anthropic from '@anthropic-ai/sdk';
 import { classifyIntent } from '../classifier.js';
 
 const mockCreate = vi.fn();
@@ -18,7 +19,7 @@ function mockResponse(text: string) {
 }
 
 describe('classifyIntent', () => {
-  let client: any;
+  let client: Anthropic;
 
   beforeEach(async () => {
     vi.clearAllMocks();
