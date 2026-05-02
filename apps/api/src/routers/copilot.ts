@@ -20,6 +20,7 @@ import type { AnthropicClient, TurnMessage } from '@corredor/ai';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
 import { env } from '../env.js';
+import { checkFeatureFlag, FeatureDisabledError } from '../lib/feature-flags.js';
 
 function getAnthropicClient(): AnthropicClient {
   if (!env.ANTHROPIC_API_KEY) {
@@ -170,6 +171,16 @@ export const copilotRouter = router({
 
       if (!session.isActive) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Session is closed' });
+      }
+
+      // Feature-flag gate
+      try {
+        await checkFeatureFlag(db, tenantId, 'ai_copilot');
+      } catch (e) {
+        if (e instanceof FeatureDisabledError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: e.message });
+        }
+        throw e;
       }
 
       // Quota check (default plan: 'free' — TODO: read from tenant.plan)

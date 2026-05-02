@@ -20,6 +20,7 @@ import { Embedder, retrieve } from '@corredor/core';
 import type { SqlClient } from '@corredor/core';
 import type { AnyDb } from '../trpc.js';
 import { getSession, getSessionId, IDLE_TIMEOUT_SECONDS } from '../middleware/session.js';
+import { checkFeatureFlag, FeatureDisabledError } from '../lib/feature-flags.js';
 
 interface StreamDeps {
   db: AnyDb;
@@ -99,6 +100,16 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
       return c.json({ error: 'Session is closed' }, 400);
     }
 
+    // Feature-flag gate
+    try {
+      await checkFeatureFlag(deps.db, tenantId, 'ai_copilot');
+    } catch (e) {
+      if (e instanceof FeatureDisabledError) {
+        return c.json({ error: e.message }, 403);
+      }
+      throw e;
+    }
+
     // Quota check
     const quota = await checkQuota(deps.redis, tenantId, userId, 'free');
     if (!quota.allowed) {
@@ -167,6 +178,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
       });
 
       let fullText = '';
+      let firstTokenMs: number | null = null;
       let streamMeta = { inputTokens: 0, outputTokens: 0, model: '' };
 
       try {
@@ -183,6 +195,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
         for await (const event of generator) {
           switch (event.type) {
             case 'text_delta':
+              if (firstTokenMs === null) firstTokenMs = Date.now() - startMs;
               fullText += event.data;
               await stream.writeSSE({ event: 'text_delta', data: event.data });
               break;
@@ -225,6 +238,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
           inputTokens: streamMeta.inputTokens,
           outputTokens: streamMeta.outputTokens,
           tokenCount: streamMeta.inputTokens + streamMeta.outputTokens,
+          firstTokenMs,
           latencyMs,
           totalMs: latencyMs,
           model: streamMeta.model,
@@ -269,6 +283,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
           outputTokens: streamMeta.outputTokens,
           model: streamMeta.model,
           latencyMs,
+          firstTokenMs,
         }),
       });
     });

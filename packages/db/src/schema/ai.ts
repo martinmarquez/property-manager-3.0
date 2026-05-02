@@ -121,6 +121,7 @@ export const copilotTurn = pgTable('copilot_turn', {
   tokenCount: integer('token_count').notNull().default(0),
   inputTokens: integer('input_tokens').notNull().default(0),
   outputTokens: integer('output_tokens').notNull().default(0),
+  firstTokenMs: integer('first_token_ms'),
   latencyMs: integer('latency_ms'),
   totalMs: integer('total_ms'),
   model: text('model'),

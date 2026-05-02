@@ -16,6 +16,7 @@ import {
 import { router, protectedProcedure, protectedProcedureNoTx } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
 import { env } from '../env.js';
+import { checkFeatureFlag, FeatureDisabledError } from '../lib/feature-flags.js';
 
 const MAX_DRAFTS = 5;
 
@@ -127,6 +128,16 @@ export const propertyDescriptionRouter = router({
     .input(generateInputSchema)
     .mutation(async ({ ctx, input }) => {
       const { tenantId, userId, db, redis } = ctx as AuthenticatedContext;
+
+      // Feature-flag gate
+      try {
+        await checkFeatureFlag(db, tenantId, 'ai_descriptions');
+      } catch (e) {
+        if (e instanceof FeatureDisabledError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: e.message });
+        }
+        throw e;
+      }
 
       if (!env.ANTHROPIC_API_KEY) {
         throw new TRPCError({
