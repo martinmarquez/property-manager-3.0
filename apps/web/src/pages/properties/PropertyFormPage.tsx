@@ -79,8 +79,9 @@ const msg = defineMessages({
   fieldGeoHint:       { id: 'properties.form.field.geocode.hint' },
   fieldDescription:   { id: 'properties.form.field.description' },
   fieldDescriptionPh: { id: 'properties.form.field.description.placeholder' },
-  fieldAiGenerate:    { id: 'properties.form.field.aiGenerate' },
-  fieldAiGenerating:  { id: 'properties.form.field.aiGenerating' },
+  fieldAiGenerate:          { id: 'properties.form.field.aiGenerate' },
+  fieldAiGenerateSaveFirst: { id: 'properties.form.field.aiGenerate.saveFirst' },
+  fieldAiGenerating:        { id: 'properties.form.field.aiGenerating' },
   fieldTags:          { id: 'properties.form.field.tags' },
   fieldTagsPh:        { id: 'properties.form.field.tags.placeholder' },
   listingAdd:         { id: 'properties.form.listing.add' },
@@ -1234,19 +1235,21 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                   </label>
                   <button
                     type="button"
-                    onClick={handleAiGenerate}
+                    onClick={propertyId ? handleAiGenerate : undefined}
+                    disabled={!propertyId}
+                    title={!propertyId ? intl.formatMessage(msg.fieldAiGenerateSaveFirst) : undefined}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
                       padding: '4px 10px',
                       borderRadius: 6,
-                      border: '1px solid rgba(126,58,242,0.4)',
-                      background: 'rgba(126,58,242,0.12)',
-                      color: '#9B59FF',
+                      border: `1px solid ${propertyId ? 'rgba(126,58,242,0.4)' : 'rgba(126,58,242,0.15)'}`,
+                      background: `rgba(126,58,242,${propertyId ? '0.12' : '0.05'})`,
+                      color: propertyId ? '#9B59FF' : 'rgba(155,89,255,0.4)',
                       fontSize: 11,
                       fontWeight: 600,
-                      cursor: 'pointer',
+                      cursor: propertyId ? 'pointer' : 'default',
                       fontFamily: F.body,
                       transition: 'background 0.15s',
                     }}

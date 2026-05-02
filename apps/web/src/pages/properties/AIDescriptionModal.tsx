@@ -73,6 +73,9 @@ const m = defineMessages({
   draftsDelete:       { id: 'aiDescription.drafts.delete' },
   draftsActive:       { id: 'aiDescription.drafts.active' },
   draftSaved:         { id: 'aiDescription.draft.saved' },
+  diffCurrent:        { id: 'aiDescription.diff.current' },
+  diffGenerated:      { id: 'aiDescription.diff.generated' },
+  close:              { id: 'aiDescription.close' },
 });
 
 /* ─── Tone / Portal config ─────────────────────────────────── */
@@ -190,7 +193,7 @@ function OverwriteWarning({
 }
 
 /* ─── Diff view ────────────────────────────────────────────── */
-function DiffView({ original, generated }: { original: string; generated: string }) {
+function DiffView({ original, generated, intl }: { original: string; generated: string; intl: ReturnType<typeof useIntl> }) {
   return (
     <div style={{ display: 'grid', gap: 12 }} data-ai-diff>
       <div>
@@ -200,7 +203,7 @@ function DiffView({ original, generated }: { original: string; generated: string
           fontFamily: F.mono, fontSize: 11, fontWeight: 600,
           color: C.textTertiary, letterSpacing: '0.05em', textTransform: 'uppercase' as const,
         }}>
-          Descripción actual
+          {intl.formatMessage(m.diffCurrent)}
         </div>
         <div style={{
           padding: 14, borderRadius: '0 0 8px 8px',
@@ -220,7 +223,7 @@ function DiffView({ original, generated }: { original: string; generated: string
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span>✦</span>
-          Descripción generada por IA
+          {intl.formatMessage(m.diffGenerated)}
         </div>
         <div style={{
           padding: 14, borderRadius: '0 0 8px 8px',
@@ -356,6 +359,7 @@ export default function AIDescriptionModal({
   const [showDrafts, setShowDrafts]       = useState(false);
   const [genError, setGenError]           = useState('');
   const [savedToast, setSavedToast]       = useState(false);
+  const [deletingId, setDeletingId]       = useState<string | null>(null);
 
   const [genMeta, setGenMeta] = useState<{
     model: string;
@@ -364,6 +368,7 @@ export default function AIDescriptionModal({
   } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // tRPC mutations
   const generateMut  = trpc.propertyDescription.generate.useMutation();
@@ -402,18 +407,19 @@ export default function AIDescriptionModal({
       setGenError('');
       setSavedToast(false);
       setGenMeta(null);
+      setDeletingId(null);
     }
   }, [open]);
 
-  // Escape key to close
+  // Escape key to close (blocked during generation/streaming)
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !showOverwrite) onClose();
+      if (e.key === 'Escape' && !showOverwrite && step !== 'generating' && step !== 'streaming') onClose();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open, onClose, showOverwrite]);
+  }, [open, onClose, showOverwrite, step]);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -421,6 +427,14 @@ export default function AIDescriptionModal({
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // Focus modal on open, restore focus on close
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => modalRef.current?.focus());
+    return () => { prev?.focus(); };
   }, [open]);
 
   // Auto-resize textarea
@@ -496,10 +510,12 @@ export default function AIDescriptionModal({
   }, [handleSave]);
 
   const handleDeleteDraft = useCallback(async (id: string) => {
+    setDeletingId(id);
     try {
       await deleteMut.mutateAsync({ id });
       draftsQuery.refetch();
     } catch { /* swallow */ }
+    setDeletingId(null);
   }, [deleteMut, draftsQuery]);
 
   const handleUseDraft = useCallback((body: string) => {
@@ -518,19 +534,21 @@ export default function AIDescriptionModal({
     <>
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={isWorking ? undefined : onClose}
         style={{
           position: 'fixed', inset: 0,
           background: C.bgOverlay, backdropFilter: 'blur(4px)',
-          zIndex: 1000,
+          zIndex: 1000, cursor: isWorking ? 'default' : 'pointer',
         }}
       />
 
       {/* Modal */}
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={intl.formatMessage(m.title)}
+        tabIndex={-1}
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -603,12 +621,15 @@ export default function AIDescriptionModal({
 
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
+            onClick={isWorking ? undefined : onClose}
+            disabled={isWorking}
+            aria-label={intl.formatMessage(m.close)}
             style={{
               background: 'transparent', border: 'none',
-              color: C.textTertiary, cursor: 'pointer',
+              color: isWorking ? C.textTertiary : C.textTertiary,
+              cursor: isWorking ? 'default' : 'pointer',
               fontSize: 18, padding: 6, lineHeight: 1, borderRadius: 6,
+              opacity: isWorking ? 0.3 : 1,
             }}
           >
             ✕
@@ -645,7 +666,7 @@ export default function AIDescriptionModal({
                       draft={draft}
                       onUse={() => handleUseDraft(draft.body)}
                       onDelete={() => handleDeleteDraft(draft.id)}
-                      deleting={deleteMut.isPending}
+                      deleting={deletingId === draft.id}
                       intl={intl}
                     />
                   ))}
@@ -957,7 +978,7 @@ export default function AIDescriptionModal({
                   {intl.formatMessage(m.comparisonBack)}
                 </button>
               </div>
-              <DiffView original={existingDescription} generated={editableText} />
+              <DiffView original={existingDescription} generated={editableText} intl={intl} />
             </div>
           )}
 

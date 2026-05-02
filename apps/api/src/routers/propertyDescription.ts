@@ -7,7 +7,7 @@ import {
   propertyAiDescription,
   descriptionGenerationLog,
 } from '@corredor/db';
-import { createQueue, QUEUE_NAMES } from '@corredor/core';
+import { createQueue, QUEUE_NAMES, checkRateLimit, RateLimitPresets } from '@corredor/core';
 import {
   generateDescription,
   generateInputSchema,
@@ -126,7 +126,7 @@ export const propertyDescriptionRouter = router({
   generate: protectedProcedureNoTx
     .input(generateInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId, db } = ctx as AuthenticatedContext;
+      const { tenantId, userId, db, redis } = ctx as AuthenticatedContext;
 
       if (!env.ANTHROPIC_API_KEY) {
         throw new TRPCError({
@@ -138,6 +138,16 @@ export const propertyDescriptionRouter = router({
       const attrs = await fetchPropertyAttributes(db, tenantId, input.propertyId);
       if (!attrs) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+      }
+
+      // AI-specific rate limit (20 req/min per user) — tighter than the general write limit
+      const aiRateLimitKey = `ratelimit:${RateLimitPresets.AI_REQUESTS.scope}:user:${tenantId}:${userId}`;
+      const aiRateResult = await checkRateLimit(redis, aiRateLimitKey, RateLimitPresets.AI_REQUESTS);
+      if (!aiRateResult.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `AI generation rate limit exceeded. Retry in ${aiRateResult.retryAfterSeconds}s`,
+        });
       }
 
       const startMs = Date.now();
