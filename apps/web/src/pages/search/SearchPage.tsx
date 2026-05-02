@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import {
   useSearchQuery,
+  useEntityCounts,
   saveRecentSearch,
   ENTITY_DISPLAY,
   ENTITY_HREF,
@@ -159,6 +160,8 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
     cursor,
     debounceMs: 300,
   });
+
+  const entityCounts = useEntityCounts(query, 300);
 
   // Reset pagination on query/filter change
   useEffect(() => { setCursor(0); }, [query, activeFilter]);
@@ -459,6 +462,19 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
                   }}>
                     {config.label}
                   </span>
+                  {query && entityCounts[et] != null && (
+                    <span style={{
+                      padding: '1px 7px',
+                      borderRadius: 20,
+                      background: isActive ? config.color : C.bgElevated,
+                      color: isActive ? '#fff' : C.textTertiary,
+                      fontFamily: F.mono,
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}>
+                      {entityCounts[et]}
+                    </span>
+                  )}
                 </button>
               );
             })}
