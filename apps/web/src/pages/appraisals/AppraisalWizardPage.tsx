@@ -1,839 +1,1431 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { C, F } from '../../components/copilot/tokens.js';
+import React, { useState, useEffect } from 'react';
+import {
+  X, CheckCircle2, Search, Home, Clock, BarChart2, FileText, Navigation, Shield,
+  ChevronDown, RefreshCw, Sparkles, Check, Edit3, Download,
+} from 'lucide-react';
 
-/* ─── Types ──────────────────────────────────────────────────────── */
+/* ─── Design tokens ──────────────────────────────────────────── */
 
-type WizardStep = 1 | 2 | 3 | 4 | 5;
-type Purpose = 'cma' | 'valuation' | 'price_update' | 'rental' | 'guarantee';
-type AiState = 'idle' | 'generating' | 'done' | 'error';
+const C = {
+  bgBase:        '#070D1A',
+  bgRaised:      '#0D1526',
+  bgElevated:    '#131E33',
+  bgSubtle:      '#162035',
+  brand:         '#1654d9',
+  brandHover:    '#1244b8',
+  brandFaint:    'rgba(22,84,217,0.12)',
+  ai:            '#7E3AF2',
+  aiFaint:       'rgba(126,58,242,0.12)',
+  aiLight:       '#9B59FF',
+  success:       '#18A659',
+  successFaint:  'rgba(24,166,89,0.12)',
+  warning:       '#E88A14',
+  warningFaint:  'rgba(232,138,20,0.12)',
+  error:         '#E83B3B',
+  textPrimary:   '#EFF4FF',
+  textSecondary: '#8DA0C0',
+  textTertiary:  '#506180',
+  border:        '#1F2D48',
+};
 
-interface Property {
-  id: string;
-  address: string;
-  neighborhood: string;
-  type: string;
-  area: number;
-  rooms: number;
-  price: string;
-  thumbnail: string;
+const F = {
+  display: "'Syne', sans-serif",
+  body:    "'DM Sans', sans-serif",
+  mono:    "'DM Mono', monospace",
+};
+
+/* ─── Wizard state types ─────────────────────────────────────── */
+
+type Step = 1 | 2 | 3 | 4 | 5;
+
+interface WizardData {
+  selectedPropertyIdx: number | null;
+  selectedPurpose:     string;
+  selectedCondition:   string;
 }
 
-interface Comp {
-  id: string;
-  address: string;
-  area: number;
-  rooms: number;
-  pricePerM2: number;
-  distance: number;
-  adjustment: number;
-  selected: boolean;
-}
+/* ─── Step definitions ───────────────────────────────────────── */
 
-/* ─── Mock data ──────────────────────────────────────────────────── */
+const STEPS = [
+  { n: 1, label: 'Propiedad'   },
+  { n: 2, label: 'Finalidad'   },
+  { n: 3, label: 'Comparables' },
+  { n: 4, label: 'Narrativa IA'},
+  { n: 5, label: 'Vista previa'},
+] as const;
 
-const RECENT_PROPERTIES: Property[] = [
-  { id: 'p1', address: 'Av. Corrientes 1800, 3° A', neighborhood: 'CABA', type: 'Departamento', area: 85, rooms: 3, price: 'USD 180,000', thumbnail: '🏢' },
-  { id: 'p2', address: 'Thames 900, PH', neighborhood: 'Palermo', type: 'PH', area: 200, rooms: 5, price: 'USD 380,000', thumbnail: '🏠' },
-  { id: 'p3', address: 'Defensa 450, 2° B', neighborhood: 'San Telmo', type: 'Departamento', area: 72, rooms: 2, price: 'USD 145,000', thumbnail: '🏢' },
-];
+/* ──────────────────────────────────────────────────────────────
+   STEPPER
+   ────────────────────────────────────────────────────────────── */
 
-const MOCK_COMPS: Comp[] = [
-  { id: 'c1', address: 'Av. Corrientes 1650, 2° A', area: 82, rooms: 3, pricePerM2: 2100, distance: 150, adjustment: -5, selected: true },
-  { id: 'c2', address: 'Callao 400, 4° B', area: 90, rooms: 3, pricePerM2: 2050, distance: 300, adjustment: -2, selected: true },
-  { id: 'c3', address: 'Av. Rivadavia 3200, 1° C', area: 75, rooms: 3, pricePerM2: 2200, distance: 420, adjustment: 0, selected: false },
-  { id: 'c4', address: 'Corrientes 2100 PB', area: 80, rooms: 3, pricePerM2: 1950, distance: 580, adjustment: 3, selected: false },
-  { id: 'c5', address: 'Bartolomé Mitre 1400, 6°', area: 88, rooms: 3, pricePerM2: 2080, distance: 720, adjustment: -1, selected: true },
-  { id: 'c6', address: 'Uruguay 800, 3° D', area: 78, rooms: 2, pricePerM2: 1980, distance: 850, adjustment: 2, selected: false },
-];
-
-const PURPOSES: { code: Purpose; label: string; desc: string }[] = [
-  { code: 'cma', label: 'CMA (Análisis de mercado comparativo)', desc: 'Para establecer precio de publicación' },
-  { code: 'valuation', label: 'Valuación formal', desc: 'Para documentación legal, hipotecas, herencias' },
-  { code: 'price_update', label: 'Actualización de precio', desc: 'Revisión de precio de una propiedad ya publicada' },
-  { code: 'rental', label: 'Tasación de alquiler', desc: 'Estimar valor mensual de renta' },
-  { code: 'guarantee', label: 'Garantía', desc: 'Valuación como respaldo crediticio' },
-];
-
-const STEP_LABELS = [
-  'Seleccioná la propiedad',
-  'Definí el propósito',
-  'Buscá comparables',
-  'Revisá la narrativa IA',
-  'Descargá el reporte',
-];
-
-/* ─── Step indicator ─────────────────────────────────────────────── */
-
-function StepIndicator({ current, total }: { current: WizardStep; total: number }) {
-  const pct = Math.round(((current - 1) / (total - 1)) * 100);
+function Stepper({ current }: { current: Step }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      {/* Linear progress bar */}
-      <div style={{ height: 4, background: C.bgElevated, borderRadius: 2, marginBottom: 16 }}>
-        <div style={{
-          height: '100%', width: `${pct}%`, background: C.brand,
-          borderRadius: 2, transition: 'width 0.35s ease',
-        }} />
-      </div>
-      {/* Step pills */}
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {STEP_LABELS.map((label, i) => {
-          const stepNum = (i + 1) as WizardStep;
-          const done = stepNum < current;
-          const active = stepNum === current;
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      background: C.bgRaised, borderBottom: `1px solid ${C.border}`,
+      padding: '14px 40px', position: 'sticky', top: 56, zIndex: 10,
+    }}>
+      {STEPS.map((step, idx) => {
+        const done   = step.n < current;
+        const active = step.n === current;
+        const last   = idx === STEPS.length - 1;
+        return (
+          <React.Fragment key={step.n}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 80 }}>
+              {/* Circle */}
               <div style={{
-                width: 22, height: 22, borderRadius: '50%',
+                width: 30, height: 30, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700,
-                background: done ? C.success : active ? C.brand : C.bgElevated,
-                color: (done || active) ? '#fff' : C.textTertiary,
                 border: `2px solid ${done ? C.success : active ? C.brand : C.border}`,
+                background: done ? C.success : active ? C.brand : 'transparent',
+                color: done || active ? '#fff' : C.textTertiary,
+                fontFamily: F.mono, fontSize: 12, fontWeight: 700,
+                transition: 'all 0.25s',
                 flexShrink: 0,
               }}>
-                {done ? '✓' : stepNum}
+                {done ? <CheckCircle2 size={14} /> : step.n}
               </div>
+              {/* Label */}
               <span style={{
-                fontFamily: F.body, fontSize: 12,
+                fontFamily: F.body, fontSize: 11,
                 color: active ? C.textPrimary : done ? C.textSecondary : C.textTertiary,
-                fontWeight: active ? 600 : 400,
+                fontWeight: active ? 600 : 400, whiteSpace: 'nowrap',
               }}>
-                {label}
+                {step.label}
               </span>
-              {i < STEP_LABELS.length - 1 && (
-                <div style={{ width: 16, height: 1, background: C.border, marginLeft: 2 }} />
-              )}
             </div>
+
+            {!last && (
+              <div style={{
+                flex: 1, height: 2, marginBottom: 20, minWidth: 24,
+                background: done ? C.success : C.bgElevated,
+                transition: 'background 0.3s',
+              }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   STEP 1 — Seleccionar propiedad
+   ────────────────────────────────────────────────────────────── */
+
+const PROPERTIES = [
+  { id: 'PRO-1234', address: 'Serrano 2450 PB',              type: 'Departamento', rooms: '3 amb.', sqm: '78m²'  },
+  { id: 'PRO-0892', address: 'Av. Santa Fe 2180 9°A',        type: 'Departamento', rooms: '2 amb.', sqm: '55m²'  },
+  { id: 'PRO-0567', address: 'Palermo SoHo, Thames 1680 PH', type: 'PH',           rooms: '4 amb.', sqm: '120m²' },
+  { id: 'PRO-1109', address: "Belgrano R, O'Higgins 2340",   type: 'Casa',         rooms: '5 amb.', sqm: '280m²' },
+];
+
+function Step1Property({
+  selectedIdx,
+  onSelect,
+  onNext,
+}: {
+  selectedIdx: number | null;
+  onSelect: (i: number) => void;
+  onNext: () => void;
+}) {
+  const [query, setQuery]           = useState('');
+  const [showManual, setShowManual] = useState(false);
+
+  const visible = !query
+    ? PROPERTIES
+    : PROPERTIES.filter(p =>
+        p.address.toLowerCase().includes(query.toLowerCase()) ||
+        p.id.includes(query.toUpperCase()),
+      );
+
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 0 60px' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.textPrimary, margin: '0 0 6px' }}>
+        ¿A qué propiedad pertenece esta tasación?
+      </h2>
+      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, margin: '0 0 28px' }}>
+        Buscá la propiedad en tu cartera o ingresá una dirección manual.
+      </p>
+
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <Search size={16} style={{
+          position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+          color: C.textTertiary, pointerEvents: 'none',
+        }} />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar por dirección, ID o código interno…"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            height: 48, paddingLeft: 44, paddingRight: 16,
+            background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 10,
+            color: C.textPrimary, fontFamily: F.body, fontSize: 14, outline: 'none',
+          }}
+          onFocus={e => (e.target.style.borderColor = C.brand)}
+          onBlur={e => (e.target.style.borderColor = C.border)}
+        />
+      </div>
+
+      {/* Property list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+        {visible.map((prop, i) => {
+          const actualIdx = PROPERTIES.indexOf(prop);
+          const sel = selectedIdx === actualIdx;
+          return (
+            <button
+              key={prop.id}
+              onClick={() => onSelect(actualIdx)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                background: sel ? C.brandFaint : C.bgRaised,
+                border: sel ? `1px solid ${C.brand}` : `1px solid ${C.border}`,
+                borderLeft: sel ? `3px solid ${C.brand}` : `1px solid ${C.border}`,
+                borderRadius: 10, padding: '12px 16px',
+                cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+                width: '100%',
+              }}
+              onMouseEnter={e => { if (!sel) e.currentTarget.style.background = C.bgElevated; }}
+              onMouseLeave={e => { if (!sel) e.currentTarget.style.background = C.bgRaised; }}
+            >
+              {/* Thumbnail */}
+              <div style={{
+                width: 48, height: 48, borderRadius: 8, flexShrink: 0,
+                background: C.bgElevated, border: `1px solid ${C.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Home size={20} color={sel ? C.brand : C.textTertiary} />
+              </div>
+
+              {/* Info */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: F.body, fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>
+                  {prop.address}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary }}>{prop.type}</span>
+                  <span style={{ color: C.border }}>·</span>
+                  <span style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary }}>{prop.rooms}</span>
+                  <span style={{ color: C.border }}>·</span>
+                  <span style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary }}>{prop.sqm}</span>
+                  <span style={{
+                    fontFamily: F.mono, fontSize: 10, color: C.textTertiary,
+                    background: C.bgElevated, border: `1px solid ${C.border}`,
+                    borderRadius: 4, padding: '1px 6px',
+                  }}>
+                    {prop.id}
+                  </span>
+                </div>
+              </div>
+
+              {/* Selected check */}
+              {sel && <CheckCircle2 size={18} color={C.brand} style={{ flexShrink: 0 }} />}
+            </button>
           );
         })}
       </div>
-    </div>
-  );
-}
 
-/* ─── Step 1: Property Selection ────────────────────────────────── */
-
-function Step1({ selected, onSelect }: { selected: Property | null; onSelect: (p: Property) => void }) {
-  const [query, setQuery] = useState('');
-  const results = query.length > 1
-    ? RECENT_PROPERTIES.filter(p => p.address.toLowerCase().includes(query.toLowerCase()))
-    : RECENT_PROPERTIES;
-
-  return (
-    <div>
-      <h3 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-        Seleccioná la propiedad
-      </h3>
-      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, marginBottom: 20 }}>
-        Buscá una propiedad del CRM o ingresá una dirección externa.
-      </p>
-
-      <input
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        placeholder="🔍 Buscar por dirección, código o cliente..."
+      {/* Manual toggle */}
+      <button
+        onClick={() => setShowManual(v => !v)}
         style={{
-          width: '100%', background: C.bgElevated, border: `1px solid ${C.border}`,
-          borderRadius: 10, padding: '11px 16px', color: C.textPrimary,
-          fontFamily: F.body, fontSize: 14, outline: 'none',
-          boxSizing: 'border-box', marginBottom: 16,
+          background: 'none', border: 'none', padding: 0,
+          color: C.brand, fontFamily: F.body, fontSize: 13, cursor: 'pointer',
+          textDecoration: 'underline', marginBottom: showManual ? 16 : 32,
+          display: 'block',
         }}
-      />
+      >
+        {showManual ? '↑ Cancelar dirección manual' : 'O ingresá dirección manualmente'}
+      </button>
 
-      <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-        {query ? `${results.length} resultado${results.length !== 1 ? 's' : ''}` : 'Recientes'}
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {results.map(p => (
-          <div key={p.id} onClick={() => onSelect(p)} style={{
-            display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-            background: selected?.id === p.id ? C.brandFaint : C.bgElevated,
-            border: `1px solid ${selected?.id === p.id ? C.brand : C.border}`,
-            borderRadius: 10, padding: '12px 16px',
-            transition: 'border-color 0.12s, background 0.12s',
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 8, background: C.bgRaised,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
-            }}>
-              {p.thumbnail}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: F.body, fontSize: 14, color: C.textPrimary, fontWeight: 500 }}>
-                {p.address}
-              </div>
-              <div style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary, marginTop: 2 }}>
-                {p.type} · {p.area}m² · {p.rooms} amb. · {p.neighborhood}
-              </div>
-            </div>
-            <div style={{ fontFamily: F.mono, fontSize: 13, color: C.textPrimary, fontWeight: 700 }}>
-              {p.price}
-            </div>
-            {selected?.id === p.id && (
-              <span style={{
-                background: C.brand, color: '#fff', borderRadius: 99,
-                padding: '2px 8px', fontSize: 11, fontFamily: F.body, fontWeight: 600,
-              }}>
-                ✓ Seleccionada
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Step 2: Purpose ───────────────────────────────────────────── */
-
-function Step2({ purpose, onSelect }: { purpose: Purpose | null; onSelect: (p: Purpose) => void }) {
-  return (
-    <div>
-      <h3 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-        ¿Para qué es la tasación?
-      </h3>
-      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, marginBottom: 20 }}>
-        El propósito determina los comparables y el enfoque del informe.
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-        {PURPOSES.map(p => (
-          <div key={p.code} onClick={() => onSelect(p.code)} style={{
-            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-            background: purpose === p.code ? C.brandFaint : C.bgElevated,
-            border: `1px solid ${purpose === p.code ? C.brand : C.border}`,
-            borderRadius: 10, padding: '14px 16px',
-            transition: 'all 0.12s',
-          }}>
-            <input type="radio" checked={purpose === p.code} readOnly aria-hidden="true" />
-            <div>
-              <div style={{ fontFamily: F.body, fontSize: 14, fontWeight: 600, color: C.textPrimary }}>
-                {p.label}
-              </div>
-              <div style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary, marginTop: 2 }}>
-                {p.desc}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <label style={{ display: 'block', fontFamily: F.body, fontSize: 13, color: C.textSecondary, marginBottom: 6 }}>
-        Notas adicionales (opcional)
-      </label>
-      <textarea placeholder="Ej: el propietario quiere vender en 60 días..." rows={3} style={{
-        width: '100%', background: C.bgElevated, border: `1px solid ${C.border}`,
-        borderRadius: 8, padding: '10px 12px', color: C.textPrimary,
-        fontFamily: F.body, fontSize: 13, resize: 'vertical', outline: 'none',
-        boxSizing: 'border-box',
-      }} />
-    </div>
-  );
-}
-
-/* ─── Step 3: Comparables ───────────────────────────────────────── */
-
-function Step3({ comps, setComps }: { comps: Comp[]; setComps: (c: Comp[]) => void }) {
-  const [radius, setRadius] = useState(1000);
-  const selectedCount = comps.filter(c => c.selected).length;
-
-  function toggle(id: string) {
-    if (!comps.find(c => c.id === id)?.selected && selectedCount >= 10) return;
-    setComps(comps.map(c => c.id === id ? { ...c, selected: !c.selected } : c));
-  }
-
-  function updateAdjustment(id: string, val: number) {
-    setComps(comps.map(c => c.id === id ? { ...c, adjustment: val } : c));
-  }
-
-  return (
-    <div>
-      <h3 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-        Seleccioná los comparables
-      </h3>
-      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, marginBottom: 16 }}>
-        Encontré {comps.length} comparables en un radio de {radius >= 1000 ? `${radius / 1000} km` : `${radius} m`}.
-        Seleccioná hasta 10.
-      </p>
-
-      {/* Fake map placeholder */}
-      <div style={{
-        height: 260, background: C.bgElevated, borderRadius: 12,
-        border: `1px solid ${C.border}`, marginBottom: 16,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>🗺️</div>
-          <div style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary }}>
-            Mapa de comparables (MapLibre)
-          </div>
-          <div style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, marginTop: 4 }}>
-            📍 Propiedad sujeto · ◎ Radio {radius >= 1000 ? `${radius / 1000} km` : `${radius} m`} · {comps.filter(c => c.selected).length} comp{selectedCount !== 1 ? 's' : ''} seleccionado{selectedCount !== 1 ? 's' : ''}
-          </div>
-        </div>
-        {/* Radius selector overlay */}
+      {showManual && (
         <div style={{
-          position: 'absolute', bottom: 12, left: 12, right: 12,
-          background: 'rgba(13,21,38,0.92)', borderRadius: 8, padding: '8px 12px',
-          display: 'flex', alignItems: 'center', gap: 12,
+          background: C.bgRaised, border: `1px solid ${C.border}`,
+          borderRadius: 10, padding: 20, marginBottom: 32,
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
         }}>
-          <span style={{ fontFamily: F.mono, fontSize: 12, color: C.textTertiary }}>Radio:</span>
-          {[500, 1000, 2000].map(r => (
-            <button key={r} onClick={() => setRadius(r)} style={{
-              background: radius === r ? C.brand : C.bgElevated,
-              color: radius === r ? '#fff' : C.textSecondary,
-              border: `1px solid ${radius === r ? C.brand : C.border}`,
-              borderRadius: 6, padding: '4px 10px', fontSize: 12,
-              fontFamily: F.body, cursor: 'pointer',
-            }}>
-              {r >= 1000 ? `${r / 1000} km` : `${r} m`}
+          {['Calle y número', 'Piso / Depto', 'Barrio', 'Ciudad'].map(lbl => (
+            <FieldInput key={lbl} label={lbl} />
+          ))}
+        </div>
+      )}
+
+      {/* Bottom nav */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <PrimaryBtn
+          label="Continuar →"
+          onClick={onNext}
+          disabled={selectedIdx === null && !showManual}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   STEP 2 — Finalidad
+   ────────────────────────────────────────────────────────────── */
+
+const PURPOSES = [
+  { key: 'Venta',             desc: 'Estimación de precio de venta',       Icon: Home,       iconBg: C.brand         },
+  { key: 'Alquiler',          desc: 'Determinación de precio de alquiler',  Icon: Clock,      iconBg: C.warning       },
+  { key: 'Garantía',          desc: 'Valuación para garantía bancaria',     Icon: Shield,     iconBg: C.success       },
+  { key: 'Refinanciación',    desc: 'Tasación para refinanciamiento',       Icon: BarChart2,  iconBg: C.brand         },
+  { key: 'Herencia',          desc: 'Valuación de bienes sucesorios',       Icon: FileText,   iconBg: C.textTertiary  },
+  { key: 'Alquiler temporal', desc: 'Estimación de renta por temporada',    Icon: Navigation, iconBg: C.ai            },
+] as const;
+
+const CONDITIONS = ['Excelente', 'Bueno', 'Regular', 'A refaccionar'] as const;
+
+function Step2Purpose({
+  selectedPurpose,
+  selectedCondition,
+  onPurpose,
+  onCondition,
+  onNext,
+  onBack,
+}: {
+  selectedPurpose:   string;
+  selectedCondition: string;
+  onPurpose:   (v: string) => void;
+  onCondition: (v: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 0 60px' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.textPrimary, margin: '0 0 6px' }}>
+        ¿Para qué es esta tasación?
+      </h2>
+      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, margin: '0 0 28px' }}>
+        Seleccioná la finalidad para ajustar el análisis de mercado.
+      </p>
+
+      {/* Purpose cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 32 }}>
+        {PURPOSES.map(({ key, desc, Icon, iconBg }) => {
+          const sel = selectedPurpose === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onPurpose(key)}
+              style={{
+                position: 'relative', textAlign: 'left',
+                background: sel ? C.brandFaint : C.bgRaised,
+                border: `${sel ? 2 : 1}px solid ${sel ? C.brand : C.border}`,
+                borderRadius: 12, padding: 16,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!sel) e.currentTarget.style.background = C.bgElevated; }}
+              onMouseLeave={e => { if (!sel) e.currentTarget.style.background = C.bgRaised; }}
+            >
+              {/* Check corner */}
+              {sel && (
+                <div style={{
+                  position: 'absolute', top: 10, right: 10,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: C.brand,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Check size={11} color="#fff" />
+                </div>
+              )}
+
+              {/* Icon box */}
+              <div style={{
+                width: 32, height: 32, borderRadius: 7, marginBottom: 10,
+                background: `${iconBg}33`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon
+                  size={16}
+                  color={iconBg === C.textTertiary ? C.textSecondary : iconBg}
+                />
+              </div>
+
+              <div style={{
+                fontFamily: F.body, fontSize: 14, fontWeight: 600,
+                color: sel ? C.textPrimary : C.textSecondary, marginBottom: 3,
+              }}>
+                {key}
+              </div>
+              <div style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, lineHeight: 1.4 }}>
+                {desc}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Condition segmented control */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontFamily: F.body, fontSize: 13, color: C.textTertiary, display: 'block', marginBottom: 10 }}>
+          Condición del inmueble
+        </label>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {CONDITIONS.map(c => (
+            <button
+              key={c}
+              onClick={() => onCondition(c)}
+              style={{
+                flex: 1, padding: '9px 0',
+                border: `1px solid ${selectedCondition === c ? C.brand : C.border}`,
+                borderRadius: 8,
+                background: selectedCondition === c ? C.brandFaint : C.bgRaised,
+                color: selectedCondition === c ? C.brand : C.textSecondary,
+                fontFamily: F.body, fontSize: 13,
+                fontWeight: selectedCondition === c ? 600 : 400,
+                cursor: 'pointer', transition: 'all 0.12s',
+              }}
+            >
+              {c}
             </button>
           ))}
-          <input
-            type="range" min={200} max={3000} step={100} value={radius}
-            onChange={e => setRadius(Number(e.target.value))}
-            style={{ flex: 1, accentColor: C.brand }}
-            aria-label="Radio de búsqueda en metros"
+        </div>
+      </div>
+
+      {/* Optional notes */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontFamily: F.body, fontSize: 13, color: C.textTertiary, display: 'block', marginBottom: 8 }}>
+          Observaciones adicionales (opcional)
+        </label>
+        <textarea
+          placeholder="Ej: propiedad con amenities, vista al río, reforma reciente…"
+          rows={3}
+          style={{
+            width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+            background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 8,
+            color: C.textPrimary, fontFamily: F.body, fontSize: 13,
+            resize: 'vertical', outline: 'none',
+          }}
+          onFocus={e => (e.target.style.borderColor = C.brand)}
+          onBlur={e => (e.target.style.borderColor = C.border)}
+        />
+      </div>
+
+      {/* Required date */}
+      <div style={{ marginBottom: 36 }}>
+        <label style={{ fontFamily: F.body, fontSize: 13, color: C.textTertiary, display: 'block', marginBottom: 8 }}>
+          Fecha requerida
+        </label>
+        <input
+          type="date"
+          style={{
+            padding: '9px 14px', background: C.bgRaised,
+            border: `1px solid ${C.border}`, borderRadius: 8,
+            color: C.textPrimary, fontFamily: F.body, fontSize: 13,
+            outline: 'none', colorScheme: 'dark',
+          }}
+          onFocus={e => (e.target.style.borderColor = C.brand)}
+          onBlur={e => (e.target.style.borderColor = C.border)}
+        />
+      </div>
+
+      <StepNav onBack={onBack} onNext={onNext} nextDisabled={!selectedPurpose} />
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   STEP 3 — Comparables
+   ────────────────────────────────────────────────────────────── */
+
+const COMPS_DATA = [
+  { addr: 'Serrano 2380, CABA',     type: 'Dpto 3am',  sqm: 75, priceM2: 2400, total: 180000, dist: '1.2km', dom: '45 días en mercado' },
+  { addr: 'Armenia 1640, CABA',     type: 'Dpto 3am',  sqm: 80, priceM2: 2350, total: 188000, dist: '1.5km', dom: '32 días en mercado' },
+  { addr: 'Lavalleja 1240, CABA',   type: 'Dpto 3am',  sqm: 72, priceM2: 2600, total: 187200, dist: '1.8km', dom: '67 días en mercado' },
+  { addr: 'Thames 1490, CABA',      type: 'Dpto 3am',  sqm: 78, priceM2: 2480, total: 193440, dist: '2.0km', dom: '18 días en mercado' },
+  { addr: 'Niceto Vega 4560, CABA', type: 'Dpto 2am+', sqm: 68, priceM2: 2200, total: 149600, dist: '2.4km', dom: '90 días en mercado' },
+];
+
+const MAP_PINS = [
+  { x: 53, y: 34 },
+  { x: 41, y: 56 },
+  { x: 61, y: 59 },
+  { x: 44, y: 34 },
+  { x: 63, y: 43 },
+];
+
+function MapMockup({ selectedComps, radius }: { selectedComps: Set<number>; radius: string }) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: 'linear-gradient(160deg, #070F20 0%, #0A1628 40%, #091524 100%)',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* SVG layer */}
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      >
+        {/* City block grid */}
+        {[12, 22, 32, 42, 52, 62, 72, 82].map(y => (
+          <line key={`h${y}`} x1="0" y1={y} x2="100" y2={y} stroke="#1F2D48" strokeWidth="0.35" />
+        ))}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(x => (
+          <line key={`v${x}`} x1={x} y1="0" x2={x} y2="100" stroke="#1F2D48" strokeWidth="0.35" />
+        ))}
+        {/* Diagonal avenue */}
+        <line x1="0" y1="95" x2="95" y2="0" stroke="#243552" strokeWidth="0.7" opacity="0.6" />
+
+        {/* City blocks */}
+        {([
+          [10,12,10,10],[20,12,10,10],[30,12,10,10],[50,12,10,10],
+          [10,22,10,10],[30,22,20,10],[60,22,10,10],
+          [10,32,10,10],[20,32,20,10],[50,32,10,10],[70,32,10,10],
+          [10,42,20,10],[40,42,10,10],[60,42,20,10],
+          [20,52,10,10],[40,52,20,10],[70,52,10,10],
+        ] as [number,number,number,number][]).map(([x,y,w,h], i) => (
+          <rect key={i} x={x} y={y} width={w} height={h} fill="#0C1827" rx="0.3" />
+        ))}
+
+        {/* Search radius circle */}
+        <circle
+          cx="50" cy="45" r="23"
+          fill={`${C.brand}07`}
+          stroke={C.brand}
+          strokeWidth="0.5"
+          strokeDasharray="2 1.5"
+        />
+
+        {/* Comparable markers */}
+        {MAP_PINS.map((pin, i) => {
+          const sel = selectedComps.has(i);
+          return (
+            <g key={i}>
+              {sel && (
+                <circle cx={pin.x} cy={pin.y} r="6" fill={C.success} opacity="0.15" />
+              )}
+              <circle
+                cx={pin.x} cy={pin.y} r="3.8"
+                fill={sel ? C.success : C.bgElevated}
+                stroke={sel ? C.success : C.border}
+                strokeWidth="0.6"
+              />
+              <text
+                x={pin.x} y={pin.y + 0.5}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize="2.4" fill="#fff" fontFamily="monospace" fontWeight="bold"
+              >
+                {i + 1}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Subject property */}
+        <circle cx="50" cy="45" r="6.5" fill={C.brand} opacity="0.18" />
+        <circle cx="50" cy="45" r="4" fill={C.brand} stroke="#fff" strokeWidth="0.8" />
+        <text
+          x="50" y="45.5"
+          textAnchor="middle" dominantBaseline="middle"
+          fontSize="2.5" fill="#fff" fontFamily="monospace" fontWeight="bold"
+        >
+          ★
+        </text>
+
+        {/* Subject label tooltip */}
+        <rect x="38.5" y="37" width="23" height="5.5" rx="1.2" fill={C.brand} opacity="0.92" />
+        <text
+          x="50" y="40"
+          textAnchor="middle" dominantBaseline="middle"
+          fontSize="2.1" fill="#fff" fontFamily="sans-serif" fontWeight="600"
+        >
+          Serrano 2450
+        </text>
+      </svg>
+
+      {/* Map controls top-right */}
+      <div style={{
+        position: 'absolute', top: 16, right: 16,
+        display: 'flex', flexDirection: 'column', gap: 4,
+      }}>
+        {['+', '−'].map(ctrl => (
+          <button key={ctrl} style={{
+            width: 32, height: 32, background: C.bgRaised, border: `1px solid ${C.border}`,
+            borderRadius: 6, color: C.textSecondary, fontFamily: F.mono, fontSize: 17,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {ctrl}
+          </button>
+        ))}
+      </div>
+
+      {/* Radius tag */}
+      <div style={{
+        position: 'absolute', top: 16, left: 16,
+        background: `${C.bgRaised}cc`, border: `1px solid ${C.border}`,
+        borderRadius: 6, padding: '4px 10px',
+        fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
+        backdropFilter: 'blur(4px)',
+      }}>
+        Radio: {radius}
+      </div>
+
+      {/* Scale bar */}
+      <div style={{
+        position: 'absolute', bottom: 64, left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+      }}>
+        <div style={{
+          width: 64, height: 3, background: `${C.textTertiary}66`,
+          borderRadius: 1, position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute', left: 0, right: 0, top: 5,
+            display: 'flex', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontFamily: F.mono, fontSize: 9, color: C.textTertiary }}>0</span>
+            <span style={{ fontFamily: F.mono, fontSize: 9, color: C.textTertiary }}>500m</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{
+        position: 'absolute', bottom: 56, left: 0, right: 0,
+        textAlign: 'center', fontFamily: F.body, fontSize: 11, color: C.textTertiary,
+      }}>
+        Mapa simulado — se integrará con MapLibre GL
+      </div>
+    </div>
+  );
+}
+
+function Step3Comparables({
+  selectedComps,
+  onToggleComp,
+  onNext,
+  onBack,
+}: {
+  selectedComps:  Set<number>;
+  onToggleComp:   (i: number) => void;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  const [radius, setRadius] = useState('2km');
+  const RADII = ['500m', '1km', '2km', '5km'];
+
+  const selArr = Array.from(selectedComps);
+  const avgPriceM2 = selArr.length > 0
+    ? Math.round(selArr.reduce((s, i) => s + (COMPS_DATA[i]?.priceM2 ?? 0), 0) / selArr.length)
+    : null;
+
+  return (
+    <div style={{ display: 'flex', height: 'calc(100vh - 129px)', minHeight: 500 }}>
+      {/* ── Left panel ── */}
+      <div style={{
+        width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        borderRight: `1px solid ${C.border}`, background: C.bgBase,
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '18px 18px 12px', borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: F.display, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
+              Comparables
+            </h3>
+            <span style={{
+              fontFamily: F.mono, fontSize: 12, fontWeight: 700,
+              background: C.brandFaint, color: C.brand,
+              borderRadius: 99, padding: '2px 10px',
+            }}>
+              {selectedComps.size}/5
+            </span>
+          </div>
+
+          {/* Filter row */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <select
+                value={radius}
+                onChange={e => setRadius(e.target.value)}
+                style={{
+                  appearance: 'none', WebkitAppearance: 'none', width: '100%',
+                  background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 7,
+                  padding: '7px 28px 7px 10px', color: C.textPrimary,
+                  fontFamily: F.body, fontSize: 12, cursor: 'pointer', outline: 'none',
+                }}
+              >
+                {RADII.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <ChevronDown size={11} style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                color: C.textTertiary, pointerEvents: 'none',
+              }} />
+            </div>
+            <button style={{
+              padding: '7px 12px', background: C.bgRaised, border: `1px solid ${C.border}`,
+              borderRadius: 7, color: C.textSecondary, fontFamily: F.body, fontSize: 12, cursor: 'pointer',
+            }}>
+              Tipo
+            </button>
+            <button style={{
+              padding: '7px 12px', background: C.bgRaised, border: `1px solid ${C.border}`,
+              borderRadius: 7, color: C.textSecondary, fontFamily: F.body, fontSize: 12, cursor: 'pointer',
+            }}>
+              Filtros
+            </button>
+          </div>
+        </div>
+
+        {/* Comp list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+          {COMPS_DATA.map((comp, i) => {
+            const sel = selectedComps.has(i);
+            return (
+              <button
+                key={i}
+                onClick={() => onToggleComp(i)}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  width: '100%', textAlign: 'left',
+                  background: sel ? C.successFaint : C.bgRaised,
+                  border: `1px solid ${sel ? C.success : C.border}`,
+                  borderRadius: 10, padding: 12, marginBottom: 8,
+                  cursor: 'pointer', transition: 'all 0.12s',
+                }}
+                onMouseEnter={e => { if (!sel) e.currentTarget.style.background = C.bgElevated; }}
+                onMouseLeave={e => { if (!sel) e.currentTarget.style.background = C.bgRaised; }}
+              >
+                {/* Checkbox */}
+                <div style={{
+                  width: 16, height: 16, borderRadius: 4, flexShrink: 0, marginTop: 2,
+                  border: `2px solid ${sel ? C.success : C.border}`,
+                  background: sel ? C.success : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {sel && <Check size={10} color="#fff" />}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
+                    {comp.addr}
+                  </div>
+                  <div style={{ fontFamily: F.body, fontSize: 11, color: C.textSecondary, marginBottom: 6 }}>
+                    {comp.type} · {comp.sqm}m²
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, color: C.success }}>
+                      ${comp.priceM2.toLocaleString('es-AR')}/m²
+                    </span>
+                    <span style={{ fontFamily: F.mono, fontSize: 12, color: C.textSecondary }}>
+                      USD {comp.total.toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <span style={{ fontFamily: F.body, fontSize: 11, color: C.textTertiary }}>{comp.dist}</span>
+                    <span style={{ fontFamily: F.body, fontSize: 11, color: C.textTertiary }}>{comp.dom}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Summary footer */}
+        {avgPriceM2 !== null && (
+          <div style={{
+            padding: '14px 18px', borderTop: `1px solid ${C.border}`,
+            background: C.bgRaised,
+          }}>
+            <div style={{ fontFamily: F.body, fontSize: 11, color: C.textTertiary, marginBottom: 4 }}>
+              Promedio $/m² · {selectedComps.size} comparables
+            </div>
+            <div style={{ fontFamily: F.mono, fontSize: 18, fontWeight: 700, color: C.success }}>
+              ${avgPriceM2.toLocaleString('es-AR')}/m²
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Right panel: map ── */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <MapMockup selectedComps={selectedComps} radius={radius} />
+
+        {/* Bottom nav bar over map */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '12px 24px', borderTop: `1px solid ${C.border}`,
+          background: `${C.bgBase}f0`, backdropFilter: 'blur(10px)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <GhostBtn label="← Anterior" onClick={onBack} />
+          <PrimaryBtn
+            label="Continuar →"
+            onClick={onNext}
+            disabled={selectedComps.size < 2}
           />
         </div>
       </div>
-
-      {/* Comparables table */}
-      <div style={{ background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: C.bgElevated, borderBottom: `1px solid ${C.border}` }}>
-          <span style={{ fontFamily: F.body, fontSize: 13, color: C.textSecondary }}>
-            {selectedCount}/10 comparables seleccionados
-            {selectedCount < 3 && <span style={{ color: C.warning, marginLeft: 8 }}>· Mínimo 3 requeridos</span>}
-          </span>
-          {selectedCount > 0 && (
-            <button onClick={() => setComps(comps.map(c => ({ ...c, selected: false })))} style={{
-              background: 'none', border: 'none', color: C.textTertiary,
-              fontFamily: F.body, fontSize: 12, cursor: 'pointer', textDecoration: 'underline',
-            }}>
-              Limpiar selección
-            </button>
-          )}
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F.body }}>
-          <thead>
-            <tr>
-              {['', 'Dirección', 'm²', 'Amb.', '$/m²', 'Dist.', 'Ajuste %'].map(h => (
-                <th key={h} style={{
-                  textAlign: 'left', padding: '8px 12px',
-                  fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                  borderBottom: `1px solid ${C.border}`,
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {comps.map(comp => (
-              <tr key={comp.id} style={{
-                borderBottom: `1px solid ${C.border}`,
-                background: comp.selected ? C.brandFaint : 'transparent',
-                opacity: !comp.selected && selectedCount >= 10 ? 0.4 : 1,
-                cursor: 'pointer',
-              }}
-                onClick={() => toggle(comp.id)}
-              >
-                <td style={{ padding: '10px 12px' }}>
-                  <input
-                    type="checkbox"
-                    checked={comp.selected}
-                    onChange={() => toggle(comp.id)}
-                    disabled={!comp.selected && selectedCount >= 10}
-                    style={{ accentColor: C.brand }}
-                  />
-                </td>
-                <td style={{ padding: '10px 12px', fontSize: 13, color: C.textPrimary }}>{comp.address}</td>
-                <td style={{ padding: '10px 12px', fontFamily: F.mono, fontSize: 13, color: C.textSecondary }}>{comp.area}</td>
-                <td style={{ padding: '10px 12px', fontFamily: F.mono, fontSize: 13, color: C.textSecondary }}>{comp.rooms}</td>
-                <td style={{ padding: '10px 12px', fontFamily: F.mono, fontSize: 13, color: C.textPrimary, fontWeight: 600 }}>
-                  ${comp.pricePerM2.toLocaleString()}
-                </td>
-                <td style={{ padding: '10px 12px', fontFamily: F.mono, fontSize: 12, color: C.textTertiary }}>
-                  {comp.distance < 1000 ? `${comp.distance}m` : `${(comp.distance / 1000).toFixed(1)}km`}
-                </td>
-                <td style={{ padding: '10px 12px' }} onClick={e => e.stopPropagation()}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input
-                      type="number"
-                      value={comp.adjustment}
-                      onChange={e => updateAdjustment(comp.id, Number(e.target.value))}
-                      style={{
-                        width: 52, background: C.bgElevated, border: `1px solid ${C.border}`,
-                        borderRadius: 5, padding: '4px 6px', color: C.textPrimary,
-                        fontFamily: F.mono, fontSize: 12, textAlign: 'right', outline: 'none',
-                      }}
-                    />
-                    <span style={{ fontFamily: F.mono, fontSize: 12, color: C.textTertiary }}>%</span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
 
-/* ─── Step 4: AI Narrative ──────────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────
+   STEP 4 — Narrativa IA
+   ────────────────────────────────────────────────────────────── */
 
-function Step4({
-  comps, property,
-  narrative, setNarrative,
-  aiState, setAiState,
-}: {
-  comps: Comp[];
-  property: Property | null;
-  narrative: string;
-  setNarrative: (s: string) => void;
-  aiState: AiState;
-  setAiState: (s: AiState) => void;
-}) {
-  const selectedComps = comps.filter(c => c.selected);
-  const avgPricePerM2 = selectedComps.length > 0
-    ? selectedComps.reduce((s, c) => s + c.pricePerM2 * (1 + c.adjustment / 100), 0) / selectedComps.length
-    : 0;
-  const estValue = property ? Math.round(property.area * avgPricePerM2) : 0;
-  const estMin = Math.round(estValue * 0.97);
-  const estMax = Math.round(estValue * 1.03);
+const AI_NARRATIVE = `La propiedad ubicada en Serrano 2450, Planta Baja, en el barrio de Palermo, Ciudad Autónoma de Buenos Aires, presenta características acordes al segmento residencial medio-alto del sector.
 
-  const streamRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+Se analizaron 2 propiedades comparables en un radio de 2km, con superficies entre 72 y 80m² y antigüedades similares. El precio promedio de mercado del segmento es de USD 2,375/m².
 
-  const MOCK_NARRATIVE = `La propiedad ubicada en ${property?.address ?? 'la dirección seleccionada'}, de ${property?.area ?? 0} m² y ${property?.rooms ?? 0} ambientes, fue analizada comparativamente con ${selectedComps.length} operaciones recientes en un radio de 1 km en el barrio de ${property?.neighborhood ?? 'la zona'}.
+En función del análisis de mercado y el estado del inmueble, se estima un valor de mercado de USD 280,000 – 295,000, con un valor central de USD 285,000.`;
 
-El análisis de mercado comparativo (CMA) se basó en transacciones del último trimestre, ajustadas por superficie, estado de conservación, piso y orientación. Los comparables seleccionados presentan un valor promedio de USD ${Math.round(avgPricePerM2).toLocaleString()}/m², con una dispersión del ±3% dentro del rango de confianza.
+function Step4Narrative({
+  onNext, onBack,
+}: { onNext: () => void; onBack: () => void }) {
+  const [aiGenerating, setAiGenerating]    = useState(true);
+  const [aiGenerated, setAiGenerated]      = useState(false);
+  const [isEditingNarrative, setIsEditing] = useState(false);
+  const [narrative, setNarrative]          = useState(AI_NARRATIVE);
+  const [progress, setProgress]            = useState(0);
+  const [dots, setDots]                    = useState('·');
 
-Considerando las características constructivas del inmueble, su ubicación en piso alto con buena iluminación y el contexto de mercado actual, se estima un valor de mercado comprendido entre USD ${estMin.toLocaleString()} y USD ${estMax.toLocaleString()}, con un valor central de USD ${estValue.toLocaleString()}.
+  // Simulate generation on mount
+  useEffect(() => {
+    let p = 0;
+    const progressInterval = setInterval(() => {
+      p += Math.random() * 15 + 3;
+      const capped = Math.min(p, 95);
+      setProgress(capped);
+      if (capped >= 95) {
+        clearInterval(progressInterval);
+        setTimeout(() => {
+          setProgress(100);
+          setAiGenerating(false);
+          setAiGenerated(true);
+        }, 400);
+      }
+    }, 130);
 
-Esta valuación tiene validez de 90 días a partir de la fecha de emisión y está sujeta a verificación presencial del estado del inmueble.`;
+    const dotsInterval = setInterval(() => {
+      setDots(d => d.length >= 3 ? '·' : d + '·');
+    }, 500);
 
-  function startGeneration() {
-    setAiState('generating');
-    setNarrative('');
-    let i = 0;
-    const chars = MOCK_NARRATIVE.split('');
-    function tick() {
-      if (i >= chars.length) { setAiState('done'); return; }
-      setNarrative(MOCK_NARRATIVE.slice(0, i + 1));
-      i += Math.floor(Math.random() * 6) + 3;
-      streamRef.current = setTimeout(tick, 35);
-    }
-    tick();
-  }
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(dotsInterval);
+    };
+  }, []);
 
-  useEffect(() => () => { if (streamRef.current) clearTimeout(streamRef.current); }, []);
-
-  const [editMode, setEditMode] = useState(false);
-  const [userEdited, setUserEdited] = useState(false);
+  const regenerate = () => {
+    setAiGenerating(true);
+    setAiGenerated(false);
+    setIsEditing(false);
+    setProgress(0);
+    let p = 0;
+    const interval = setInterval(() => {
+      p += Math.random() * 18 + 3;
+      const capped = Math.min(p, 95);
+      setProgress(capped);
+      if (capped >= 95) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setProgress(100);
+          setNarrative(AI_NARRATIVE);
+          setAiGenerating(false);
+          setAiGenerated(true);
+        }, 400);
+      }
+    }, 110);
+  };
 
   return (
-    <div>
-      <h3 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-        Narrativa de valuación
-      </h3>
-      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, marginBottom: 20 }}>
-        La IA analiza los {selectedComps.length} comparables seleccionados y genera el texto del informe.
-      </p>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 28, alignItems: 'start' }}>
 
-      {aiState === 'idle' && (
-        <div style={{
-          background: C.aiFaint, border: `1px dashed ${C.ai}`,
-          borderRadius: 12, padding: 32, textAlign: 'center', marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>✦</div>
-          <div style={{ fontFamily: F.body, fontSize: 16, color: C.textPrimary, marginBottom: 8 }}>
-            Generá la narrativa con IA
-          </div>
-          <div style={{ fontFamily: F.body, fontSize: 13, color: C.textSecondary, marginBottom: 16 }}>
-            Claude Sonnet analizará los {selectedComps.length} comparables y generará un texto profesional.
-            El proceso tarda menos de 20 segundos.
-          </div>
-          <button onClick={startGeneration} style={{
-            background: C.ai, color: '#fff', border: 'none',
-            borderRadius: 8, padding: '10px 24px', fontFamily: F.body,
-            fontWeight: 600, fontSize: 14, cursor: 'pointer',
+        {/* ── Left: property summary ── */}
+        <div>
+          <h3 style={{ fontFamily: F.display, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: '0 0 14px' }}>
+            Resumen de la propiedad
+          </h3>
+
+          {/* Summary card */}
+          <div style={{
+            background: C.bgRaised, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: '4px 16px', marginBottom: 16,
           }}>
-            ✦ Generar narrativa
+            {[
+              { label: 'Dirección',  value: 'Serrano 2450 PB, Palermo' },
+              { label: 'Tipo',       value: 'Departamento 3 amb.'       },
+              { label: 'Superficie', value: '78m² / 65m² cubiertos'     },
+              { label: 'Piso',       value: 'PB (Planta baja)'          },
+              { label: 'Antigüedad', value: '12 años'                   },
+              { label: 'Condición',  value: 'Bueno'                     },
+              { label: 'Finalidad',  value: 'Venta'                     },
+            ].map((row, i, arr) => (
+              <div
+                key={row.label}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                  borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : 'none',
+                  padding: '8px 0',
+                }}
+              >
+                <span style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary }}>{row.label}</span>
+                <span style={{ fontFamily: F.body, fontSize: 12, color: C.textPrimary, fontWeight: 500, textAlign: 'right', maxWidth: '55%' }}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Comparables used */}
+          <div style={{
+            background: C.bgRaised, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: '4px 16px', marginBottom: 16,
+          }}>
+            <div style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+              2 comparables seleccionados
+            </div>
+            {[
+              { addr: 'Serrano 2380, CABA', pm2: '$2,400/m²' },
+              { addr: 'Armenia 1640, CABA', pm2: '$2,350/m²' },
+            ].map((c, i, arr) => (
+              <div
+                key={c.addr}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : 'none',
+                }}
+              >
+                <span style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary }}>{c.addr}</span>
+                <span style={{ fontFamily: F.mono, fontSize: 12, color: C.success, fontWeight: 700 }}>{c.pm2}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Notes placeholder */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, display: 'block', marginBottom: 6 }}>
+              Observaciones
+            </label>
+            <textarea
+              placeholder="Sin observaciones adicionales"
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px',
+                background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 8,
+                color: C.textTertiary, fontFamily: F.body, fontSize: 12,
+                resize: 'none', outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Regenerar */}
+          <button
+            onClick={regenerate}
+            disabled={aiGenerating}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              width: '100%', padding: '9px 0',
+              background: 'transparent', border: `1px solid ${C.ai}50`,
+              borderRadius: 8, color: C.aiLight,
+              fontFamily: F.body, fontSize: 13, cursor: aiGenerating ? 'wait' : 'pointer',
+              opacity: aiGenerating ? 0.6 : 1, transition: 'opacity 0.15s',
+            }}
+          >
+            <RefreshCw size={13} />
+            <Sparkles size={13} />
+            Regenerar narrativa
           </button>
         </div>
-      )}
 
-      {(aiState === 'generating' || aiState === 'done') && (
-        <>
-          <div style={{
-            background: aiState === 'generating' ? C.aiFaint : `rgba(126,58,242,0.06)`,
-            border: `1px solid ${aiState === 'done' && userEdited ? C.border : C.ai}`,
-            borderRadius: 12, padding: 20, marginBottom: 16, position: 'relative',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{
-                background: aiState === 'generating' ? C.aiFaint : (userEdited ? 'rgba(80,97,128,0.2)' : C.aiFaint),
-                color: userEdited ? C.textTertiary : C.aiLight,
-                borderRadius: 99, padding: '2px 10px', fontSize: 11,
-                fontFamily: F.body, fontWeight: 600, border: `1px solid ${userEdited ? C.border : C.ai}`,
-              }}>
-                {aiState === 'generating' ? '✦ Generando...' : userEdited ? '✏️ Editado manualmente' : '✦ Narrativa IA'}
-              </span>
-              {aiState === 'done' && !editMode && !userEdited && (
-                <button onClick={() => setEditMode(true)} style={{
-                  background: 'none', border: 'none', color: C.textTertiary,
-                  fontFamily: F.body, fontSize: 12, cursor: 'pointer', textDecoration: 'underline',
-                }}>
-                  ✏️ Editar
-                </button>
-              )}
-            </div>
+        {/* ── Right: AI narrative ── */}
+        <div>
+          <h3 style={{ fontFamily: F.display, fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: '0 0 14px' }}>
+            Narrativa generada por IA
+          </h3>
 
-            {editMode ? (
-              <textarea
-                value={narrative}
-                onChange={e => { setNarrative(e.target.value); setUserEdited(true); }}
-                rows={10}
-                style={{
-                  width: '100%', background: 'transparent', border: 'none',
-                  color: C.textPrimary, fontFamily: F.body, fontSize: 14,
-                  lineHeight: 1.7, resize: 'vertical', outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            ) : (
-              <p style={{
-                fontFamily: F.body, fontSize: 14, color: C.textPrimary,
-                lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap',
-              }}>
-                {narrative}
-                {aiState === 'generating' && (
-                  <span style={{
-                    display: 'inline-block', width: 2, height: '1em',
-                    background: C.ai, marginLeft: 1, verticalAlign: 'middle',
-                    animation: 'blink 0.8s step-end infinite',
+          {/* Loading */}
+          {aiGenerating && (
+            <div style={{
+              background: C.bgRaised, border: `1px solid ${C.ai}30`,
+              borderRadius: 10, padding: 20,
+            }}>
+              <div style={{ height: 3, background: C.bgElevated, borderRadius: 2, overflow: 'hidden', marginBottom: 16 }}>
+                <div style={{
+                  height: '100%', background: C.ai, borderRadius: 2,
+                  width: `${progress}%`, transition: 'width 0.2s linear',
+                }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Sparkles size={14} color={C.ai} />
+                <span style={{ fontFamily: F.body, fontSize: 13, color: C.ai }}>
+                  Generando narrativa{dots}
+                </span>
+              </div>
+              {/* Skeleton lines */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[92, 78, 95, 58, 82, 70, 88].map((w, i) => (
+                  <div key={i} style={{
+                    height: 9, borderRadius: 4,
+                    background: `${C.ai}15`, width: `${w}%`,
                   }} />
-                )}
-              </p>
-            )}
-          </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {aiState === 'done' && (
+          {/* Generated content */}
+          {aiGenerated && !aiGenerating && (
             <>
-              {/* Estimated value card */}
+              {/* AI header bar */}
               <div style={{
-                background: C.bgRaised, border: `1px solid ${C.border}`,
-                borderRadius: 12, padding: 20, marginBottom: 16,
+                display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px',
+                background: C.aiFaint, border: `1px solid ${C.ai}30`,
+                borderBottom: 'none', borderRadius: '10px 10px 0 0',
               }}>
-                <div style={{ fontFamily: F.mono, fontSize: 12, color: C.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                  Valuación estimada
-                </div>
-                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary, marginBottom: 2 }}>Rango</div>
-                    <div style={{ fontFamily: F.mono, fontSize: 18, fontWeight: 700, color: C.textPrimary }}>
-                      USD {estMin.toLocaleString()} — {estMax.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary, marginBottom: 2 }}>Valor central</div>
-                    <div style={{ fontFamily: F.mono, fontSize: 24, fontWeight: 800, color: C.brand }}>
-                      USD {estValue.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: F.body, fontSize: 12, color: C.textSecondary, marginBottom: 2 }}>Confianza</div>
-                    <div style={{ fontFamily: F.body, fontSize: 14, color: C.success, fontWeight: 600 }}>
-                      Alta ({selectedComps.length} comparables)
-                    </div>
-                  </div>
-                </div>
+                <Sparkles size={13} color={C.ai} />
+                <span style={{ fontFamily: F.body, fontSize: 12, fontWeight: 600, color: C.aiLight, flex: 1 }}>
+                  Generado por IA · Corredor Copilot
+                </span>
+                <button
+                  onClick={() => setIsEditing(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    background: 'none', border: `1px solid ${C.ai}40`,
+                    borderRadius: 6, padding: '4px 10px',
+                    color: C.aiLight, fontFamily: F.body, fontSize: 11, cursor: 'pointer',
+                  }}
+                >
+                  <Edit3 size={11} />
+                  {isEditingNarrative ? 'Cerrar edición' : 'Editar'}
+                </button>
               </div>
 
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => {
-                  setAiState('idle');
-                  setNarrative('');
-                  setEditMode(false);
-                  setUserEdited(false);
-                  startGeneration();
-                }} style={{
-                  background: C.aiFaint, color: C.aiLight, border: `1px solid ${C.ai}`,
-                  borderRadius: 8, padding: '8px 14px', fontFamily: F.body,
-                  fontSize: 13, cursor: 'pointer',
+              {/* Narrative */}
+              {isEditingNarrative ? (
+                <textarea
+                  value={narrative}
+                  onChange={e => setNarrative(e.target.value)}
+                  rows={9}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '16px',
+                    background: C.bgRaised, border: `1px solid ${C.ai}40`,
+                    borderTop: 'none', borderRadius: '0 0 10px 10px',
+                    color: C.textPrimary, fontFamily: F.body, fontSize: 13,
+                    lineHeight: 1.7, resize: 'vertical', outline: 'none',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  background: C.aiFaint, border: `1px solid ${C.ai}30`,
+                  borderTop: 'none', borderLeft: `4px solid ${C.ai}`,
+                  borderRadius: '0 0 10px 10px', padding: '16px 20px',
+                  fontFamily: F.body, fontSize: 13, color: C.textSecondary,
+                  lineHeight: 1.75, whiteSpace: 'pre-line',
                 }}>
-                  🔄 Regenerar
-                </button>
-                {!editMode && (
-                  <button onClick={() => setEditMode(true)} style={{
-                    background: 'none', border: `1px solid ${C.border}`,
-                    borderRadius: 8, padding: '8px 14px', fontFamily: F.body,
-                    fontSize: 13, color: C.textSecondary, cursor: 'pointer',
-                  }}>
-                    ✏️ Editar manualmente
-                  </button>
-                )}
+                  {narrative}
+                </div>
+              )}
+
+              {/* Estimated value */}
+              <div style={{
+                marginTop: 20, padding: '18px 20px',
+                background: C.bgRaised, border: `1px solid ${C.border}`,
+                borderRadius: 10,
+              }}>
+                <div style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, marginBottom: 5 }}>
+                  Valor estimado
+                </div>
+                <div style={{ fontFamily: F.mono, fontSize: 32, fontWeight: 700, color: C.textPrimary, lineHeight: 1, marginBottom: 7 }}>
+                  USD 285,000
+                </div>
+                <div style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary }}>
+                  Rango: USD 280,000 – USD 295,000
+                </div>
               </div>
             </>
           )}
-        </>
-      )}
-
-      {aiState === 'error' && (
-        <div style={{
-          background: 'rgba(232,59,59,0.1)', border: '1px solid #E83B3B',
-          borderRadius: 12, padding: 20, display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <span style={{ fontSize: 20 }}>⚠️</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: F.body, fontSize: 14, color: C.textPrimary, fontWeight: 500 }}>
-              Error al generar la narrativa
-            </div>
-            <div style={{ fontFamily: F.body, fontSize: 13, color: C.textSecondary }}>
-              Verificá tu conexión e intentá nuevamente.
-            </div>
-          </div>
-          <button onClick={startGeneration} style={{
-            background: '#E83B3B', color: '#fff', border: 'none',
-            borderRadius: 8, padding: '8px 14px', fontFamily: F.body, cursor: 'pointer',
-          }}>
-            Reintentar
-          </button>
         </div>
-      )}
+      </div>
+
+      {/* Nav */}
+      <div style={{ marginTop: 36, display: 'flex', justifyContent: 'space-between' }}>
+        <GhostBtn label="← Anterior" onClick={onBack} />
+        <PrimaryBtn label="Continuar →" onClick={onNext} disabled={!aiGenerated} />
+      </div>
     </div>
   );
 }
 
-/* ─── Step 5: PDF Preview ───────────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────
+   STEP 5 — Vista previa PDF
+   ────────────────────────────────────────────────────────────── */
 
-function Step5({ property, estValue }: { property: Property | null; estValue: number }) {
-  const [page, setPage] = useState(1);
-  const totalPages = 4;
-
-  const PAGE_DESCRIPTIONS = [
-    { title: 'Portada', desc: `Informe de Tasación · ${property?.address ?? ''} · ${new Date().toLocaleDateString('es-AR')}` },
-    { title: 'Narrativa y valuación', desc: `Rango estimado y valor central: USD ${estValue.toLocaleString()}` },
-    { title: 'Tabla de comparables', desc: 'Hasta 10 comparables con distancia, precio/m², ajuste y valor ajustado' },
-    { title: 'Fotos y firma', desc: 'Fotografías de la propiedad · Bloque de firma del agente' },
-  ];
-
+function Step5Preview({ onBack }: { onBack: () => void }) {
   return (
-    <div>
-      <h3 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-        Previsualización del reporte
-      </h3>
-      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, marginBottom: 20 }}>
-        Revisá el informe antes de descargarlo. Todas las páginas se incluyen en el PDF.
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 0 80px' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.textPrimary, margin: '0 0 6px' }}>
+        Vista previa del informe
+      </h2>
+      <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, margin: '0 0 24px' }}>
+        Revisá el documento antes de guardarlo o descargarlo.
       </p>
 
-      {/* PDF Preview Mock */}
+      {/* PDF frame — A4 ratio 1:1.414 */}
       <div style={{
-        background: '#fff', borderRadius: 12, border: `1px solid ${C.border}`,
-        minHeight: 440, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexDirection: 'column', marginBottom: 12, position: 'relative', overflow: 'hidden',
+        background: '#FFFFFF', maxWidth: 680, margin: '0 auto',
+        borderRadius: 4, overflow: 'hidden',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.25), 0 20px 52px rgba(0,0,0,0.6)',
+        fontFamily: "'DM Sans', sans-serif",
+        display: 'flex', flexDirection: 'column',
+        color: '#1a1a1a',
       }}>
-        {/* A4 mock page */}
+        {/* Header */}
         <div style={{
-          width: '100%', maxWidth: 540, background: '#fff',
-          padding: '40px 48px', boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '20px 28px 16px', borderBottom: '2px solid #1654d9',
         }}>
-          {/* Mock header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 16, borderBottom: '2px solid #1654d9' }}>
-            <div>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 800, color: '#0D1526' }}>Corredor</div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: '#506180', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Informe de Tasación</div>
+          <div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: '#1654d9', letterSpacing: '-0.03em' }}>
+              CORREDOR
             </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#506180', textAlign: 'right' }}>
-              <div>TAS-0043</div>
-              <div>{new Date().toLocaleDateString('es-AR')}</div>
+            <div style={{ fontSize: 10, color: '#8096B5', marginTop: 1 }}>
+              Tasaciones Inmobiliarias
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50', letterSpacing: '0.04em' }}>
+              TASACIÓN INMOBILIARIA
+            </div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#8096B5', marginTop: 3 }}>
+              TAS-0049 · 01/05/2026
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '22px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* PROPIEDAD */}
+          <section>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#8096B5', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid #E2E8F0' }}>
+              PROPIEDAD
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: 12 }}>
+              {[
+                ['Dirección',  'Serrano 2450 PB, Palermo, CABA'],
+                ['Tipo',       'Departamento 3 ambientes'],
+                ['Superficie', '78m² / 65m² cubiertos'],
+                ['Finalidad',  'Venta'],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+                  <span style={{ color: '#8096B5', minWidth: 68, fontFamily: "'DM Mono', monospace", fontSize: 10, flexShrink: 0 }}>{k}:</span>
+                  <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* VALOR ESTIMADO */}
+          <div style={{
+            background: '#EEF4FF', borderLeft: '4px solid #1654d9',
+            borderRadius: '0 6px 6px 0', padding: '14px 18px',
+          }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#8096B5', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+              VALOR ESTIMADO
+            </div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 30, fontWeight: 700, color: '#1654d9', lineHeight: 1 }}>
+              USD 285,000
+            </div>
+            <div style={{ fontSize: 12, color: '#4A6490', marginTop: 6 }}>
+              Rango: USD 280,000 – USD 295,000
             </div>
           </div>
 
-          {/* Page content */}
-          <div style={{ color: '#0D1526', fontFamily: "'DM Sans', sans-serif" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#506180', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-              Página {page} / {totalPages}
+          {/* COMPARABLES */}
+          <section>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#8096B5', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid #E2E8F0' }}>
+              COMPARABLES
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
-              {PAGE_DESCRIPTIONS[page - 1].title}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+              <thead>
+                <tr style={{ background: '#F7F9FC' }}>
+                  {['Dirección', 'm²', '$/m²', 'Precio total'].map(h => (
+                    <th key={h} style={{
+                      padding: '5px 8px', textAlign: 'left',
+                      color: '#8096B5', fontWeight: 600, fontSize: 9,
+                      letterSpacing: '0.07em', textTransform: 'uppercase',
+                    }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Serrano 2380, CABA', '75', '2,400', 'USD 180,000'],
+                  ['Armenia 1640, CABA', '80', '2,350', 'USD 188,000'],
+                ].map(([addr, m2, pm2, price]) => (
+                  <tr key={addr} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                    <td style={{ padding: '6px 8px', color: '#1a1a1a' }}>{addr}</td>
+                    <td style={{ padding: '6px 8px', fontFamily: "'DM Mono', monospace", color: '#4A6490' }}>{m2}</td>
+                    <td style={{ padding: '6px 8px', fontFamily: "'DM Mono', monospace", color: '#1654d9', fontWeight: 600 }}>{pm2}</td>
+                    <td style={{ padding: '6px 8px', fontFamily: "'DM Mono', monospace", color: '#1a1a1a', fontWeight: 600 }}>{price}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          {/* NARRATIVA */}
+          <section>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#8096B5', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8, paddingBottom: 5, borderBottom: '1px solid #E2E8F0' }}>
+              NARRATIVA
             </div>
-            <div style={{ fontSize: 13, color: '#8DA0C0', lineHeight: 1.5 }}>
-              {PAGE_DESCRIPTIONS[page - 1].desc}
-            </div>
-            <div style={{ marginTop: 24, height: 140, background: '#F0F4FF', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#8DA0C0', fontSize: 13 }}>
-                {page === 1 ? '📋 Datos de la propiedad' : page === 2 ? '📊 Gráfico de valuación' : page === 3 ? '📋 Tabla comparables' : '📸 Fotos + firma'}
-              </span>
+            <p style={{ fontSize: 11, color: '#2D3748', lineHeight: 1.7, margin: 0 }}>
+              La propiedad ubicada en Serrano 2450, Planta Baja, en el barrio de Palermo, Ciudad Autónoma de Buenos Aires, presenta características acordes al segmento residencial medio-alto del sector. Se analizaron 2 propiedades comparables en un radio de 2km, con superficies entre 72 y 80m²...
+            </p>
+          </section>
+
+          {/* Signature block */}
+          <div style={{ paddingTop: 14, borderTop: '1px solid #E2E8F0', marginTop: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, fontSize: 11, color: '#4A6490' }}>
+              <div>
+                <div style={{ marginBottom: 28, color: '#1a1a1a', fontWeight: 500 }}>Tasador: _______________________</div>
+                <div style={{ borderBottom: '1px solid #C4CFD9', marginBottom: 4 }} />
+                <div>Firma</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 28, color: '#1a1a1a', fontWeight: 500 }}>Matrícula: _____________________</div>
+                <div style={{ borderBottom: '1px solid #C4CFD9', marginBottom: 4 }} />
+                <div>Sello</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Page navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={() => setPage(p => Math.max(1, p - 1) as WizardStep)} disabled={page === 1}
-          style={{
-            background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
-            padding: '6px 12px', color: page === 1 ? C.textTertiary : C.textPrimary,
-            fontFamily: F.body, cursor: page === 1 ? 'not-allowed' : 'pointer',
-            opacity: page === 1 ? 0.4 : 1,
+      {/* Actions */}
+      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <GhostBtn label="← Anterior" onClick={onBack} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={{
+            background: C.bgRaised, border: `1px solid ${C.border}`,
+            borderRadius: 8, padding: '10px 18px',
+            color: C.textSecondary, fontFamily: F.body, fontSize: 14, cursor: 'pointer',
           }}>
-          ← Anterior
-        </button>
-        <span style={{ fontFamily: F.mono, fontSize: 13, color: C.textSecondary }}>
-          Pág. {page} / {totalPages}
-        </span>
-        <button onClick={() => setPage(p => Math.min(totalPages, p + 1) as WizardStep)} disabled={page === totalPages}
-          style={{
-            background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
-            padding: '6px 12px', color: page === totalPages ? C.textTertiary : C.textPrimary,
-            fontFamily: F.body, cursor: page === totalPages ? 'not-allowed' : 'pointer',
-            opacity: page === totalPages ? 0.4 : 1,
+            Guardar borrador
+          </button>
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            background: C.brand, border: 'none', borderRadius: 8, padding: '10px 20px',
+            color: '#fff', fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: 'pointer',
           }}>
-          Siguiente →
-        </button>
+            <Download size={15} />
+            Descargar PDF
+          </button>
+        </div>
       </div>
-
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ textAlign: 'right', marginTop: 12 }}>
         <button style={{
-          flex: 1, background: 'none', border: `1px solid ${C.border}`,
-          borderRadius: 8, padding: '10px 16px', color: C.textSecondary,
-          fontFamily: F.body, fontSize: 14, cursor: 'pointer',
+          background: 'none', border: 'none',
+          color: C.textTertiary, fontFamily: F.body, fontSize: 13, cursor: 'pointer',
+          textDecoration: 'underline',
         }}>
-          📥 Descargar borrador PDF
+          Finalizar y cerrar
         </button>
       </div>
     </div>
   );
 }
 
-/* ─── Main Wizard ─────────────────────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────
+   SHARED UI HELPERS
+   ────────────────────────────────────────────────────────────── */
+
+function FieldInput({ label }: { label: string }) {
+  return (
+    <div>
+      <label style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary, display: 'block', marginBottom: 5 }}>
+        {label}
+      </label>
+      <input
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '9px 12px',
+          background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 7,
+          color: C.textPrimary, fontFamily: F.body, fontSize: 13, outline: 'none',
+        }}
+        onFocus={e => (e.target.style.borderColor = C.brand)}
+        onBlur={e => (e.target.style.borderColor = C.border)}
+      />
+    </div>
+  );
+}
+
+function PrimaryBtn({
+  label, onClick, disabled = false,
+}: { label: string; onClick: () => void; disabled?: boolean }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        background: disabled ? C.bgElevated : hov ? C.brandHover : C.brand,
+        color: disabled ? C.textTertiary : '#fff',
+        border: 'none', borderRadius: 8, padding: '10px 22px',
+        fontFamily: F.body, fontWeight: 600, fontSize: 14,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'background 0.15s',
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function GhostBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: 'transparent', border: `1px solid ${C.border}`,
+        borderRadius: 8, padding: '10px 18px',
+        color: hov ? C.textPrimary : C.textSecondary,
+        fontFamily: F.body, fontSize: 14, cursor: 'pointer',
+        transition: 'color 0.12s',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function StepNav({
+  onBack, onNext, nextDisabled = false,
+}: { onBack: () => void; onNext: () => void; nextDisabled?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <GhostBtn label="← Anterior" onClick={onBack} />
+      <PrimaryBtn label="Continuar →" onClick={onNext} disabled={nextDisabled} />
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ROOT WIZARD COMPONENT
+   ────────────────────────────────────────────────────────────── */
 
 export default function AppraisalWizardPage() {
-  const [step, setStep] = useState<WizardStep>(1);
-  const [property, setProperty] = useState<Property | null>(null);
-  const [purpose, setPurpose] = useState<Purpose | null>(null);
-  const [comps, setComps] = useState<Comp[]>(MOCK_COMPS);
-  const [narrative, setNarrative] = useState('');
-  const [aiState, setAiState] = useState<AiState>('idle');
+  const [currentStep, setCurrentStep] = useState<Step>(1);
 
-  const selectedComps = comps.filter(c => c.selected);
-  const avgPricePerM2 = selectedComps.length > 0
-    ? selectedComps.reduce((s, c) => s + c.pricePerM2 * (1 + c.adjustment / 100), 0) / selectedComps.length
-    : 0;
-  const estValue = property ? Math.round(property.area * avgPricePerM2) : 0;
+  const [wizardData, setWizardData] = useState<WizardData>({
+    selectedPropertyIdx: 0,   // first property pre-selected
+    selectedPurpose:    'Venta',
+    selectedCondition:  'Bueno',
+  });
 
-  function canAdvance() {
-    if (step === 1) return property !== null;
-    if (step === 2) return purpose !== null;
-    if (step === 3) return selectedComps.length >= 3;
-    if (step === 4) return aiState === 'done' && narrative.length > 0;
-    return true;
-  }
+  const [selectedComps, setSelectedComps] = useState<Set<number>>(new Set([0, 1]));
 
-  function handleSave() {
-    alert('Tasación guardada. Redirigiendo a /appraisals/TAS-0043...');
-  }
+  const next = () => setCurrentStep(s => Math.min(s + 1, 5) as Step);
+  const back = () => setCurrentStep(s => Math.max(s - 1, 1) as Step);
+
+  const toggleComp = (i: number) => {
+    setSelectedComps(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bgBase, padding: '32px 40px' }}>
-      <div style={{ maxWidth: 780, margin: '0 auto' }}>
-        {/* Back link */}
-        <a href="/appraisals" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontFamily: F.body, fontSize: 13, color: C.textSecondary, textDecoration: 'none',
-          marginBottom: 20,
-        }}>
-          ← Tasaciones
-        </a>
+    <div style={{ minHeight: '100vh', background: C.bgBase, display: 'flex', flexDirection: 'column' }}>
 
-        <h2 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 800, color: C.textPrimary, marginBottom: 24 }}>
+      {/* ── Top bar ── */}
+      <div style={{
+        height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 24px', borderBottom: `1px solid ${C.border}`,
+        background: C.bgBase, position: 'sticky', top: 0, zIndex: 20, flexShrink: 0,
+      }}>
+        <button
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none',
+            color: C.textSecondary, fontFamily: F.body, fontSize: 13, cursor: 'pointer',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = C.textPrimary)}
+          onMouseLeave={e => (e.currentTarget.style.color = C.textSecondary)}
+        >
+          <X size={14} />
+          Cancelar
+        </button>
+
+        <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.textPrimary }}>
           Nueva tasación
-        </h2>
-
-        <StepIndicator current={step} total={5} />
-
-        {/* Step content */}
-        <div style={{ background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 20 }}>
-          {step === 1 && <Step1 selected={property} onSelect={p => { setProperty(p); }} />}
-          {step === 2 && <Step2 purpose={purpose} onSelect={setPurpose} />}
-          {step === 3 && <Step3 comps={comps} setComps={setComps} />}
-          {step === 4 && (
-            <Step4
-              comps={comps}
-              property={property}
-              narrative={narrative}
-              setNarrative={setNarrative}
-              aiState={aiState}
-              setAiState={setAiState}
-            />
-          )}
-          {step === 5 && <Step5 property={property} estValue={estValue} />}
         </div>
 
-        {/* Navigation buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button
-            onClick={() => setStep(s => Math.max(1, s - 1) as WizardStep)}
-            disabled={step === 1}
-            style={{
-              background: 'none', border: `1px solid ${C.border}`,
-              borderRadius: 8, padding: '10px 20px', color: C.textSecondary,
-              fontFamily: F.body, fontSize: 14, cursor: step === 1 ? 'not-allowed' : 'pointer',
-              opacity: step === 1 ? 0.4 : 1,
-            }}
-          >
-            ← Atrás
-          </button>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            {step < 5 ? (
-              <button
-                onClick={() => setStep(s => Math.min(5, s + 1) as WizardStep)}
-                disabled={!canAdvance()}
-                style={{
-                  background: canAdvance() ? C.brand : C.bgElevated,
-                  color: canAdvance() ? '#fff' : C.textTertiary,
-                  border: `1px solid ${canAdvance() ? C.brand : C.border}`,
-                  borderRadius: 8, padding: '10px 24px', fontFamily: F.body,
-                  fontSize: 14, fontWeight: 600,
-                  cursor: canAdvance() ? 'pointer' : 'not-allowed',
-                }}
-              >
-                Siguiente: {STEP_LABELS[step]} →
-              </button>
-            ) : (
-              <>
-                <button style={{
-                  background: 'none', border: `1px solid ${C.border}`,
-                  borderRadius: 8, padding: '10px 20px', color: C.textSecondary,
-                  fontFamily: F.body, fontSize: 14, cursor: 'pointer',
-                }}>
-                  📥 Descargar PDF
-                </button>
-                <button onClick={handleSave} style={{
-                  background: C.success, color: '#fff', border: 'none',
-                  borderRadius: 8, padding: '10px 24px', fontFamily: F.body,
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}>
-                  ✅ Guardar tasación
-                </button>
-              </>
-            )}
-          </div>
+        <div style={{ fontFamily: F.mono, fontSize: 12, color: C.textTertiary }}>
+          Paso{' '}
+          <span style={{ color: C.textSecondary, fontWeight: 700 }}>{currentStep}</span>
+          {' '}de 5
         </div>
       </div>
 
-      <style>{`
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
+      {/* ── Stepper ── */}
+      <Stepper current={currentStep} />
+
+      {/* ── Step content ── */}
+      <div style={{
+        flex: 1,
+        overflowY: currentStep === 3 ? 'hidden' : 'auto',
+      }}>
+        {currentStep === 1 && (
+          <div style={{ padding: '0 40px' }}>
+            <Step1Property
+              selectedIdx={wizardData.selectedPropertyIdx}
+              onSelect={i => setWizardData(d => ({ ...d, selectedPropertyIdx: i }))}
+              onNext={next}
+            />
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div style={{ padding: '0 40px' }}>
+            <Step2Purpose
+              selectedPurpose={wizardData.selectedPurpose}
+              selectedCondition={wizardData.selectedCondition}
+              onPurpose={v => setWizardData(d => ({ ...d, selectedPurpose: v }))}
+              onCondition={v => setWizardData(d => ({ ...d, selectedCondition: v }))}
+              onNext={next}
+              onBack={back}
+            />
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <Step3Comparables
+            selectedComps={selectedComps}
+            onToggleComp={toggleComp}
+            onNext={next}
+            onBack={back}
+          />
+        )}
+
+        {currentStep === 4 && (
+          <Step4Narrative onNext={next} onBack={back} />
+        )}
+
+        {currentStep === 5 && (
+          <div style={{ padding: '0 40px' }}>
+            <Step5Preview onBack={back} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
