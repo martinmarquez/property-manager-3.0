@@ -29,7 +29,7 @@ jobs:
 
       # Fail CI on high or critical CVEs
       - name: npm audit
-        run: pnpm audit --audit-level=high --recursive
+        run: pnpm audit --audit-level=high
         # Do not continue on error — this is a hard gate
         continue-on-error: false
 
@@ -52,7 +52,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check Snyk token
+        id: snyk-check
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SNYK_TOKEN secret is not set — skipping Snyk scan. Add the secret to enable."
+          fi
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
       - name: Snyk — test all workspaces
+        if: steps.snyk-check.outputs.has_token == 'true'
         uses: snyk/actions/node@master
         continue-on-error: false
         env:
@@ -62,6 +75,7 @@ jobs:
           args: --severity-threshold=high --all-projects
 
       - name: Snyk — upload SARIF to GitHub Security tab
+        if: steps.snyk-check.outputs.has_token == 'true'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -70,8 +84,8 @@ jobs:
           args: --all-projects --sarif-file-output=snyk.sarif
 
       - name: Upload SARIF
+        if: steps.snyk-check.outputs.has_token == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: snyk.sarif
 

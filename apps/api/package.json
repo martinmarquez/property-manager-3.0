@@ -19,6 +19,7 @@
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
     "@corredor/documents": "workspace:*",
+    "@corredor/portals": "workspace:*",
     "@corredor/telemetry": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "@hono/trpc-server": "^0.3.4",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@corredor/config": "workspace:*",
     "@vitest/coverage-v8": "^2.1.0",
+    "bullmq": "^5.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

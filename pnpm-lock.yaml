@@ -75,6 +75,9 @@ importers:
       '@corredor/documents':
         specifier: workspace:*
         version: link:../../packages/documents
+      '@corredor/portals':
+        specifier: workspace:*
+        version: link:../../packages/portals
       '@corredor/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
@@ -124,6 +127,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^2.1.0
         version: 2.1.9(vitest@2.1.9(@types/node@22.19.17)(terser@5.46.1))
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.75.2
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
@@ -7665,6 +7671,7 @@ packages:
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vite-node@2.1.9:
