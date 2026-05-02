@@ -523,13 +523,14 @@ export default function AIDescriptionModal({
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '100%', maxWidth: 700, maxHeight: '90vh',
+          width: '100%', maxWidth: 680, maxHeight: '90vh',
           overflowY: 'auto',
           background: C.bgRaised,
           border: `1px solid ${C.border}`, borderRadius: 16,
           boxShadow: `0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px ${C.ai}15`,
           zIndex: 1001,
         }}
+        data-ai-modal
       >
         {/* ── Header ── */}
         <div style={{
@@ -1021,6 +1022,18 @@ export default function AIDescriptionModal({
         @keyframes ai-desc-spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @media (max-width: 767px) {
+          [data-ai-modal] {
+            top: 0 !important;
+            left: 0 !important;
+            transform: none !important;
+            max-width: 100% !important;
+            max-height: 100vh !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+            border: none !important;
+          }
         }
       `}</style>
 

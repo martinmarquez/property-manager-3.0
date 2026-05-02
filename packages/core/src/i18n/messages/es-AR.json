@@ -5,6 +5,7 @@
   "aiDescription.draft.label": "Borrador IA",
   "aiDescription.draft.saved": "Borrador guardado",
   "aiDescription.error": "No se pudo generar la descripción. Intentá de nuevo.",
+  "aiDescription.generated": "Descripción generada",
   "aiDescription.generating": "Generando descripción…",
   "aiDescription.highlight.placeholder": "Destacar: luminoso, reformado, ubicación céntrica…",
   "aiDescription.length.tooLong": "La descripción supera el límite de {max} caracteres.",

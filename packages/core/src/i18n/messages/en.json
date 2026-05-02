@@ -5,6 +5,7 @@
   "aiDescription.draft.label": "AI Draft",
   "aiDescription.draft.saved": "Draft saved",
   "aiDescription.error": "Could not generate description. Please try again.",
+  "aiDescription.generated": "Description generated",
   "aiDescription.generating": "Generating description…",
   "aiDescription.highlight.placeholder": "Highlight: bright, renovated, central location…",
   "aiDescription.length.tooLong": "Description exceeds the maximum of {max} characters.",
