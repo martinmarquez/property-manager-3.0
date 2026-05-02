@@ -201,4 +201,56 @@ describe("BaseWorker", () => {
     // Just verify worker was constructed; concurrency is validated by BullMQ internals
     expect(worker).toBeDefined();
   });
+
+  it("archives to dead-letter queue when job exhausts all retries", async () => {
+    const { Queue: MockQueue } = await import("bullmq");
+    const addSpy = vi.spyOn(MockQueue.prototype, "add");
+
+    type WorkerWithEmit = { emit: (event: string, ...args: unknown[]) => void };
+    const mockWorkerInstance = (worker as unknown as { worker: WorkerWithEmit }).worker;
+
+    const exhaustedJob = makeJob({ attemptsMade: 5, opts: { attempts: 5 } });
+    mockWorkerInstance.emit("failed", exhaustedJob, new Error("exhausted"));
+
+    // Allow async archiving to settle
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(addSpy).toHaveBeenCalledOnce();
+    const [, payload] = addSpy.mock.calls[0] as [string, { originalQueue: string; error: string }];
+    expect(payload.originalQueue).toBe("ai-embed");
+    expect(payload.error).toBe("exhausted");
+
+    addSpy.mockRestore();
+  });
+
+  it("does not archive when job still has remaining retries", async () => {
+    const { Queue: MockQueue } = await import("bullmq");
+    const addSpy = vi.spyOn(MockQueue.prototype, "add");
+
+    type WorkerWithEmit = { emit: (event: string, ...args: unknown[]) => void };
+    const mockWorkerInstance = (worker as unknown as { worker: WorkerWithEmit }).worker;
+
+    const retriableJob = makeJob({ attemptsMade: 2, opts: { attempts: 5 } });
+    mockWorkerInstance.emit("failed", retriableJob, new Error("transient"));
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(addSpy).not.toHaveBeenCalled();
+    addSpy.mockRestore();
+  });
+
+  it("logs and captures Sentry error on worker-level error event", async () => {
+    const { captureException } = await import("@sentry/node");
+    const errorSpy = vi.spyOn(worker["logger"], "error");
+
+    type WorkerWithEmit = { emit: (event: string, ...args: unknown[]) => void };
+    const mockWorkerInstance = (worker as unknown as { worker: WorkerWithEmit }).worker;
+
+    mockWorkerInstance.emit("error", new Error("connection lost"));
+
+    expect(errorSpy).toHaveBeenCalledOnce();
+    expect(captureException).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
 });
