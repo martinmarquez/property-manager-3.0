@@ -179,7 +179,7 @@ export default function CommandPalette({
       <div
         data-cmd-palette
         role="combobox"
-        aria-expanded={results.length > 0 || suggestions.length > 0}
+        aria-expanded={true}
         aria-haspopup="listbox"
         aria-label="Búsqueda rápida"
         style={{
@@ -205,7 +205,7 @@ export default function CommandPalette({
           alignItems: 'center',
           gap: 12,
           padding: '14px 18px',
-          borderBottom: `1px solid ${C.border}`,
+          borderBottom: showEmpty ? 'none' : `1px solid ${C.border}`,
         }}>
           {isLoading ? (
             <div style={{ width: 18, height: 18, flexShrink: 0, animation: 'palette-spin 0.8s linear infinite' }}>

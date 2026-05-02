@@ -153,6 +153,10 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
   const [cursor, setCursor] = useState(0);
   const isCompact = useIsCompact();
 
+  // Sync URL params → internal state when navigating to /search with a new query from ⌘K
+  useEffect(() => { setQuery(initialQuery); }, [initialQuery]);
+  useEffect(() => { setActiveFilter(initialEntityType); }, [initialEntityType]);
+
   const { results, total, hasMore, isLoading, isFetching, phase } = useSearchQuery({
     query,
     entityType: activeFilter,
