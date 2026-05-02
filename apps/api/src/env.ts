@@ -41,6 +41,28 @@ const envSchema = z.object({
   // AI providers (Phase F)
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+
+  // Stripe billing (Phase G)
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_ID_STARTER: z.string().optional(),
+  STRIPE_PRICE_ID_PRO: z.string().optional(),
+
+  // Mercado Pago billing — AR domestic (Phase G)
+  MP_ACCESS_TOKEN: z.string().optional(),
+  MP_PUBLIC_KEY: z.string().optional(),
+  MP_WEBHOOK_SECRET: z.string().optional(),
+
+  // AFIP electronic invoicing — WSAA (Phase G)
+  AFIP_CUIT: z.string().optional(),
+  AFIP_PRIVATE_KEY: z.string().optional(),
+  AFIP_CERTIFICATE: z.string().optional(),
+  AFIP_SANDBOX: z.coerce.boolean().default(true),
+
+  // Cloudflare custom domain management for tenant websites (Phase G)
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
+  CLOUDFLARE_ZONE_ID: z.string().optional(),
 });
 
 function parseEnv() {
