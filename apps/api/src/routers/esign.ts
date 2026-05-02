@@ -7,13 +7,10 @@ import {
   docSigner,
   docAuditTrail,
 } from '@corredor/db';
-import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import {
   type ESignProvider,
-  type SignatureAdapter,
   registerAdapter,
   getAdapter,
-  hasAdapter,
   SignaturitAdapter,
   DocuSignAdapter,
 } from '@corredor/documents';

@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { eq, and, isNull, isNotNull, desc, inArray, sql } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, inArray } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
 import {
   property,

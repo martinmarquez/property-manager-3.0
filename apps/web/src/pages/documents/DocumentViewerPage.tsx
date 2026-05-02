@@ -182,7 +182,7 @@ function SignerRow({ signer, showReminder, docStatus }: { signer: Signer; showRe
         )}
         {signer.declinedReason && (
           <div style={{ fontSize: 11, color: C.error, marginTop: 4 }}>
-            Rechazó: "{signer.declinedReason}"
+            Rechazó: &ldquo;{signer.declinedReason}&rdquo;
           </div>
         )}
       </div>
@@ -479,8 +479,8 @@ function PDFViewer({ status, url }: { status: DocStatus; url?: string }) {
 
           {page === 1 && <>
             <p>En la ciudad de <strong>Buenos Aires</strong>, a los <strong>25 de abril de 2026</strong>, entre:</p>
-            <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678, con domicilio en Av. del Libertador 5000, CABA; en adelante "EL VENDEDOR".</p>
-            <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789, con domicilio en Thames 2200, Palermo; en adelante "EL COMPRADOR".</p>
+            <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678, con domicilio en Av. del Libertador 5000, CABA; en adelante &ldquo;EL VENDEDOR&rdquo;.</p>
+            <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789, con domicilio en Thames 2200, Palermo; en adelante &ldquo;EL COMPRADOR&rdquo;.</p>
             <p>Convienen lo siguiente con relación al inmueble sito en <strong>Av. Corrientes 1234, CABA</strong> (Matrícula 1-12345, Folio Real 8765, Tomo 234, Folio 45).</p>
             <p><strong>ARTÍCULO 1 — PRECIO Y CONDICIONES DE PAGO.</strong> La operación se pactó en la suma de <strong>USD 250.000 (dólares estadounidenses doscientos cincuenta mil)</strong>, que el COMPRADOR pagará al VENDEDOR de la siguiente forma:</p>
             <p>a) USD 11.000 entregados en concepto de seña al suscribirse la Reserva de fecha 10/04/2026; b) USD 50.000 al firmarse el presente instrumento; c) USD 189.000 saldo de precio en el acto de escritura.</p>

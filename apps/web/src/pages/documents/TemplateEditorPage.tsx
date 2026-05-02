@@ -576,8 +576,8 @@ function PreviewPanel() {
         </h1>
 
         <p>En la ciudad de <strong>Buenos Aires</strong>, a los <strong>25 de abril de 2026</strong>, entre:</p>
-        <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678; en adelante "EL VENDEDOR".</p>
-        <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789; en adelante "EL COMPRADOR".</p>
+        <p><strong>PARTE VENDEDORA:</strong> Carlos Ramos, DNI 22.345.678; en adelante &ldquo;EL VENDEDOR&rdquo;.</p>
+        <p><strong>PARTE COMPRADORA:</strong> Juan García, DNI 30.456.789; en adelante &ldquo;EL COMPRADOR&rdquo;.</p>
         <p>Se conviene la siguiente reserva de compraventa del inmueble ubicado en <strong>Av. Corrientes 1234, CABA</strong> (Ref: CAP-0142).</p>
         <p><strong>PRECIO:</strong> La operación se pactó en la suma de <strong>USD 250.000</strong>, moneda de los Estados Unidos de América.</p>
         <p><strong>SEÑA:</strong> En este acto el COMPRADOR entrega la suma de USD 11.000 en concepto de seña y principio de ejecución del contrato, en los términos del artículo 1060 del C.C.C.N.</p>

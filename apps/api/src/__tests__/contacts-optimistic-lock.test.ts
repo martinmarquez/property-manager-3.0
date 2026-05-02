@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TRPCError } from '@trpc/server';
 
 // ---------------------------------------------------------------------------
 // Mocks

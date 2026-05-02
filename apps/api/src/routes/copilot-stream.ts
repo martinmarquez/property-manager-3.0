@@ -168,7 +168,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
             }
           }
         }
-      } catch (err) {
+      } catch {
         await stream.writeSSE({
           event: 'error',
           data: JSON.stringify({ message: 'Generation failed' }),

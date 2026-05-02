@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { eq, and, isNull, desc, sql, asc } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import {
   property,
   propertyListing,
@@ -126,7 +126,7 @@ export const propertyDescriptionRouter = router({
   generate: protectedProcedureNoTx
     .input(generateInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId, db, redis } = ctx as AuthenticatedContext;
+      const { tenantId, userId, db } = ctx as AuthenticatedContext;
 
       if (!env.ANTHROPIC_API_KEY) {
         throw new TRPCError({

@@ -17,13 +17,12 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import {
-  eq, and, isNull, desc, inArray, gte,
+  eq, and, isNull, desc, gte,
 } from 'drizzle-orm';
 import {
   portalConnection,
   propertyPortalPublication,
   portalSyncLog,
-  portalTypeEnum,
 } from '@corredor/db';
 import { QUEUE_NAMES } from '@corredor/core';
 import { encryptCredentials, portalIdSchema } from '@corredor/portals';

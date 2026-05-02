@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkQuota, incrementQuota, getMonthlyLimit } from '../quota.js';
+import { describe, it, expect, vi, type MockedObject } from 'vitest';
+import { checkQuota, incrementQuota, getMonthlyLimit, type QuotaRedis } from '../quota.js';
 
-function createMockRedis(counter: number = 0) {
+function createMockRedis(counter: number = 0): MockedObject<QuotaRedis> {
   return {
     get: vi.fn().mockResolvedValue(counter > 0 ? String(counter) : null),
     incr: vi.fn().mockResolvedValue(counter + 1),
     expire: vi.fn().mockResolvedValue(1),
-  } as any;
+  };
 }
 
 describe('getMonthlyLimit', () => {
@@ -87,10 +87,10 @@ describe('incrementQuota', () => {
   });
 
   it('does not set expiry on subsequent increments', async () => {
-    const redis = {
+    const redis: MockedObject<QuotaRedis> = {
       ...createMockRedis(5),
       incr: vi.fn().mockResolvedValue(6),
-    } as any;
+    };
 
     await incrementQuota(redis, 'tenant-1', 'user-1');
 

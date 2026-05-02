@@ -500,7 +500,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate, onVerTodos }: Comm
               textAlign: 'center',
             }}>
               <p style={{ fontFamily: F.body, fontSize: 14, color: C.textSecondary, margin: 0 }}>
-                Sin resultados para <strong style={{ color: C.textPrimary }}>"{query}"</strong>
+                Sin resultados para <strong style={{ color: C.textPrimary }}>&ldquo;{query}&rdquo;</strong>
               </p>
             </div>
           ) : (

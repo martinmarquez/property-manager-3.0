@@ -175,7 +175,6 @@ vi.mock('../middleware/session.js', () => ({
 // ---------------------------------------------------------------------------
 
 const TENANT_ID = 'tenant-1';
-const USER_ID = 'user-1';
 const PROPERTY_ID = '00000000-0000-0000-0000-000000000001';
 const IMPORT_JOB_ID = '00000000-0000-0000-0000-000000000002';
 

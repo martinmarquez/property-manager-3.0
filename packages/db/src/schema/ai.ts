@@ -7,9 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
-  index,
   customType,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';

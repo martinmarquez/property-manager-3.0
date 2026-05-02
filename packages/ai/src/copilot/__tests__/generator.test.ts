@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type Anthropic from '@anthropic-ai/sdk';
 import { generateResponse } from '../generator.js';
 import type { GenerateOptions } from '../generator.js';
 
@@ -20,7 +21,7 @@ function mockResponse(text: string, inputTokens = 100, outputTokens = 50) {
 }
 
 describe('generateResponse', () => {
-  let client: any;
+  let client: Anthropic;
 
   const baseOpts: GenerateOptions = {
     tenantId: 'tenant-1',
