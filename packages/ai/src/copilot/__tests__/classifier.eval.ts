@@ -6,10 +6,12 @@
  *
  * Usage: pnpm --filter @corredor/ai eval:classifier
  * Requires: ANTHROPIC_API_KEY environment variable
+ * Optional: EVAL_OUTPUT_FILE — path to write JSON baseline (e.g. eval-baseline.json)
  */
+import fs from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { classifyIntent, type IntentType } from '../classifier.js';
-import { evalDataset, type EvalSample } from './intent-eval-dataset.js';
+import { evalDataset } from './intent-eval-dataset.js';
 
 const ACCURACY_THRESHOLD = 0.8;
 
@@ -17,6 +19,18 @@ interface IntentResult {
   correct: number;
   total: number;
   failures: { query: string; predicted: IntentType }[];
+}
+
+interface BaselineRecord {
+  timestamp: string;
+  modelId: string;
+  totalSamples: number;
+  totalCorrect: number;
+  overallAccuracy: number;
+  passThreshold: number;
+  passed: boolean;
+  byIntent: Record<string, { correct: number; total: number; accuracy: number }>;
+  misclassifications: { expected: string; predicted: string; query: string }[];
 }
 
 async function runEval() {
@@ -86,20 +100,50 @@ async function runEval() {
   );
   console.log();
 
-  const failedIntents = intents.filter((i) => {
-    const r = results.get(i)!;
-    return r.failures.length > 0;
-  });
+  const misclassifications: BaselineRecord['misclassifications'] = [];
+  for (const intent of intents) {
+    const r = results.get(intent)!;
+    for (const f of r.failures) {
+      misclassifications.push({ expected: intent, predicted: f.predicted, query: f.query });
+    }
+  }
 
-  if (failedIntents.length > 0) {
+  if (misclassifications.length > 0) {
     console.log('MISCLASSIFICATIONS:');
-    for (const intent of failedIntents) {
-      const r = results.get(intent)!;
-      for (const f of r.failures) {
-        console.log(`  expected=${intent}  predicted=${f.predicted}  query="${f.query}"`);
-      }
+    for (const m of misclassifications) {
+      console.log(`  expected=${m.expected}  predicted=${m.predicted}  query="${m.query}"`);
     }
     console.log();
+  }
+
+  const outputFile = process.env['EVAL_OUTPUT_FILE'];
+  if (outputFile) {
+    const byIntent: BaselineRecord['byIntent'] = {};
+    for (const intent of intents) {
+      const r = results.get(intent)!;
+      if (r.total > 0) {
+        byIntent[intent] = {
+          correct: r.correct,
+          total: r.total,
+          accuracy: r.total > 0 ? r.correct / r.total : 0,
+        };
+      }
+    }
+
+    const baseline: BaselineRecord = {
+      timestamp: new Date().toISOString(),
+      modelId: 'claude-haiku-4-5-20251001',
+      totalSamples: evalDataset.length,
+      totalCorrect,
+      overallAccuracy,
+      passThreshold: ACCURACY_THRESHOLD,
+      passed: overallAccuracy >= ACCURACY_THRESHOLD,
+      byIntent,
+      misclassifications,
+    };
+
+    fs.writeFileSync(outputFile, JSON.stringify(baseline, null, 2));
+    console.log(`Baseline written to: ${outputFile}`);
   }
 
   if (overallAccuracy < ACCURACY_THRESHOLD) {
