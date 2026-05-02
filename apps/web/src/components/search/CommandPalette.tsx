@@ -169,7 +169,7 @@ export default function CommandPalette({
           position: 'fixed',
           inset: 0,
           background: C.bgOverlay,
-          backdropFilter: 'blur(6px)',
+          backdropFilter: 'blur(4px)',
           zIndex: 9990,
           animation: 'palette-fade-in 0.15s ease-out',
         }}
@@ -184,15 +184,15 @@ export default function CommandPalette({
         aria-label="Búsqueda rápida"
         style={{
           position: 'fixed',
-          top: '18%',
+          top: '20%',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
-          maxWidth: 640,
+          maxWidth: 620,
           background: C.bgRaised,
           border: `1px solid ${C.border}`,
           borderRadius: 16,
-          boxShadow: '0 40px 100px rgba(0,0,0,0.75), 0 0 0 1px rgba(22,84,217,0.08)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(22,84,217,0.08)',
           zIndex: 9991,
           overflow: 'hidden',
           animation: 'palette-slide-in 0.2s cubic-bezier(0.16,1,0.3,1)',

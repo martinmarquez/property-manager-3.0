@@ -204,7 +204,7 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
               color: C.textPrimary,
               margin: 0,
             }}>
-              Búsqueda
+              Resultados de búsqueda
             </h1>
             {onOpenPalette && (
               <button
@@ -362,7 +362,7 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
         {/* Left sidebar: filter chips (desktop only) */}
         {!isCompact && (
         <div style={{
-          width: 220,
+          width: 240,
           flexShrink: 0,
           position: 'sticky',
           top: 24,
@@ -376,7 +376,7 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
             color: C.textTertiary,
             marginBottom: 10,
           }}>
-            Tipo de entidad
+            Filtrar por tipo
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -461,6 +461,29 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
             })}
           </div>
 
+          {activeFilter && (
+            <button
+              onClick={() => setActiveFilter(undefined)}
+              style={{
+                marginTop: 10,
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'transparent',
+                border: `1px solid ${C.border}`,
+                color: C.textTertiary,
+                fontFamily: F.body,
+                fontSize: 12,
+                cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = C.textPrimary; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = C.textTertiary; }}
+            >
+              Quitar filtros
+            </button>
+          )}
+
           {/* Keyboard hints */}
           <div style={{
             marginTop: 24,
@@ -480,7 +503,7 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
             }}>
               Atajos
             </div>
-            {[['⌘K', 'Paleta rápida'], ['Tab', 'Filtrar tipo']].map(([key, label]) => (
+            {[['⌘K', 'Paleta rápida'], ['/', 'Buscar']].map(([key, label]) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
                 <kbd style={{
                   padding: '2px 6px',
@@ -579,60 +602,87 @@ export default function SearchPage({ initialQuery = '', initialEntityType, onNav
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 24,
-            }}>
-              <button
-                onClick={() => setCursor(c => Math.max(0, c - PAGE_SIZE))}
-                disabled={cursor === 0}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: `1px solid ${C.border}`,
-                  color: cursor === 0 ? C.textTertiary : C.textSecondary,
-                  cursor: cursor === 0 ? 'default' : 'pointer',
-                  fontFamily: F.body,
-                  fontSize: 13,
-                  opacity: cursor === 0 ? 0.5 : 1,
-                }}
-              >
-                ← Anterior
-              </button>
+          {totalPages > 1 && (() => {
+            const pages: number[] = [];
+            const maxVisible = 5;
+            let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            const end = Math.min(totalPages, start + maxVisible - 1);
+            if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+            for (let p = start; p <= end; p++) pages.push(p);
 
-              <span style={{
-                fontFamily: F.mono,
-                fontSize: 12,
-                color: C.textSecondary,
-                padding: '0 8px',
+            return (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 24,
               }}>
-                {currentPage} / {totalPages}
-              </span>
+                <button
+                  onClick={() => setCursor(c => Math.max(0, c - PAGE_SIZE))}
+                  disabled={cursor === 0}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 8,
+                    background: 'transparent',
+                    border: `1px solid ${C.border}`,
+                    color: cursor === 0 ? C.textTertiary : C.textSecondary,
+                    cursor: cursor === 0 ? 'default' : 'pointer',
+                    fontFamily: F.body,
+                    fontSize: 13,
+                    opacity: cursor === 0 ? 0.5 : 1,
+                  }}
+                >
+                  ←
+                </button>
 
-              <button
-                onClick={() => setCursor(c => c + PAGE_SIZE)}
-                disabled={!hasMore}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: `1px solid ${C.border}`,
-                  color: !hasMore ? C.textTertiary : C.textSecondary,
-                  cursor: !hasMore ? 'default' : 'pointer',
-                  fontFamily: F.body,
-                  fontSize: 13,
-                  opacity: !hasMore ? 0.5 : 1,
-                }}
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+                {pages.map(p => {
+                  const isCurrentPage = p === currentPage;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setCursor((p - 1) * PAGE_SIZE)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: isCurrentPage ? C.brand : 'transparent',
+                        border: isCurrentPage ? 'none' : `1px solid ${C.border}`,
+                        color: isCurrentPage ? '#fff' : C.textSecondary,
+                        cursor: isCurrentPage ? 'default' : 'pointer',
+                        fontFamily: F.mono,
+                        fontSize: 13,
+                        fontWeight: isCurrentPage ? 700 : 400,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCursor(c => c + PAGE_SIZE)}
+                  disabled={!hasMore}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 8,
+                    background: 'transparent',
+                    border: `1px solid ${C.border}`,
+                    color: !hasMore ? C.textTertiary : C.textSecondary,
+                    cursor: !hasMore ? 'default' : 'pointer',
+                    fontFamily: F.body,
+                    fontSize: 13,
+                    opacity: !hasMore ? 0.5 : 1,
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
