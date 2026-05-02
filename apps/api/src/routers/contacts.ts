@@ -44,6 +44,9 @@ import {
   contactImportJob,
   contactImportRow,
   dsrRequest,
+  conversation,
+  message,
+  auditLog,
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
@@ -55,6 +58,7 @@ import {
   buildAccessBundle,
   buildPortabilityBundle,
   buildDeletePatch,
+  EventBus,
 } from '@corredor/core';
 
 // ---------------------------------------------------------------------------
@@ -702,6 +706,15 @@ const dsrRouter = router({
         deadlineAt,
       }).returning();
 
+      await db.insert(auditLog).values({
+        tenantId,
+        userId,
+        entityType: 'dsr_request',
+        entityId: created!.id,
+        action: 'dsr.create',
+        diff: { type: input.type, contactId: input.contactId },
+      });
+
       return created!;
     }),
 
@@ -765,8 +778,31 @@ const dsrRouter = router({
           .delete(contactSegmentMember)
           .where(and(eq(contactSegmentMember.contactId, dsr.contactId), eq(contactSegmentMember.tenantId, tenantId)));
 
+        const contactConversations = await db
+          .select({ id: conversation.id })
+          .from(conversation)
+          .where(and(eq(conversation.contactId, dsr.contactId), eq(conversation.tenantId, tenantId)));
+
+        if (contactConversations.length > 0) {
+          await db
+            .update(message)
+            .set({ content: sql`'{"redacted": true, "reason": "DSR delete"}'::jsonb` })
+            .where(and(
+              eq(message.tenantId, tenantId),
+              inArray(message.conversationId, contactConversations.map((cv) => cv.id)),
+            ));
+        }
+
         result = { deleted: true };
       } else if (dsr.type === 'rectify') {
+        await db.insert(auditLog).values({
+          tenantId,
+          userId,
+          entityType: 'dsr_request',
+          entityId: dsr.id,
+          action: 'dsr.process',
+          diff: { type: dsr.type, contactId: dsr.contactId, status: 'in_progress' },
+        });
         result = { message: 'Rectification requires manual review — DSR marked in_progress for admin action' };
         return result;
       }
@@ -775,6 +811,28 @@ const dsrRouter = router({
         .update(dsrRequest)
         .set({ status: 'completed', completedAt: new Date(), updatedAt: new Date() })
         .where(eq(dsrRequest.id, input.id));
+
+      await db.insert(auditLog).values({
+        tenantId,
+        userId,
+        entityType: 'dsr_request',
+        entityId: dsr.id,
+        action: 'dsr.process',
+        diff: { type: dsr.type, contactId: dsr.contactId, status: 'completed' },
+      });
+
+      const bus = new EventBus({ redis: ctx.redis });
+      if (dsr.type === 'delete') {
+        await bus.emit({
+          type: 'contact.dsr_delete',
+          payload: { tenantId, contactId: dsr.contactId, dsrRequestId: dsr.id, userId },
+        });
+      } else if (dsr.type === 'access') {
+        await bus.emit({
+          type: 'contact.dsr_access',
+          payload: { tenantId, contactId: dsr.contactId, dsrRequestId: dsr.id, userId },
+        });
+      }
 
       return result;
     }),
@@ -799,6 +857,15 @@ const dsrRouter = router({
         .update(dsrRequest)
         .set({ status: 'disputed', disputedAt: new Date(), disputeReason: input.reason, updatedAt: new Date() })
         .where(eq(dsrRequest.id, input.id));
+
+      await db.insert(auditLog).values({
+        tenantId,
+        userId: ctx.userId,
+        entityType: 'dsr_request',
+        entityId: dsr.id,
+        action: 'dsr.dispute',
+        diff: { contactId: dsr.contactId, reason: input.reason },
+      });
 
       return { ok: true };
     }),
