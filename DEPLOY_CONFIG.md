@@ -4,22 +4,23 @@ Infrastructure topology and runbook for Corredor CRM (Corredor project).
 
 ## Architecture Overview
 
-| App / Service         | Provider           | Project / App Name        | Region |
-|-----------------------|--------------------|---------------------------|--------|
-| `apps/api`            | Fly.io             | `corredor-api-prod`       | `gru` (São Paulo) |
-| `apps/worker`         | Fly.io             | `corredor-worker-prod`    | `gru`  |
-| `apps/web` (SPA)      | Cloudflare Pages   | `corredor-web`            | Global CDN |
-| `apps/admin` (SPA)    | Cloudflare Pages   | `corredor-admin`          | Global CDN |
-| `apps/site` (Next.js) | Vercel             | `corredor-site`           | Global CDN |
-| Database              | Neon (PostgreSQL)  | `corredor-prod`           | `aws-sa-east-1` |
-| Media storage         | Cloudflare R2      | `corredor-media-prod`     | — |
-| Document storage      | Cloudflare R2      | `corredor-documents-prod` | — |
+| App / Service              | Provider           | Project / App Name           | Region |
+|----------------------------|--------------------|------------------------------|--------|
+| `apps/api`                 | Fly.io             | `corredor-api-prod`          | `gru` (São Paulo) |
+| `apps/worker`              | Fly.io             | `corredor-worker-prod`       | `gru`  |
+| `apps/web` (SPA)           | Cloudflare Pages   | `corredor-web`               | Global CDN |
+| `apps/admin` (SPA)         | Cloudflare Pages   | `corredor-admin`             | Global CDN |
+| `apps/site` (Next.js)      | Vercel             | `corredor-site`              | Global CDN |
+| `apps/tenant-site` (Next.js ISR) | Cloudflare Pages | `corredor-tenant-sites`  | Global CDN |
+| Database                   | Neon (PostgreSQL)  | `corredor-crm`               | `aws-us-east-2` |
+| Media storage              | Cloudflare R2      | `corredor-media-prod`        | — |
+| Document storage           | Cloudflare R2      | `corredor-documents-prod`    | — |
 
 ## Deployment Triggers
 
 | Event                  | Workflow                          | Effect |
 |------------------------|-----------------------------------|--------|
-| Push to `main`         | `production-deploy.yml`           | Full production deploy (migrate → API → Worker → Web → Admin → Site) |
+| Push to `main`         | `production-deploy.yml`           | Full production deploy (migrate → API → Worker → Web → Admin → Site → Tenant Sites) |
 | PR opened / updated    | `preview.yml`                     | Ephemeral preview stack per PR (Neon branch + Fly preview + CF Pages preview + Vercel preview) |
 | PR closed              | `cleanup-preview.yml`             | Tears down Fly preview app + Neon branch |
 
@@ -51,16 +52,51 @@ Infrastructure topology and runbook for Corredor CRM (Corredor project).
 | `VERCEL_PROJECT_ID_SITE` | Vercel project settings for `corredor-site` |
 | `NEXT_PUBLIC_API_URL_PROD` | Production API URL, e.g. `https://corredor-api-prod.fly.dev` |
 
+### Phase G — Electronic invoicing (AFIP WSAA)
+
+| Secret | How to obtain |
+|--------|---------------|
+| `AFIP_CUIT` | Company CUIT (numeric, no dashes) |
+| `AFIP_PRIVATE_KEY` | Base64-encoded RSA private key — see `infra/afip/README.md` |
+| `AFIP_CERTIFICATE` | Base64-encoded WSAA signed cert — see `infra/afip/README.md` |
+| `AFIP_SANDBOX` | `true` for staging, `false` for production |
+
+### Phase G — Stripe billing
+
+| Secret | How to obtain |
+|--------|---------------|
+| `STRIPE_SECRET_KEY` | Stripe dashboard → Developers → API Keys → Secret key (test mode: `sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe dashboard → Webhooks → Add endpoint → signing secret (`whsec_...`) |
+| `STRIPE_PRICE_ID_STARTER` | Stripe dashboard → Products → create Starter plan → copy price ID |
+| `STRIPE_PRICE_ID_PRO` | Stripe dashboard → Products → create Pro plan → copy price ID |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe dashboard → Developers → API Keys → Publishable key (test: `pk_test_...`) |
+
+Webhook endpoint to register in Stripe dashboard (staging):
+`https://corredor-api-prod.fly.dev/webhooks/stripe`
+Events to listen: `customer.subscription.*`, `invoice.payment_succeeded`, `invoice.payment_failed`
+
+### Phase G — Mercado Pago billing (AR domestic)
+
+| Secret | How to obtain |
+|--------|---------------|
+| `MP_ACCESS_TOKEN` | MP Developers → Credentials → Sandbox access token (`TEST-...`) |
+| `MP_PUBLIC_KEY` | MP Developers → Credentials → Sandbox public key |
+| `MP_WEBHOOK_SECRET` | MP dashboard → Webhooks → configure → copy secret |
+
+Sandbox credentials: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/credentials
+MP Webhook endpoint (staging): `https://corredor-api-prod.fly.dev/webhooks/mercadopago`
+
 ## Infra Config Files
 
 | File | Purpose |
 |------|---------|
 | `infra/fly/api.fly.toml` | Fly.io config for `apps/api` |
 | `infra/fly/worker.fly.toml` | Fly.io config for `apps/worker` (1 GB RAM — Playwright/Chromium) |
-| `infra/cloudflare/wrangler.jsonc` | R2 bucket bindings (media, documents, documents-staging) |
-| `apps/site/vercel.json` | Vercel project config for `apps/site` (Next.js) |
+| `infra/cloudflare/wrangler.jsonc` | R2 bucket bindings + Phase G tenant-sites Pages config |
+| `apps/site/vercel.json` | Vercel project config for `apps/site` (Next.js marketing site) |
 | `infra/neon/branch.sh` | Creates per-PR Neon branch; outputs `db_url` and `db_url_pooled` |
 | `infra/neon/dev-branch.sh` | Creates a personal dev Neon branch |
+| `infra/afip/README.md` | AFIP WSAA certificate generation and sandbox setup guide |
 
 ## Vercel Project Bootstrap (one-time, run once per environment)
 

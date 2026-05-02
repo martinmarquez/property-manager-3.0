@@ -5,5 +5,12 @@
     { "binding": "MEDIA", "bucket_name": "corredor-media-prod" },
     { "binding": "DOCUMENTS", "bucket_name": "corredor-documents-prod" },
     { "binding": "DOCUMENTS_STAGING", "bucket_name": "corredor-documents-staging", "preview_bucket_name": "corredor-documents-staging" }
-  ]
+  ],
+
+  // Phase G — Tenant website builder (Next.js ISR via @cloudflare/next-on-pages)
+  // One-time bootstrap: wrangler pages project create corredor-tenant-sites
+  // Custom domains are managed via the Cloudflare API by the API service (RENA-121).
+  "pages_build_output_dir": ".vercel/output/static",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"]
 }

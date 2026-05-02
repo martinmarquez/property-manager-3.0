@@ -149,3 +149,19 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_SITE }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
+
+      - name: Deploy Tenant Sites (Cloudflare Pages — Next.js ISR)
+        # Phase G: multi-tenant website builder output (apps/tenant-site).
+        # Requires: CLOUDFLARE_TENANT_SITES_PROJECT_NAME secret set to "corredor-tenant-sites".
+        # One-time bootstrap: wrangler pages project create corredor-tenant-sites
+        if: ${{ secrets.CLOUDFLARE_TENANT_SITES_PROJECT_NAME != '' }}
+        run: |
+          pnpm --filter @corredor/tenant-site build
+          pnpm dlx wrangler pages deploy .vercel/output/static \
+            --project-name "$CLOUDFLARE_TENANT_SITES_PROJECT_NAME" \
+            --commit-hash "${{ github.sha }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_TENANT_SITES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_TENANT_SITES_PROJECT_NAME }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
