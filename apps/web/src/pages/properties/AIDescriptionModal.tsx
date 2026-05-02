@@ -192,7 +192,7 @@ function OverwriteWarning({
 /* ─── Diff view ────────────────────────────────────────────── */
 function DiffView({ original, generated }: { original: string; generated: string }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 }} data-ai-diff>
       <div>
         <div style={{
           padding: '6px 12px', borderRadius: '8px 8px 0 0',
@@ -206,7 +206,7 @@ function DiffView({ original, generated }: { original: string; generated: string
           padding: 14, borderRadius: '0 0 8px 8px',
           background: C.errorFaint, border: `1px solid ${C.error}25`,
           fontFamily: F.body, fontSize: 13, color: C.textSecondary,
-          lineHeight: 1.6, minHeight: 120,
+          lineHeight: 1.6, minHeight: 120, whiteSpace: 'pre-wrap' as const,
         }}>
           {original}
         </div>
@@ -226,7 +226,7 @@ function DiffView({ original, generated }: { original: string; generated: string
           padding: 14, borderRadius: '0 0 8px 8px',
           background: C.aiFaint, border: `1px solid ${C.ai}30`,
           fontFamily: F.body, fontSize: 13, color: C.textPrimary,
-          lineHeight: 1.6, minHeight: 120,
+          lineHeight: 1.6, minHeight: 120, whiteSpace: 'pre-wrap' as const,
         }}>
           {generated}
         </div>
@@ -369,7 +369,6 @@ export default function AIDescriptionModal({
   const generateMut  = trpc.propertyDescription.generate.useMutation();
   const saveMut      = trpc.propertyDescription.save.useMutation();
   const deleteMut    = trpc.propertyDescription.delete.useMutation();
-  const setActiveMut = trpc.propertyDescription.setActive.useMutation();
 
   // tRPC query for drafts
   const draftsQuery = trpc.propertyDescription.list.useQuery(
@@ -404,6 +403,24 @@ export default function AIDescriptionModal({
       setSavedToast(false);
       setGenMeta(null);
     }
+  }, [open]);
+
+  // Escape key to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showOverwrite) onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose, showOverwrite]);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
   }, [open]);
 
   // Auto-resize textarea
@@ -485,13 +502,6 @@ export default function AIDescriptionModal({
     } catch { /* swallow */ }
   }, [deleteMut, draftsQuery]);
 
-  const handleSetActive = useCallback(async (id: string) => {
-    try {
-      await setActiveMut.mutateAsync({ id });
-      draftsQuery.refetch();
-    } catch { /* swallow */ }
-  }, [setActiveMut, draftsQuery]);
-
   const handleUseDraft = useCallback((body: string) => {
     setEditableText(body);
     setStep('done');
@@ -519,6 +529,7 @@ export default function AIDescriptionModal({
       {/* Modal */}
       <div
         role="dialog"
+        aria-modal="true"
         aria-label={intl.formatMessage(m.title)}
         style={{
           position: 'fixed', top: '50%', left: '50%',
@@ -862,6 +873,7 @@ export default function AIDescriptionModal({
                     background: C.aiFaint, border: `1px solid ${C.ai}30`,
                     fontFamily: F.body, fontSize: 13, color: C.textPrimary,
                     lineHeight: 1.7, minHeight: 100, position: 'relative' as const,
+                    whiteSpace: 'pre-wrap' as const,
                   }}>
                     {displayText}
                     <span style={{
@@ -1034,7 +1046,9 @@ export default function AIDescriptionModal({
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
+        [data-ai-diff] { grid-template-columns: 1fr 1fr; }
         @media (max-width: 767px) {
+          [data-ai-diff] { grid-template-columns: 1fr !important; }
           [data-ai-modal] {
             top: 0 !important;
             left: 0 !important;

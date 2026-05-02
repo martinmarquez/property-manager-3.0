@@ -12,6 +12,7 @@ export type {
   Portal,
   GenerateInput,
   PropertyAttributes,
+  PromptParts,
 } from './promptBuilder.js';
 
 export { generateDescription } from './generator.js';
