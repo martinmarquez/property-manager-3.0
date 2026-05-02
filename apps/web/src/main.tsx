@@ -49,6 +49,7 @@ import { DocumentViewerPage } from './pages/documents/DocumentViewerPage.js';
 import { ReservationListPage } from './pages/reservations/ReservationListPage.js';
 import { ReservationDetailPage } from './pages/reservations/ReservationDetailPage.js';
 import CopilotFloat from './components/copilot/CopilotFloat.js';
+import { useCopilotEnabled } from './hooks/useCopilotEnabled.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -445,9 +446,16 @@ const inquiryDetailRoute = createRoute({
 const searchRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/search',
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === 'string' ? search.q : '',
+    type: typeof search.type === 'string' ? search.type : undefined,
+  }),
   component: function SearchRoute() {
+    const { q, type } = searchRoute.useSearch();
     return (
       <SearchPage
+        initialQuery={q}
+        initialEntityType={type as import('./hooks/useSearch.js').EntityType | undefined}
         onNavigate={href => router.navigate({ to: href })}
         onOpenPalette={() => document.dispatchEvent(new CustomEvent('open-command-palette'))}
       />
@@ -456,12 +464,19 @@ const searchRoute = createRoute({
 });
 
 // ─── Copilot route ─────────────────────────────────────────────────────────
+function CopilotRouteGuard() {
+  const enabled = useCopilotEnabled();
+  if (!enabled) {
+    router.navigate({ to: '/dashboard' });
+    return null;
+  }
+  return <CopilotPage />;
+}
+
 const copilotRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/copilot',
-  component: function CopilotRoute() {
-    return <CopilotPage />;
-  },
+  component: CopilotRouteGuard,
 });
 
 // ─── Phase E: Documents routes ─────────────────────────────────────────────

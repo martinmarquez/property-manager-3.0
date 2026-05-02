@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import {
   useSearchQuery,
   saveRecentSearch,
@@ -27,8 +27,17 @@ const F = {
   mono:    "'DM Mono', monospace",
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 const ENTITY_TYPES: EntityType[] = ['property', 'contact', 'lead', 'document'];
+
+const TABLET_MQ = '(max-width: 1023px)';
+function useIsCompact() {
+  return useSyncExternalStore(
+    (cb) => { const mql = matchMedia(TABLET_MQ); mql.addEventListener('change', cb); return () => mql.removeEventListener('change', cb); },
+    () => matchMedia(TABLET_MQ).matches,
+    () => false,
+  );
+}
 
 function Highlight({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>;
@@ -132,14 +141,16 @@ function ResultCard({ result, query, onNavigate }: { result: SearchResult; query
 
 interface SearchPageProps {
   initialQuery?: string;
+  initialEntityType?: EntityType;
   onNavigate?: (href: string) => void;
   onOpenPalette?: () => void;
 }
 
-export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalette }: SearchPageProps) {
+export default function SearchPage({ initialQuery = '', initialEntityType, onNavigate, onOpenPalette }: SearchPageProps) {
   const [query, setQuery] = useState(initialQuery);
-  const [activeFilter, setActiveFilter] = useState<EntityType | undefined>(undefined);
+  const [activeFilter, setActiveFilter] = useState<EntityType | undefined>(initialEntityType);
   const [cursor, setCursor] = useState(0);
+  const isCompact = useIsCompact();
 
   const { results, total, hasMore, isLoading, isFetching, phase } = useSearchQuery({
     query,
@@ -152,7 +163,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
   // Reset pagination on query/filter change
   useEffect(() => { setCursor(0); }, [query, activeFilter]);
 
-  // Sync URL query param
+  // Sync URL query + type params
   useEffect(() => {
     const url = new URL(window.location.href);
     if (query) {
@@ -160,15 +171,13 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
     } else {
       url.searchParams.delete('q');
     }
+    if (activeFilter) {
+      url.searchParams.set('type', activeFilter);
+    } else {
+      url.searchParams.delete('type');
+    }
     window.history.replaceState({}, '', url.toString());
-  }, [query]);
-
-  // Read initial query from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    if (q && !initialQuery) setQuery(q);
-  }, []);
+  }, [query, activeFilter]);
 
   const handleNavigate = useCallback((href: string) => {
     saveRecentSearch(query);
@@ -278,16 +287,80 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
         </div>
       </div>
 
+      {/* Compact filter chips (tablet/mobile) */}
+      {isCompact && (
+        <div style={{
+          padding: '12px 16px',
+          borderBottom: `1px solid ${C.border}`,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <div style={{ display: 'flex', gap: 8, minWidth: 'max-content' }}>
+            <button
+              onClick={() => setActiveFilter(undefined)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 20,
+                background: !activeFilter ? `${C.brand}20` : C.bgElevated,
+                border: !activeFilter ? `1px solid ${C.brand}50` : `1px solid ${C.border}`,
+                color: !activeFilter ? C.textPrimary : C.textSecondary,
+                fontFamily: F.body,
+                fontSize: 12,
+                fontWeight: !activeFilter ? 600 : 400,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              Todos {query && <span style={{ fontFamily: F.mono, fontSize: 10 }}>({total})</span>}
+            </button>
+            {ENTITY_TYPES.map(et => {
+              const config = ENTITY_DISPLAY[et];
+              const isActive = activeFilter === et;
+              return (
+                <button
+                  key={et}
+                  onClick={() => setActiveFilter(isActive ? undefined : et)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    background: isActive ? `${config.color}20` : C.bgElevated,
+                    border: isActive ? `1px solid ${config.color}50` : `1px solid ${C.border}`,
+                    color: isActive ? C.textPrimary : C.textSecondary,
+                    fontFamily: F.body,
+                    fontSize: 12,
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{config.icon}</span>
+                  {config.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       <div style={{
         maxWidth: 1100,
         margin: '0 auto',
-        padding: '24px 32px',
+        padding: isCompact ? '16px' : '24px 32px',
         display: 'flex',
         gap: 28,
         alignItems: 'flex-start',
       }}>
-        {/* Left sidebar: filter chips */}
+        {/* Left sidebar: filter chips (desktop only) */}
+        {!isCompact && (
         <div style={{
           width: 220,
           flexShrink: 0,
@@ -307,7 +380,6 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* "All" chip */}
             <button
               onClick={() => setActiveFilter(undefined)}
               style={{
@@ -424,6 +496,7 @@ export default function SearchPage({ initialQuery = '', onNavigate, onOpenPalett
             ))}
           </div>
         </div>
+        )}
 
         {/* Results list */}
         <div style={{ flex: 1, minWidth: 0 }}>

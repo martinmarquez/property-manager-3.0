@@ -53,7 +53,7 @@ interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   onNavigate?: (href: string) => void;
-  onOpenSearchPage?: (query: string) => void;
+  onOpenSearchPage?: (query: string, entityType?: EntityType) => void;
 }
 
 export default function CommandPalette({
@@ -177,6 +177,7 @@ export default function CommandPalette({
 
       {/* Palette */}
       <div
+        data-cmd-palette
         role="combobox"
         aria-expanded={results.length > 0 || suggestions.length > 0}
         aria-haspopup="listbox"
@@ -450,7 +451,7 @@ export default function CommandPalette({
                   {config.label}
                   {items.length >= 3 && (
                     <button
-                      onClick={() => { onOpenSearchPage?.(`${query}&type=${entityType}`); onClose(); }}
+                      onClick={() => { onOpenSearchPage?.(query, entityType); onClose(); }}
                       style={{
                         marginLeft: 'auto',
                         background: 'none',
@@ -636,6 +637,13 @@ export default function CommandPalette({
         @keyframes palette-slide-in {
           from { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.97); }
           to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
+        @media (max-width: 767px) {
+          [data-cmd-palette] {
+            max-width: calc(100% - 32px) !important;
+            top: 10% !important;
+            border-radius: 12px !important;
+          }
         }
       `}</style>
     </>
