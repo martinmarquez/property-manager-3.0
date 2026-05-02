@@ -269,10 +269,10 @@ describe('POST /copilot/stream/turn — feature flag gate', () => {
     });
 
     expect(res.status).toBe(403);
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body).toHaveProperty('error');
     expect(body).toHaveProperty('upgradePrompt');
-    expect(body.error).toContain('ai_copilot');
+    expect((body.error as string | undefined)).toContain('ai_copilot');
   });
 
   it('passes through when ai_copilot flag is enabled', async () => {

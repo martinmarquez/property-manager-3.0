@@ -92,8 +92,8 @@ describe('chunkEntity — contact_note', () => {
     });
 
     expect(chunks.length).toBeGreaterThanOrEqual(1);
-    expect(chunks[0].sourceField).toBe('notes');
-    expect(chunks[0].metadata).toMatchObject({ contactName: 'Ana López' });
+    expect(chunks[0]!.sourceField).toBe('notes');
+    expect(chunks[0]!.metadata).toMatchObject({ contactName: 'Ana López' });
   });
 
   it('returns empty array for empty notes', () => {
@@ -122,9 +122,9 @@ describe('chunkEntity — conversation_message', () => {
     });
 
     expect(chunks).toHaveLength(3);
-    expect(chunks[0].metadata).toMatchObject({ windowStart: 0, windowEnd: 5 });
-    expect(chunks[1].metadata).toMatchObject({ windowStart: 5, windowEnd: 10 });
-    expect(chunks[2].metadata).toMatchObject({ windowStart: 10, windowEnd: 12 });
+    expect(chunks[0]!.metadata).toMatchObject({ windowStart: 0, windowEnd: 5 });
+    expect(chunks[1]!.metadata).toMatchObject({ windowStart: 5, windowEnd: 10 });
+    expect(chunks[2]!.metadata).toMatchObject({ windowStart: 10, windowEnd: 12 });
   });
 
   it('returns empty array when no messages', () => {
@@ -148,9 +148,9 @@ describe('chunkEntity — document_page', () => {
     });
 
     expect(chunks).toHaveLength(3);
-    expect(chunks[0].content).toBe('Página uno');
-    expect(chunks[0].metadata).toMatchObject({ pageNumber: 1 });
-    expect(chunks[2].metadata).toMatchObject({ pageNumber: 3 });
+    expect(chunks[0]!.content).toBe('Página uno');
+    expect(chunks[0]!.metadata).toMatchObject({ pageNumber: 1 });
+    expect(chunks[2]!.metadata).toMatchObject({ pageNumber: 3 });
   });
 
   it('falls back to content field when no pages array', () => {
@@ -162,8 +162,8 @@ describe('chunkEntity — document_page', () => {
     });
 
     expect(chunks).toHaveLength(1);
-    expect(chunks[0].content).toBe('Contenido del documento');
-    expect(chunks[0].metadata).toMatchObject({ pageNumber: 5 });
+    expect(chunks[0]!.content).toBe('Contenido del documento');
+    expect(chunks[0]!.metadata).toMatchObject({ pageNumber: 5 });
   });
 
   it('returns empty array when no content', () => {
@@ -187,8 +187,8 @@ describe('chunkEntity — property_description', () => {
     });
 
     expect(chunks).toHaveLength(1);
-    expect(chunks[0].content).toBe('Texto generado por IA.');
-    expect(chunks[0].metadata).toMatchObject({ locale: 'es-AR', tone: 'formal', targetPortal: 'zonaprop' });
+    expect(chunks[0]!.content).toBe('Texto generado por IA.');
+    expect(chunks[0]!.metadata).toMatchObject({ locale: 'es-AR', tone: 'formal', targetPortal: 'zonaprop' });
   });
 
   it('returns empty array for empty body', () => {
