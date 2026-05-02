@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 
 const C = {
   bgBase: '#070D1A',
@@ -279,13 +280,13 @@ function KpiCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ReservationListPage() {
+  const navigate = useNavigate()
   const [stageFilter, setStageFilter] = useState<'all' | ReservaStage>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ReservaStatus>('all')
   const [agentFilter, setAgentFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'lastActivity' | 'escrituraDate' | 'salePrice'>('lastActivity')
   const [sortDir] = useState<'asc' | 'desc'>('desc')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const agents = Array.from(new Set(MOCK_RESERVAS.map(r => r.agentName))).sort()
 
@@ -506,25 +507,22 @@ export function ReservationListPage() {
           </thead>
           <tbody>
             {filtered.map((r, i) => {
-              const isSelected = selectedId === r.id
               const isOverdue = r.overdueCount > 0
               return (
                 <tr
                   key={r.id}
-                  onClick={() => setSelectedId(isSelected ? null : r.id)}
+                  onClick={() => navigate({ to: '/reservations/$reservationId', params: { reservationId: r.id } })}
                   style={{
                     cursor: 'pointer',
                     borderBottom: `1px solid ${C.borderSubtle}`,
-                    background: isSelected
-                      ? C.bgElevated
-                      : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)',
+                    background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)',
                     transition: 'background 0.12s',
                   }}
                   onMouseEnter={e => {
-                    if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.background = C.bgRaised
+                    (e.currentTarget as HTMLTableRowElement).style.background = C.bgRaised
                   }}
                   onMouseLeave={e => {
-                    if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.background =
+                    (e.currentTarget as HTMLTableRowElement).style.background =
                       i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)'
                   }}
                 >

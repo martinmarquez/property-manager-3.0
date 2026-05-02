@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
+import { trpc } from '../../trpc.js'
 
 const C = {
   bgBase: '#070D1A',
@@ -363,13 +364,40 @@ export function DocumentGenerationModal({
   onClose,
   onGenerated,
 }: DocumentGenerationModalProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(MOCK_TEMPLATES[0]!)
+  const { data: apiTemplates } = trpc.documents.listTemplates.useQuery({ limit: 50 })
+  const createDocMutation = trpc.documents.createDocument.useMutation()
+
+  const KIND_LABEL: Record<string, string> = {
+    reserva: 'Reserva', boleto: 'Venta', escritura: 'Escritura',
+    recibo_sena: 'Recibo seña', autorizacion_venta: 'Autorización',
+    contrato_locacion: 'Alquiler', recibo_alquiler: 'Recibo alquiler',
+    carta_oferta: 'Oferta', custom: 'Personalizado',
+  }
+
+  const liveTemplates = useMemo<Template[]>(() => {
+    if (!apiTemplates?.length) return MOCK_TEMPLATES
+    return apiTemplates.map(t => ({
+      id: t.id,
+      name: t.name,
+      category: KIND_LABEL[t.kind] ?? t.kind,
+      estimatedPages: Math.max(1, Math.ceil((t.bodyHtml?.length ?? 0) / 2000)),
+      fields: ((t.requiredBindings ?? []) as string[]).map(variable => ({
+        variable,
+        label: variable.split('.').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' › '),
+        description: variable,
+        status: 'missing' as FieldStatus,
+      })),
+    }))
+  }, [apiTemplates])
+
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const activeTemplate = selectedTemplate ?? liveTemplates[0] ?? MOCK_TEMPLATES[0]!
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState(false)
   const [tab, setTab] = useState<'template' | 'fields'>('template')
 
-  const fields = selectedTemplate.fields
+  const fields = activeTemplate.fields
   const missingFields = fields.filter(f => f.status === 'missing' && !fieldValues[f.variable])
   const ambiguousFields = fields.filter(f => f.status === 'ambiguous' && !fieldValues[f.variable])
   const resolvedCount = fields.filter(f => f.status === 'resolved' || fieldValues[f.variable]).length
@@ -383,11 +411,24 @@ export function DocumentGenerationModal({
 
   function handleGenerate() {
     setGenerating(true)
-    setTimeout(() => {
-      setGenerating(false)
-      setGenerated(true)
-      setTimeout(() => onGenerated?.('doc_new_001'), 1200)
-    }, 1800)
+    const fieldBindings: Record<string, string> = {}
+    for (const f of fields) {
+      const val = fieldValues[f.variable] ?? f.resolvedValue
+      if (val) fieldBindings[f.variable] = val
+    }
+    createDocMutation.mutate(
+      { templateId: activeTemplate.id, fieldBindings },
+      {
+        onSuccess: doc => {
+          setGenerating(false)
+          setGenerated(true)
+          setTimeout(() => onGenerated?.(doc?.id ?? ''), 1200)
+        },
+        onError: () => {
+          setGenerating(false)
+        },
+      },
+    )
   }
 
   return (
@@ -477,15 +518,15 @@ export function DocumentGenerationModal({
               <p style={{ margin: '0 0 12px', fontSize: 13, color: C.textSecondary }}>
                 Seleccioná la plantilla que querés usar para esta operación.
               </p>
-              {MOCK_TEMPLATES.map(tpl => (
+              {liveTemplates.map(tpl => (
                 <div
                   key={tpl.id}
                   onClick={() => { setSelectedTemplate(tpl); setTab('fields') }}
                   style={{
                     padding: '14px 16px',
-                    border: `1px solid ${selectedTemplate.id === tpl.id ? C.brand : C.border}`,
+                    border: `1px solid ${activeTemplate.id === tpl.id ? C.brand : C.border}`,
                     borderRadius: 10,
-                    background: selectedTemplate.id === tpl.id ? C.brandSubtle : 'transparent',
+                    background: activeTemplate.id === tpl.id ? C.brandSubtle : 'transparent',
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 14,
                     transition: 'all 0.12s',
@@ -493,13 +534,13 @@ export function DocumentGenerationModal({
                 >
                   <div style={{
                     width: 40, height: 48, borderRadius: 4,
-                    background: selectedTemplate.id === tpl.id ? C.brand : C.bgElevated,
-                    border: `1px solid ${selectedTemplate.id === tpl.id ? C.brandHover : C.border}`,
+                    background: activeTemplate.id === tpl.id ? C.brand : C.bgElevated,
+                    border: `1px solid ${activeTemplate.id === tpl.id ? C.brandHover : C.border}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke={selectedTemplate.id === tpl.id ? '#fff' : C.textTertiary} strokeWidth={1.5}>
+                      stroke={activeTemplate.id === tpl.id ? '#fff' : C.textTertiary} strokeWidth={1.5}>
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
@@ -514,7 +555,7 @@ export function DocumentGenerationModal({
                     </div>
                   </div>
 
-                  {selectedTemplate.id === tpl.id && (
+                  {activeTemplate.id === tpl.id && (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                       stroke={C.brand} strokeWidth={2.5}>
                       <path d="M20 6L9 17l-5-5" />

@@ -1,7 +1,7 @@
 import { initSentryBrowser, initPostHog } from '@corredor/telemetry/browser';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect, notFound } from '@tanstack/react-router';
+import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect, notFound, useRouterState } from '@tanstack/react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { trpc, queryClient, makeTRPCReactClient } from './trpc.js';
@@ -44,6 +44,10 @@ import { InquiryDetailPage } from './pages/inquiries/InquiryDetailPage.js';
 import SearchPage from './pages/search/SearchPage.js';
 import CommandPalette from './components/search/CommandPalette.js';
 import CopilotPage from './pages/copilot/CopilotPage.js';
+import { TemplateEditorPage } from './pages/documents/TemplateEditorPage.js';
+import { DocumentViewerPage } from './pages/documents/DocumentViewerPage.js';
+import { ReservationListPage } from './pages/reservations/ReservationListPage.js';
+import { ReservationDetailPage } from './pages/reservations/ReservationDetailPage.js';
 import CopilotFloat from './components/copilot/CopilotFloat.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
@@ -80,8 +84,32 @@ const MOCK_ORG: OrganizationData = {
 };
 
 // ─── Root layout (wraps all authenticated routes) ─��──────────────────────────
+const MODULE_PATHS: Record<string, string> = {
+  dashboard:    '/dashboard',
+  properties:   '/properties',
+  contacts:     '/contacts',
+  leads:        '/leads',
+  documents:    '/documents',
+  reservations: '/reservations',
+  calendar:     '/calendar',
+  settings:     '/settings',
+};
+
+function pathToModule(pathname: string): string {
+  if (pathname.startsWith('/documents'))    return 'documents';
+  if (pathname.startsWith('/reservations')) return 'reservations';
+  if (pathname.startsWith('/properties'))   return 'properties';
+  if (pathname.startsWith('/contacts'))     return 'contacts';
+  if (pathname.startsWith('/leads') || pathname.startsWith('/pipelines')) return 'leads';
+  if (pathname.startsWith('/calendar'))     return 'calendar';
+  if (pathname.startsWith('/settings'))     return 'settings';
+  return 'dashboard';
+}
+
 function AuthenticatedLayout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const pathname = useRouterState({ select: s => s.location.pathname });
+  const activeModule = pathToModule(pathname) as import('@corredor/ui').NavModule;
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -90,12 +118,24 @@ function AuthenticatedLayout() {
         setPaletteOpen(p => !p);
       }
     };
+    const openHandler = () => setPaletteOpen(true);
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    document.addEventListener('open-command-palette', openHandler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('open-command-palette', openHandler);
+    };
   }, []);
 
   return (
-    <AppShell user={MOCK_USER}>
+    <AppShell
+      user={MOCK_USER}
+      activeModule={activeModule}
+      onNavigate={module => {
+        const path = MODULE_PATHS[module];
+        if (path) router.navigate({ to: path });
+      }}
+    >
       <Outlet />
       <CommandPalette
         open={paletteOpen}
@@ -104,9 +144,9 @@ function AuthenticatedLayout() {
           setPaletteOpen(false);
           router.navigate({ to: href });
         }}
-        onOpenSearchPage={q => {
+        onOpenSearchPage={(q, entityType) => {
           setPaletteOpen(false);
-          router.navigate({ to: '/search', search: { q } });
+          router.navigate({ to: '/search', search: { q, type: entityType } });
         }}
       />
       <CopilotFloat />
@@ -409,6 +449,7 @@ const searchRoute = createRoute({
     return (
       <SearchPage
         onNavigate={href => router.navigate({ to: href })}
+        onOpenPalette={() => document.dispatchEvent(new CustomEvent('open-command-palette'))}
       />
     );
   },
@@ -420,6 +461,56 @@ const copilotRoute = createRoute({
   path: '/copilot',
   component: function CopilotRoute() {
     return <CopilotPage />;
+  },
+});
+
+// ─── Phase E: Documents routes ─────────────────────────────────────────────
+const documentsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/documents',
+  component: function DocumentsRoute() {
+    return <TemplateEditorPage templateId="demo" />;
+  },
+});
+
+const templateEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/documents/templates/$templateId/edit',
+  component: function TemplateEditRoute() {
+    const { templateId } = templateEditRoute.useParams();
+    return <TemplateEditorPage templateId={templateId} />;
+  },
+});
+
+const documentViewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/documents/$documentId',
+  component: function DocumentViewRoute() {
+    const { documentId } = documentViewRoute.useParams();
+    return (
+      <DocumentViewerPage
+        documentId={documentId}
+        onSendForSign={() => router.navigate({ to: '/documents/$documentId', params: { documentId } })}
+      />
+    );
+  },
+});
+
+// ─── Phase E: Reservations routes ──────────────────────────────────────────
+const reservationsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/reservations',
+  component: function ReservationsRoute() {
+    return <ReservationListPage />;
+  },
+});
+
+const reservationDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/reservations/$reservationId',
+  component: function ReservationDetailRoute() {
+    const { reservationId } = reservationDetailRoute.useParams();
+    return <ReservationDetailPage reservationId={reservationId} />;
   },
 });
 
@@ -486,6 +577,11 @@ const routeTree = rootRoute.addChildren([
     calendarRoute,
     inquiriesRoute,
     inquiryDetailRoute,
+    documentsRoute,
+    templateEditRoute,
+    documentViewRoute,
+    reservationsRoute,
+    reservationDetailRoute,
     searchRoute,
     copilotRoute,
     settingsRoute.addChildren([
