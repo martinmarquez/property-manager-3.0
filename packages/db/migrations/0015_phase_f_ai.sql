@@ -170,7 +170,6 @@ ALTER TABLE property ADD COLUMN IF NOT EXISTS search_text text
     coalesce(reference_code, '') || ' ' ||
     coalesce(title, '') || ' ' ||
     coalesce(description, '') || ' ' ||
-    coalesce(property_type::text, '') || ' ' ||
     coalesce(subtype, '') || ' ' ||
     coalesce(province, '') || ' ' ||
     coalesce(locality, '') || ' ' ||

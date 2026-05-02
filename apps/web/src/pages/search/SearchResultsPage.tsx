@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 
 /* ─── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -248,10 +248,7 @@ export default function SearchResultsPage({
   const [query, setQuery]                 = useState(initialQuery);
   const [activeFilter, setActiveFilter]   = useState<EntityType | null>(initialEntityType ?? null);
   const [page, setPage]                   = useState(1);
-  const inputRef                          = useRef<HTMLInputElement>(null);
-
-  const import_useRef = React.useRef;
-  const inputRefLocal = import_useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -357,7 +354,7 @@ export default function SearchResultsPage({
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
-                ref={inputRefLocal}
+                ref={inputRef}
                 type="text"
                 value={query}
                 onChange={e => { setQuery(e.target.value); setPage(1); }}

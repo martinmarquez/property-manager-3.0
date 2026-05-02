@@ -207,6 +207,7 @@ describe('RBAC', () => {
       tenantId: 'tid',
       userId: 'uid',
       roles: ['read-only'],
+      queues: {},
     };
 
     expect(() => requirePermission(ctx, 'billing:manage')).toThrowError(TRPCError);

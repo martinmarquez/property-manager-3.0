@@ -9,6 +9,8 @@ import { ragRouter } from './routers/rag.js';
 import { propertyDescriptionRouter } from './routers/propertyDescription.js';
 import { searchRouter } from './routers/search.js';
 import { copilotRouter } from './routers/copilot.js';
+import { leadsRouter } from './routers/leads.js';
+import { pipelinesRouter } from './routers/pipelines.js';
 
 /**
  * Root tRPC router.
@@ -40,6 +42,8 @@ export const appRouter = router({
   propertyDescription: propertyDescriptionRouter,
   search:              searchRouter,
   copilot:             copilotRouter,
+  leads:               leadsRouter,
+  pipelines:           pipelinesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const executeCalls: unknown[][] = [];
 
 function makeMockSelectChain() {
-  const chain: Record<string, unknown> = {};
+  const chain: Record<string | symbol, unknown> = {};
   chain.from = vi.fn().mockReturnValue(chain);
   chain.where = vi.fn().mockReturnValue(chain);
   chain.groupBy = vi.fn().mockReturnValue(Promise.resolve([]));

@@ -46,7 +46,7 @@ CREATE TRIGGER lead_search_text_trg
 UPDATE lead SET search_text = search_text WHERE search_text IS NULL;
 
 -- GIN trgm index for fast keyword search
-CREATE INDEX CONCURRENTLY IF NOT EXISTS lead_search_text_trgm_idx
+CREATE INDEX IF NOT EXISTS lead_search_text_trgm_idx
   ON lead USING gin (search_text gin_trgm_ops);
 
 -- ---------------------------------------------------------------------------
@@ -89,5 +89,5 @@ UPDATE doc_document SET search_text = search_text;
 
 -- Recreate the trgm index (drop old one from 0015 if it exists on the generated column)
 DROP INDEX IF EXISTS doc_document_search_text_trgm_idx;
-CREATE INDEX CONCURRENTLY IF NOT EXISTS doc_document_search_text_trgm_idx
+CREATE INDEX IF NOT EXISTS doc_document_search_text_trgm_idx
   ON doc_document USING gin (search_text gin_trgm_ops);

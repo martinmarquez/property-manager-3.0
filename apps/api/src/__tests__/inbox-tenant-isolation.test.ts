@@ -198,6 +198,7 @@ async function buildCaller() {
     db: mockDb as any,
     redis: redis as any,
     sessionId: 'sess-1',
+    queues: {},
   });
 
   return caller;

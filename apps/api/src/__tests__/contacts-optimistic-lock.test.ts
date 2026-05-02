@@ -212,6 +212,7 @@ async function buildCaller() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     redis: redis as any,
     sessionId: 'sess-1',
+    queues: {},
   });
 
   return caller;

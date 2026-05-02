@@ -228,7 +228,7 @@ const publicationsRouter = router({
         })
         .returning();
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_PUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_PUBLISH];
       if (queue) {
         await queue.add('publish', {
           publicationId: pub!.id,
@@ -265,7 +265,7 @@ const publicationsRouter = router({
         })
         .where(eq(propertyPortalPublication.id, input.publicationId));
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_UNPUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_UNPUBLISH];
       if (queue) {
         await queue.add('unpublish', {
           publicationId: input.publicationId,
@@ -309,7 +309,7 @@ const publicationsRouter = router({
         })))
         .returning();
 
-      const queue = ctx.queues[QUEUE_NAMES.PORTAL_PUBLISH];
+      const queue = ctx.queues?.[QUEUE_NAMES.PORTAL_PUBLISH];
       if (queue) {
         for (const pub of pubs) {
           await queue.add('publish', {

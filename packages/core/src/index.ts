@@ -75,19 +75,9 @@ export type {
   PortabilityBundle,
 } from './contacts/dsr.js';
 
-// Inquiry match engine
-export {
-  computeMatchScore,
-  MATCH_WEIGHTS,
-} from './inquiries/match-engine.js';
-export type {
-  InquiryCriteria,
-  ZoneCriterion,
-  PropertyData,
-  ListingData,
-  ScoreBreakdown,
-  MatchResult,
-} from './inquiries/match-engine.js';
+// Inquiry match engine (not yet implemented)
+// export { computeMatchScore, MATCH_WEIGHTS } from './inquiries/match-engine.js';
+// export type { InquiryCriteria, ZoneCriterion, PropertyData, ListingData, ScoreBreakdown, MatchResult } from './inquiries/match-engine.js';
 
 // Analytics event taxonomy and KPI helpers
 export * from './analytics/index.js';

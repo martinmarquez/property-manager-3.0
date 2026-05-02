@@ -127,9 +127,8 @@ const MOCK_TEMPLATES: Template[] = [
       {
         variable: 'operation.earnest_amount',
         label: 'Monto de seña',
-        description: 'Importe de la seña a la firma del boleto',
-        status: 'missing',
         description: 'No existe registro de seña en la operación. Debe ingresarse manualmente.',
+        status: 'missing',
       },
       {
         variable: 'operation.escritura_date',
@@ -142,9 +141,8 @@ const MOCK_TEMPLATES: Template[] = [
       {
         variable: 'agent.matricula',
         label: 'Matrícula del corredor',
-        description: 'Número de matrícula CUCICBA/CMCPRA del agente interviniente',
-        status: 'missing',
         description: 'La matrícula no está cargada en el perfil del agente.',
+        status: 'missing',
       },
       {
         variable: 'agent.full_name',
@@ -365,7 +363,7 @@ export function DocumentGenerationModal({
   onClose,
   onGenerated,
 }: DocumentGenerationModalProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(MOCK_TEMPLATES[0])
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(MOCK_TEMPLATES[0]!)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState(false)

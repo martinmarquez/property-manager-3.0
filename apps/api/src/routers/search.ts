@@ -56,7 +56,7 @@ interface FusionEntry {
   exactRefMatch: boolean;
 }
 
-interface SearchResult {
+export interface SearchResult {
   entityType: 'property' | 'contact' | 'lead' | 'document';
   entityId: string;
   title: string;
@@ -66,7 +66,7 @@ interface SearchResult {
   matchedOn: string;
 }
 
-interface AutocompleteResult {
+export interface AutocompleteResult {
   label: string;
   entityType: 'property' | 'contact' | 'lead' | 'document';
   entityId: string;
