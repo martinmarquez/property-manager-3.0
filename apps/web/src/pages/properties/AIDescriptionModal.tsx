@@ -856,19 +856,30 @@ export default function AIDescriptionModal({
 
               {step === 'streaming' ? (
                 /* Read-only streaming preview */
-                <div style={{
-                  padding: 16, borderRadius: 10,
-                  background: C.aiFaint, border: `1px solid ${C.ai}30`,
-                  fontFamily: F.body, fontSize: 13, color: C.textPrimary,
-                  lineHeight: 1.7, minHeight: 100, position: 'relative' as const,
-                }}>
-                  {displayText}
-                  <span style={{
-                    display: 'inline-block', width: 2, height: 14,
-                    background: C.ai, marginLeft: 2, verticalAlign: 'text-bottom',
-                    animation: 'ai-desc-cursor 0.8s step-end infinite',
-                  }} />
-                </div>
+                <>
+                  <div style={{
+                    padding: 16, borderRadius: 10,
+                    background: C.aiFaint, border: `1px solid ${C.ai}30`,
+                    fontFamily: F.body, fontSize: 13, color: C.textPrimary,
+                    lineHeight: 1.7, minHeight: 100, position: 'relative' as const,
+                  }}>
+                    {displayText}
+                    <span style={{
+                      display: 'inline-block', width: 2, height: 14,
+                      background: C.ai, marginLeft: 2, verticalAlign: 'text-bottom',
+                      animation: 'ai-desc-cursor 0.8s step-end infinite',
+                    }} />
+                  </div>
+                  <div style={{
+                    display: 'flex', justifyContent: 'flex-end', marginTop: 4,
+                  }}>
+                    <span style={{
+                      fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
+                    }}>
+                      {intl.formatMessage(m.charCount, { count: displayText.length })}
+                    </span>
+                  </div>
+                </>
               ) : (
                 /* Editable textarea in done state */
                 <>
