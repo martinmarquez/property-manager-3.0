@@ -4,6 +4,10 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import {
   copilotSession,
   copilotTurn,
+  calendarEvent,
+  calendarEventType,
+  message as messageTable,
+  conversation,
 } from '@corredor/db';
 import {
   createAnthropicClient,
@@ -289,7 +293,7 @@ export const copilotRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, db } = ctx as AuthenticatedContext;
+      const { tenantId, userId, db } = ctx as AuthenticatedContext;
 
       const [turn] = await db
         .select()
@@ -310,12 +314,83 @@ export const copilotRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'No pending action on this turn' });
       }
 
+      let executedId: string | null = null;
+
+      const payload = Array.isArray(turn.toolCalls) ? (turn.toolCalls[0] as Record<string, unknown>)?.payload as Record<string, unknown> | undefined : undefined;
+
+      if (turn.actionType === 'create_task' && payload) {
+        const title = (payload.title as string) ?? 'Tarea desde Copilot';
+        const description = (payload.description as string) ?? null;
+        const startsAt = payload.startsAt ? new Date(payload.startsAt as string) : new Date();
+        const endsAt = payload.endsAt ? new Date(payload.endsAt as string) : new Date(startsAt.getTime() + 3600000);
+
+        // Get or create a default "task" event type
+        let [eventType] = await db
+          .select({ id: calendarEventType.id })
+          .from(calendarEventType)
+          .where(and(eq(calendarEventType.tenantId, tenantId), eq(calendarEventType.name, 'tarea')))
+          .limit(1);
+
+        if (!eventType) {
+          [eventType] = await db
+            .insert(calendarEventType)
+            .values({ tenantId, name: 'tarea', color: '#7E3AF2', icon: 'task' })
+            .returning({ id: calendarEventType.id });
+        }
+
+        const [event] = await db
+          .insert(calendarEvent)
+          .values({
+            tenantId,
+            eventTypeId: eventType!.id,
+            title,
+            description,
+            startAt: startsAt,
+            endAt: endsAt,
+            allDay: false,
+            createdByUserId: userId,
+            createdBy: userId,
+          })
+          .returning({ id: calendarEvent.id });
+        executedId = event?.id ?? null;
+      }
+
+      if (turn.actionType === 'send_message' && payload) {
+        const conversationId = payload.conversationId as string | undefined;
+        const content = (payload.content as string) ?? (payload.message as string) ?? '';
+
+        if (conversationId && content) {
+          // Verify conversation belongs to tenant
+          const [conv] = await db
+            .select({ id: conversation.id })
+            .from(conversation)
+            .where(and(eq(conversation.id, conversationId), eq(conversation.tenantId, tenantId)))
+            .limit(1);
+
+          if (conv) {
+            const [msg] = await db
+              .insert(messageTable)
+              .values({
+                tenantId,
+                conversationId: conv.id,
+                direction: 'out',
+                contentType: 'text',
+                content: { text: content },
+                status: 'queued',
+                senderUserId: userId,
+              })
+              .returning({ id: messageTable.id });
+            executedId = msg?.id ?? null;
+          }
+        }
+      }
+
       await db
         .update(copilotTurn)
         .set({ actionConfirmed: true })
         .where(eq(copilotTurn.id, input.turnId));
 
-      return { confirmed: true, turnId: input.turnId, actionType: turn.actionType };
+      return { confirmed: true, turnId: input.turnId, actionType: turn.actionType, executedId };
     }),
 
   cancelAction: protectedProcedure

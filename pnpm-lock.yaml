@@ -94,6 +94,9 @@ importers:
       '@hono/trpc-server':
         specifier: ^0.3.4
         version: 0.3.4(@trpc/server@11.16.0(typescript@5.9.3))(hono@4.12.14)
+      '@neondatabase/serverless':
+        specifier: ^0.10.0
+        version: 0.10.4
       '@opentelemetry/sdk-node':
         specifier: ^0.55.0
         version: 0.55.0(@opentelemetry/api@1.9.1)

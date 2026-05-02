@@ -2,52 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { trpc } from '../../trpc.js';
 import { useCopilotStream } from '../../hooks/useCopilotStream.js';
-import type { StreamCitation, StreamActionSuggestion } from '../../hooks/useCopilotStream.js';
-
-/* ─── Design tokens ─────────────────────────────────────────── */
-const C = {
-  bgBase:        '#070D1A',
-  bgRaised:      '#0D1526',
-  bgElevated:    '#131E33',
-  border:        '#1F2D48',
-  brand:         '#1654d9',
-  brandLight:    '#4669ff',
-  brandFaint:    'rgba(22,84,217,0.12)',
-  textPrimary:   '#EFF4FF',
-  textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
-  success:       '#18A659',
-  ai:            '#7E3AF2',
-  aiFaint:       'rgba(126,58,242,0.12)',
-  aiLight:       '#9B59FF',
-};
-
-const F = {
-  display: "'Syne', system-ui, sans-serif",
-  body:    "'DM Sans', system-ui, sans-serif",
-  mono:    "'DM Mono', monospace",
-};
-
-/* ─── Types ─────────────────────────────────────────────────── */
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  isStreaming?: boolean;
-  timestamp: string;
-}
-
-const ENTITY_ICONS: Record<string, string> = {
-  property: '🏠', contact: '👤', deal: '📋', document: '📄', task: '✅',
-};
-
-const ENTITY_ROUTES: Record<string, (id: string) => string> = {
-  property: (id) => `/properties/${id}/edit`,
-  contact:  (id) => `/contacts/${id}`,
-  deal:     (id) => `/pipelines?deal=${id}`,
-  document: (id) => `/documents/${id}`,
-  task:     (id) => `/calendar?task=${id}`,
-};
+import { useCopilotEnabled } from '../../hooks/useCopilotEnabled.js';
+import { useMediaQuery, BREAKPOINTS } from '../../hooks/useMediaQuery.js';
+import { C, F } from './tokens.js';
+import type { Message } from './tokens.js';
 
 /* ─── Inline markdown (bold + inline code) ─────────────────── */
 function renderInline(text: string): React.ReactNode[] {
@@ -79,12 +37,13 @@ function CompactSheet({
   onClose,
   onOpenFull,
   context,
+  isMobile,
 }: {
   onClose: () => void;
   onOpenFull: () => void;
   context?: Record<string, unknown>;
+  isMobile: boolean;
 }) {
-  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState('');
@@ -98,7 +57,6 @@ function CompactSheet({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -107,7 +65,6 @@ function CompactSheet({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Close on click outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
@@ -168,12 +125,21 @@ function CompactSheet({
     }
   }, [input, isStreaming, sessionId, createSession, context, sendMessage]);
 
-  return (
-    <div
-      ref={sheetRef}
-      role="dialog"
-      aria-label="Copilot IA"
-      style={{
+  const sheetStyle: React.CSSProperties = isMobile
+    ? {
+        position:      'fixed',
+        inset:         0,
+        borderRadius:  0,
+        background:    C.bgRaised,
+        border:        'none',
+        boxShadow:     'none',
+        display:       'flex',
+        flexDirection: 'column',
+        overflow:      'hidden',
+        zIndex:        9999,
+        animation:     'copilot-float-slideUp 0.25s ease-out',
+      }
+    : {
         position:      'fixed',
         bottom:        80,
         right:         24,
@@ -187,7 +153,15 @@ function CompactSheet({
         flexDirection: 'column',
         overflow:      'hidden',
         zIndex:        9999,
-      }}
+        animation:     'copilot-float-scaleIn 0.2s ease-out',
+      };
+
+  return (
+    <div
+      ref={sheetRef}
+      role="dialog"
+      aria-label="Copilot IA"
+      style={sheetStyle}
     >
       {/* Header */}
       <div style={{
@@ -339,10 +313,10 @@ function CompactSheet({
 
       {/* Input */}
       <div style={{
-        padding:   '12px 14px',
-        borderTop: `1px solid ${C.border}`,
-        display:   'flex',
-        gap:       8,
+        padding:    '12px 14px',
+        borderTop:  `1px solid ${C.border}`,
+        display:    'flex',
+        gap:        8,
         flexShrink: 0,
       }}>
         <input
@@ -390,11 +364,15 @@ function CompactSheet({
   );
 }
 
-/* ─── Floating button ───────────────────────────────────────── */
+/* ─── Floating button ────────────────────────���──────────────── */
 
 export default function CopilotFloat({ context }: { context?: Record<string, unknown> }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
+  const enabled = useCopilotEnabled();
+
+  if (!enabled) return null;
 
   const handleOpenFull = useCallback(() => {
     setOpen(false);
@@ -403,11 +381,26 @@ export default function CopilotFloat({ context }: { context?: Record<string, unk
 
   return (
     <>
+      <style>{`
+        @keyframes copilot-float-scaleIn {
+          from { opacity: 0; transform: scale(0.92) translateY(8px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes copilot-float-slideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes copilot-float-pulse {
+          0%, 100% { box-shadow: 0 8px 24px ${C.ai}50; }
+          50%      { box-shadow: 0 8px 32px ${C.ai}70; }
+        }
+      `}</style>
       {open ? (
         <CompactSheet
           onClose={() => setOpen(false)}
           onOpenFull={handleOpenFull}
           context={context}
+          isMobile={isMobile}
         />
       ) : (
         <button
@@ -432,6 +425,7 @@ export default function CopilotFloat({ context }: { context?: Record<string, unk
             color:          '#fff',
             zIndex:         9998,
             transition:     'transform 0.2s, box-shadow 0.2s',
+            animation:      'copilot-float-pulse 3s ease-in-out infinite',
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)';

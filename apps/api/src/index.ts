@@ -138,6 +138,8 @@ app.route('/api/copilot', createCopilotStreamRoutes({
   db: db as any,
   redis,
   anthropicApiKey: env.ANTHROPIC_API_KEY,
+  openaiApiKey: env.OPENAI_API_KEY,
+  databaseUrl: env.DATABASE_URL,
 }));
 
 // ── tRPC router ────────────────────────────────────────────────────────────

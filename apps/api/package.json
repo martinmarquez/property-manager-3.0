@@ -18,6 +18,7 @@
     "@corredor/ai": "workspace:*",
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
+    "@neondatabase/serverless": "^0.10.0",
     "@corredor/documents": "workspace:*",
     "@corredor/portals": "workspace:*",
     "@corredor/telemetry": "workspace:*",

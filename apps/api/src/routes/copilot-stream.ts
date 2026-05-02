@@ -3,6 +3,7 @@ import { streamSSE } from 'hono/streaming';
 import type { Redis } from 'ioredis';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
+import { neon } from '@neondatabase/serverless';
 import {
   copilotSession,
   copilotTurn,
@@ -15,6 +16,8 @@ import {
   incrementQuota,
 } from '@corredor/ai';
 import type { TurnMessage } from '@corredor/ai';
+import { Embedder, retrieve } from '@corredor/core';
+import type { SqlClient } from '@corredor/core';
 import type { AnyDb } from '../trpc.js';
 import { getSession, getSessionId, IDLE_TIMEOUT_SECONDS } from '../middleware/session.js';
 
@@ -22,10 +25,27 @@ interface StreamDeps {
   db: AnyDb;
   redis: Redis;
   anthropicApiKey: string | undefined;
+  openaiApiKey: string | undefined;
+  databaseUrl: string;
+}
+
+function makeSqlClient(databaseUrl: string): SqlClient {
+  const neonSql = neon(databaseUrl);
+  return {
+    async query(text: string, params: unknown[]) {
+      const rows = await neonSql(text, params as (string | number | boolean | null)[]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { rows: rows as any };
+    },
+  };
 }
 
 export function createCopilotStreamRoutes(deps: StreamDeps) {
   const app = new Hono();
+  const sqlClient = makeSqlClient(deps.databaseUrl);
+  const embedder = deps.openaiApiKey
+    ? new Embedder({ apiKey: deps.openaiApiKey, redis: deps.redis })
+    : null;
 
   app.post('/turn', async (c) => {
     // Authenticate via session cookie (same as tRPC tenant middleware)
@@ -110,6 +130,21 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
     // Classify intent
     const classification = await classifyIntent(client, body.message, recentContext);
 
+    // RAG retrieval — fetch relevant chunks for context injection
+    let retrievedChunks: Awaited<ReturnType<typeof retrieve>> = [];
+    if (embedder) {
+      try {
+        retrievedChunks = await retrieve(sqlClient, embedder, {
+          tenantId,
+          query: body.message,
+          topK: 8,
+          entityTypes: ['property', 'contact_note', 'document_page', 'property_description'],
+        });
+      } catch {
+        // Non-fatal: proceed without RAG context rather than failing the turn
+      }
+    }
+
     // Save user turn
     await deps.db
       .insert(copilotTurn)
@@ -141,7 +176,7 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
           intent: classification.type,
           message: body.message,
           history,
-          retrievedChunks: [],
+          retrievedChunks,
           locale: 'es-AR',
         });
 
