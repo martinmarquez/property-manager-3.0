@@ -262,6 +262,9 @@ function DraftRow({
   const isActive = !draft.isDraft;
   const date = new Date(draft.createdAt);
   const portalLabel = PORTAL_OPTIONS.find(p => p.key === draft.targetPortal)?.label ?? draft.targetPortal ?? 'General';
+  const toneLabel = TONE_MSG[draft.tone as Tone]
+    ? intl.formatMessage(m[TONE_MSG[draft.tone as Tone].label])
+    : draft.tone;
 
   return (
     <div style={{
@@ -276,7 +279,7 @@ function DraftRow({
           color: C.textTertiary, textTransform: 'uppercase' as const,
           letterSpacing: '0.05em',
         }}>
-          {draft.tone} · {portalLabel}
+          {toneLabel} · {portalLabel}
         </span>
         <span style={{
           fontFamily: F.mono, fontSize: 11, color: C.textTertiary,
@@ -626,7 +629,7 @@ export default function AIDescriptionModal({
             aria-label={intl.formatMessage(m.close)}
             style={{
               background: 'transparent', border: 'none',
-              color: isWorking ? C.textTertiary : C.textTertiary,
+              color: C.textTertiary,
               cursor: isWorking ? 'default' : 'pointer',
               fontSize: 18, padding: 6, lineHeight: 1, borderRadius: 6,
               opacity: isWorking ? 0.3 : 1,
@@ -1041,12 +1044,14 @@ export default function AIDescriptionModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={isWorking ? undefined : onClose}
+            disabled={isWorking}
             style={{
               marginLeft: 'auto', padding: '10px 18px', borderRadius: 8,
               background: 'transparent', border: 'none',
               color: C.textTertiary, fontFamily: F.body, fontSize: 14,
-              cursor: 'pointer',
+              cursor: isWorking ? 'default' : 'pointer',
+              opacity: isWorking ? 0.5 : 1,
             }}
           >
             {intl.formatMessage(m.cancel)}
