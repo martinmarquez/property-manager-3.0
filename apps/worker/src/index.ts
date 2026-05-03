@@ -37,6 +37,7 @@ import { BillingMPWebhookWorker } from './workers/billing-mp-webhook.js';
 import { BillingAfipInvoiceWorker } from './workers/billing-afip-invoice.js';
 import { createBillingAfipPdfWorker } from './workers/billing-afip-pdf.js';
 import { BillingDunningWorker } from './workers/billing-dunning.js';
+import { BillingBnaRateWorker, type BnaRateJobData } from './workers/billing-bna-rate.js';
 import { createAppraisalNarrativeWorker } from './workers/appraisal-narrative.js';
 import { createAppraisalPdfWorker } from './workers/appraisal-pdf.js';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
@@ -124,6 +125,7 @@ if (!billingAfipPdfWorker) {
   logger.warn('billing-afip-pdf worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
 }
 const billingDunningWorker = new BillingDunningWorker(redis, databaseUrl);
+const billingBnaRateWorker = new BillingBnaRateWorker(redis, databaseUrl);
 
 // Phase G: Appraisal AI narrative worker — Anthropic LLM appraisal narrative generation
 const appraisalNarrativeWorker = createAppraisalNarrativeWorker(redis);
@@ -140,7 +142,7 @@ if (!appraisalPdfWorker) {
 // Phase G: Analytics MV refresh worker — event-driven + scheduled CONCURRENT refresh
 const mvRefreshWorker = new MvRefreshWorker(redis, databaseUrl);
 
-const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'analytics-mv-refresh'];
+const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'billing-bna-rate-fetch', 'analytics-mv-refresh'];
 if (docGenerateWorker) activeQueues.push('doc-generate');
 if (ragIngestWorker) activeQueues.push('rag-ingest');
 if (appraisalNarrativeWorker) activeQueues.push('appraisal-ai-narrative');
@@ -170,6 +172,16 @@ void (async () => {
     });
   }
   logger.info('mv-refresh cron jobs registered', { hourly: hourlyMvs.length, nightly: nightlyMvs.length });
+
+  // BNA rate daily fetch — 10:00 ART (13:00 UTC)
+  const bnaRateQueue = createQueue<BnaRateJobData>(QUEUE_NAMES.BILLING_BNA_RATE_FETCH, redis);
+  await bnaRateQueue.add('bna-rate-fetch', {}, {
+    jobId: 'cron:bna-rate:daily',
+    repeat: { pattern: '0 13 * * *' },
+    removeOnComplete: { count: 7 },
+    removeOnFail: false,
+  });
+  logger.info('bna-rate-fetch daily cron registered (10:00 ART / 13:00 UTC)');
 })();
 
 void importCsvWorker;
@@ -187,6 +199,7 @@ void billingMPWebhookWorker;
 void billingAfipInvoiceWorker;
 void billingAfipPdfWorker;
 void billingDunningWorker;
+void billingBnaRateWorker;
 void appraisalNarrativeWorker;
 void appraisalPdfWorker;
 void mvRefreshWorker;

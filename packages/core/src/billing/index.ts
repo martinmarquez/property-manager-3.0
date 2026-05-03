@@ -11,6 +11,8 @@ export type {
 export {
   determineInvoiceType,
   calculateArsPrice,
+  interpretBnaRate,
   AFIP_PUNTO_VENTA,
   IVA_RATE,
 } from './pricing.js';
+export type { LatestBnaRate, BnaRateRow } from './pricing.js';

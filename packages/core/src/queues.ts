@@ -52,6 +52,7 @@ export const QUEUE_NAMES = {
   BILLING_AFIP_PDF: "billing-afip-pdf",
   BILLING_DUNNING: "billing-dunning",
   BILLING_USAGE_REFRESH: "billing-usage-refresh",
+  BILLING_BNA_RATE_FETCH: "billing-bna-rate-fetch",
 
   // Appraisals — medium priority
   APPRAISAL_AI_NARRATIVE: "appraisal-ai-narrative",
@@ -165,6 +166,7 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.BILLING_AFIP_PDF]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
   [QUEUE_NAMES.BILLING_DUNNING]:        { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
   [QUEUE_NAMES.BILLING_USAGE_REFRESH]:  { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
+  [QUEUE_NAMES.BILLING_BNA_RATE_FETCH]: { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.APPRAISAL_AI_NARRATIVE]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.APPRAISAL_PDF_GENERATE]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
   [QUEUE_NAMES.REPORT_EXPORT]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },

@@ -251,6 +251,19 @@ export const afipInvoice = pgTable("afip_invoice", {
 });
 
 // ---------------------------------------------------------------------------
+// bna_rate  (system-level — no tenant_id, no RLS)
+// ---------------------------------------------------------------------------
+
+export const bnaRate = pgTable("bna_rate", {
+  date: date("date").primaryKey(),
+  buyRate: numeric("buy_rate", { precision: 10, scale: 4 }).notNull(),
+  sellRate: numeric("sell_rate", { precision: 10, scale: 4 }).notNull(),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+// ---------------------------------------------------------------------------
 // Type exports
 // ---------------------------------------------------------------------------
 
@@ -274,3 +287,6 @@ export type NewUsageCounter = typeof usageCounter.$inferInsert;
 
 export type AfipInvoice = typeof afipInvoice.$inferSelect;
 export type NewAfipInvoice = typeof afipInvoice.$inferInsert;
+
+export type BnaRate = typeof bnaRate.$inferSelect;
+export type NewBnaRate = typeof bnaRate.$inferInsert;

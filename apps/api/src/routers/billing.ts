@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   plan,
@@ -8,7 +8,8 @@ import {
   payment,
   afipInvoice,
 } from '@corredor/db';
-import { createQueue, QUEUE_NAMES } from '@corredor/core';
+import { createQueue, QUEUE_NAMES, interpretBnaRate, calculateArsPrice } from '@corredor/core';
+import type { BnaRateRow } from '@corredor/core';
 import { router, protectedProcedure } from '../trpc.js';
 import { env } from '../env.js';
 
@@ -246,12 +247,15 @@ export const billingRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
       }
 
-      // ARS price = USD × (BNA rate × 1.15), rounded to ARS 500
-      // Using a hardcoded estimate for now; production should fetch BNA rate
-      const BNA_RATE_ESTIMATE = 1100;
+      const bnaResult = await ctx.db.execute(sql`
+        SELECT date, sell_rate, fetched_at FROM bna_rate ORDER BY date DESC LIMIT 1
+      `);
+      const { sellRate: bnaRate, isStale } = interpretBnaRate(bnaResult.rows as unknown as BnaRateRow[]);
+      if (isStale) {
+        console.warn('BNA rate is stale (>48h) — billing may use outdated exchange rate');
+      }
       const usdPrice = Number(selectedPlan.priceUsd ?? 0);
-      const rawArs = usdPrice * BNA_RATE_ESTIMATE * 1.15;
-      const arsPrice = Math.ceil(rawArs / 500) * 500;
+      const arsPrice = calculateArsPrice(usdPrice, bnaRate);
 
       // For recurring monthly: use Preapproval API
       if (input.interval === 'monthly') {
