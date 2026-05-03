@@ -8,7 +8,7 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^build", "^typecheck"],
       "inputs": ["src/**", "tsconfig.json", "package.json"]
     },
     "lint": {
