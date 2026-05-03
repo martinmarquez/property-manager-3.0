@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Lock, ArrowRight, Sparkles } from 'lucide-react';
 import { C, F } from '../../components/copilot/tokens.js';
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -89,7 +90,7 @@ function Step1({ domain, setDomain, onNext }: {
       />
       {error && <p style={{ color: C.error, fontSize: 12, fontFamily: F.body, marginTop: 6 }}>{error}</p>}
       <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={validate} style={{
+        <button type="button" onClick={validate} style={{
           padding: '9px 20px', borderRadius: 8, border: 'none', background: C.brand,
           color: '#fff', fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: 'pointer',
         }}>
@@ -151,7 +152,7 @@ function Step2({ domain, onNext }: { domain: string; onNext: () => void }) {
       </p>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={handleCheck} disabled={checking || verified} style={{
+        <button type="button" onClick={handleCheck} disabled={checking || verified} style={{
           padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`,
           background: C.bgElevated, color: checking ? C.textTertiary : C.textSecondary,
           fontFamily: F.body, fontSize: 13, cursor: checking ? 'wait' : 'pointer',
@@ -159,7 +160,7 @@ function Step2({ domain, onNext }: { domain: string; onNext: () => void }) {
           {checking ? '🔄 Verificando…' : verified ? '✓ DNS verificado' : '🔍 Verificar ahora'}
         </button>
         {verified && (
-          <button onClick={onNext} style={{
+          <button type="button" onClick={onNext} style={{
             padding: '9px 20px', borderRadius: 8, border: 'none', background: C.brand,
             color: '#fff', fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: 'pointer',
           }}>
@@ -207,7 +208,7 @@ function Step3({ domain, onNext }: { domain: string; onNext: () => void }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {!done && (
-          <button onClick={handleProvision} disabled={provisioning} style={{
+          <button type="button" onClick={handleProvision} disabled={provisioning} style={{
             padding: '9px 20px', borderRadius: 8, border: 'none',
             background: provisioning ? C.bgElevated : C.success,
             color: provisioning ? C.textTertiary : '#fff',
@@ -217,7 +218,7 @@ function Step3({ domain, onNext }: { domain: string; onNext: () => void }) {
           </button>
         )}
         {done && (
-          <button onClick={onNext} style={{
+          <button type="button" onClick={onNext} style={{
             padding: '9px 20px', borderRadius: 8, border: 'none', background: C.brand,
             color: '#fff', fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: 'pointer',
           }}>
@@ -242,7 +243,7 @@ function Step4({ domain }: { domain: string }) {
           https://{domain}
         </a>
       </p>
-      <button style={{
+      <button type="button" style={{
         padding: '10px 24px', borderRadius: 8, border: 'none', background: C.brand,
         color: '#fff', fontFamily: F.body, fontWeight: 600, fontSize: 14, cursor: 'pointer',
       }}>
@@ -252,11 +253,127 @@ function Step4({ domain }: { domain: string }) {
   );
 }
 
+/* ─── Upsell Wall (Solo plan) ──────────────────────────────────── */
+
+function DomainUpsellWall() {
+  const features = [
+    'Dominio personalizado (tuinmobiliaria.com.ar)',
+    'Certificado SSL / HTTPS gratuito',
+    'Redirecciones personalizadas',
+    'Sin branding de Corredor',
+  ];
+
+  return (
+    <div style={{
+      padding: '28px 32px', maxWidth: 520, fontFamily: F.body,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        background: `${C.warning}18`, border: `1px solid ${C.warning}40`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginBottom: 20,
+      }}>
+        <Lock size={28} color={C.warning} />
+      </div>
+
+      <h1 style={{
+        fontFamily: F.display, fontSize: 24, fontWeight: 700,
+        color: C.textPrimary, margin: '0 0 8px', textAlign: 'center',
+      }}>
+        Dominio personalizado
+      </h1>
+      <p style={{
+        fontFamily: F.body, fontSize: 14, color: C.textSecondary,
+        textAlign: 'center', margin: '0 0 28px', maxWidth: 400, lineHeight: 1.6,
+      }}>
+        Tu plan <span style={{ fontFamily: F.mono, fontWeight: 700, color: C.warning }}>Solo</span> incluye
+        un subdominio gratuito. Actualizá a <span style={{ fontFamily: F.mono, fontWeight: 700, color: C.brand }}>Agencia</span> o
+        superior para conectar tu propio dominio.
+      </p>
+
+      <div style={{
+        background: C.bgRaised, borderRadius: 14, border: `1px solid ${C.border}`,
+        padding: '24px 28px', width: '100%', marginBottom: 24,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+        }}>
+          <Sparkles size={16} color={C.brand} />
+          <span style={{ fontFamily: F.body, fontSize: 14, fontWeight: 600, color: C.textPrimary }}>
+            Incluido en Agencia
+          </span>
+        </div>
+        {features.map(feat => (
+          <div key={feat} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+            <div style={{
+              width: 20, height: 20, borderRadius: '50%',
+              background: C.successFaint, border: `1px solid ${C.success}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: C.success, fontSize: 11, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ fontFamily: F.body, fontSize: 13, color: C.textSecondary }}>
+              {feat}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{
+        background: C.bgBase, borderRadius: 10, border: `1px solid ${C.border}`,
+        padding: '14px 20px', width: '100%', marginBottom: 24,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <span style={{ fontFamily: F.body, fontSize: 12, color: C.textTertiary }}>Tu sitio actual</span>
+          <p style={{ fontFamily: F.mono, fontSize: 13, color: C.textPrimary, margin: '2px 0 0' }}>
+            miinmobiliaria.corredor.io
+          </p>
+        </div>
+        <span style={{
+          fontFamily: F.mono, fontSize: 10, padding: '2px 8px', borderRadius: 20,
+          background: C.successFaint, color: C.success, border: `1px solid ${C.success}40`,
+        }}>
+          Activo
+        </span>
+      </div>
+
+      <button type="button"
+        aria-label="Actualizar al plan Agencia"
+        style={{
+          padding: '12px 28px', borderRadius: 10, border: 'none',
+          background: C.brand, color: '#fff', fontFamily: F.body,
+          fontWeight: 700, fontSize: 15, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 4px 16px rgba(22,84,217,0.3)',
+          minHeight: 48,
+        }}
+      >
+        Actualizar a Agencia
+        <ArrowRight size={16} />
+      </button>
+
+      <p style={{
+        fontFamily: F.body, fontSize: 11, color: C.textTertiary,
+        margin: '12px 0 0', textAlign: 'center',
+      }}>
+        Desde $45/mes · Sin compromiso · Podés cancelar en cualquier momento
+      </p>
+    </div>
+  );
+}
+
 /* ─── Main ──────────────────────────────────────────────────── */
 
-export default function SiteDomainsPage() {
+export default function SiteDomainsPage({ planTier = 'agencia' }: { planTier?: 'solo' | 'agencia' | 'pro' | 'empresa' }) {
   const [step, setStep] = useState<WizardStep>(1);
   const [domain, setDomain] = useState('');
+
+  if (planTier === 'solo') {
+    return <DomainUpsellWall />;
+  }
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 600, fontFamily: F.body }}>

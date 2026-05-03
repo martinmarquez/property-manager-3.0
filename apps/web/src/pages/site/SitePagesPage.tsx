@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { C, F } from '../../components/copilot/tokens.js';
 
-const PAGES = [
-  { id: 'p1', slug: '/',               title: 'Home',              status: 'published', lastEdit: 'hace 2h',  blocks: 5 },
-  { id: 'p2', slug: '/propiedades',    title: 'Propiedades',       status: 'published', lastEdit: 'ayer',     blocks: 3 },
-  { id: 'p3', slug: '/contacto',       title: 'Contacto',          status: 'draft',     lastEdit: 'hace 3d',  blocks: 2 },
-  { id: 'p4', slug: '/nosotros',       title: 'Nosotros',          status: 'draft',     lastEdit: 'hace 1s',  blocks: 4 },
-  { id: 'p5', slug: '/blog',           title: 'Blog',              status: 'unpublished',lastEdit: 'hace 2s', blocks: 1 },
+type PageStatus = 'published' | 'draft' | 'unpublished';
+
+const PAGES: Array<{ id: string; slug: string; title: string; status: PageStatus; lastEdit: string; blocks: number }> = [
+  { id: 'p1', slug: '/',               title: 'Home',              status: 'published',   lastEdit: 'hace 2h',  blocks: 5 },
+  { id: 'p2', slug: '/propiedades',    title: 'Propiedades',       status: 'published',   lastEdit: 'ayer',     blocks: 3 },
+  { id: 'p3', slug: '/contacto',       title: 'Contacto',          status: 'draft',       lastEdit: 'hace 3d',  blocks: 2 },
+  { id: 'p4', slug: '/nosotros',       title: 'Nosotros',          status: 'draft',       lastEdit: 'hace 1s',  blocks: 4 },
+  { id: 'p5', slug: '/blog',           title: 'Blog',              status: 'unpublished', lastEdit: 'hace 2s',  blocks: 1 },
 ];
 
 const STATUS_COLORS = {
@@ -36,7 +38,7 @@ export default function SitePagesPage() {
             {PAGES.length} páginas · 2 publicadas
           </p>
         </div>
-        <button style={{
+        <button type="button" style={{
           padding: '8px 16px', borderRadius: 8, border: 'none',
           background: C.brand, color: '#fff', fontFamily: F.body,
           fontWeight: 600, fontSize: 14, cursor: 'pointer',
@@ -103,13 +105,13 @@ export default function SitePagesPage() {
                 {page.lastEdit}
               </span>
               <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                <button onClick={e => e.stopPropagation()} style={{
+                <button type="button" onClick={e => e.stopPropagation()} style={{
                   padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`,
                   background: 'transparent', color: C.textSecondary, fontSize: 11, cursor: 'pointer',
                 }}>
                   ✏️
                 </button>
-                <button onClick={e => e.stopPropagation()} style={{
+                <button type="button" onClick={e => e.stopPropagation()} style={{
                   padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`,
                   background: 'transparent', color: C.textSecondary, fontSize: 11, cursor: 'pointer',
                 }}>

@@ -39,6 +39,8 @@ export type NavModule =
   | 'reservations'
   | 'calendar'
   | 'messages'
+  | 'appraisals'
+  | 'site'
   | 'reports'
   | 'settings';
 
@@ -109,6 +111,20 @@ const Icon = {
   Reservations: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  ),
+  Appraisals: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
+    </svg>
+  ),
+  Site: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
     </svg>
   ),
   Settings: () => (
@@ -188,6 +204,8 @@ export interface AppShellUser {
   tenantName: string;
 }
 
+export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
+
 export interface AppShellProps {
   children?: React.ReactNode;
   activeModule?: NavModule;
@@ -196,6 +214,10 @@ export interface AppShellProps {
   /** Notification count for bell icon */
   notificationCount?: number;
   breadcrumb?: React.ReactNode;
+  /** Days remaining in trial — shows a countdown banner when set */
+  trialDaysLeft?: number | null;
+  /** Current subscription status — shows read-only overlay when expired */
+  subscriptionStatus?: SubscriptionStatus;
 }
 
 // ─── Nav items config ────────────────────────────────────
@@ -208,7 +230,9 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'reservations', label: 'Reservas',      icon: <Icon.Reservations /> },
   { key: 'calendar',     label: 'Agenda',        icon: <Icon.Calendar />,     disabled: true },
   { key: 'messages',     label: 'Mensajes',      icon: <Icon.Messages />,     disabled: true },
-  { key: 'reports',      label: 'Reportes',      icon: <Icon.Reports />,      disabled: true },
+  { key: 'appraisals',   label: 'Tasaciones',    icon: <Icon.Appraisals /> },
+  { key: 'site',         label: 'Sitio web',     icon: <Icon.Site /> },
+  { key: 'reports',      label: 'Reportes',      icon: <Icon.Reports /> },
 ];
 
 const NAV_BOTTOM: NavItem[] = [
@@ -223,6 +247,8 @@ export function AppShell({
   user = { name: 'Usuario', email: 'usuario@corredor.ar', tenantName: 'Mi Inmobiliaria' },
   notificationCount = 0,
   breadcrumb,
+  trialDaysLeft,
+  subscriptionStatus,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -786,6 +812,42 @@ export function AppShell({
             </div>
           </header>
 
+          {/* ── Trial banner ── */}
+          {trialDaysLeft != null && trialDaysLeft > 0 && (
+            <div style={{
+              background: trialDaysLeft <= 3 ? 'rgba(232,58,59,0.08)' : 'rgba(232,138,20,0.08)',
+              borderBottom: `1px solid ${trialDaysLeft <= 3 ? 'rgba(232,58,59,0.25)' : 'rgba(232,138,20,0.25)'}`,
+              padding: '8px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontSize: '0.8125rem',
+              fontFamily: F.body,
+            }}>
+              <span>{trialDaysLeft <= 3 ? '⚠️' : '⚡'}</span>
+              <span style={{ color: C.textPrimary, flex: 1 }}>
+                Te quedan <strong>{trialDaysLeft} día{trialDaysLeft !== 1 ? 's' : ''}</strong> de prueba
+              </span>
+              <button
+                type="button"
+                onClick={() => onNavigate?.('settings')}
+                style={{
+                  background: trialDaysLeft <= 3 ? '#E83B3B' : '#E88A14',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '4px 12px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  fontFamily: F.body,
+                  cursor: 'pointer',
+                }}
+              >
+                Elegir plan
+              </button>
+            </div>
+          )}
+
           {/* ── Content ── */}
           <main
             style={{
@@ -793,11 +855,71 @@ export function AppShell({
               overflowY: 'auto',
               overflowX: 'hidden',
               background: C.bgBase,
+              position: 'relative',
             }}
             id="main-content"
             tabIndex={-1}
           >
             {children}
+            {/* ── Expired overlay ── */}
+            {subscriptionStatus === 'expired' && (
+              <div style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(7,13,26,0.92)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 300,
+              }}>
+                <div style={{
+                  background: C.bgRaised,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 16,
+                  width: '100%',
+                  maxWidth: 480,
+                  padding: 40,
+                  textAlign: 'center',
+                  fontFamily: F.body,
+                }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>{'🔒'}</div>
+                  <h2 style={{
+                    fontFamily: F.display,
+                    fontSize: '1.375rem',
+                    fontWeight: 800,
+                    color: C.textPrimary,
+                    marginBottom: 8,
+                  }}>
+                    Tu suscripción venció
+                  </h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: C.textSecondary,
+                    marginBottom: 24,
+                    lineHeight: 1.6,
+                  }}>
+                    Tu cuenta está en modo solo lectura. Para recuperar el acceso completo, elegí un plan.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.('settings')}
+                    style={{
+                      background: C.brand,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '12px 32px',
+                      fontSize: '0.9375rem',
+                      fontWeight: 600,
+                      fontFamily: F.body,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Elegir plan
+                  </button>
+                </div>
+              </div>
+            )}
           </main>
         </div>
       </div>

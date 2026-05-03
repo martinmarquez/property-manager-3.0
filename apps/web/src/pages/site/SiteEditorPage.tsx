@@ -1,41 +1,81 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Layout, Type, Image, Grid3x3, Send, ChevronDown, ChevronRight, Eye,
   Monitor, Smartphone, Save, Globe, Settings, Trash2, Copy, Plus,
   GripVertical, Palette, FileText, Link2, BarChart2, ArrowLeft, Check,
   X, ExternalLink, Layers, Columns2, AlignLeft, FormInput, Share2,
   MoreHorizontal, Home, Edit3, PlusCircle, Upload,
+  Undo2, Redo2, Clock, RotateCcw,
 } from 'lucide-react';
+import { C, F } from '../../components/copilot/tokens.js';
 
-/* ─── Design tokens ────────────────────────────────────────────── */
+/* ─── Undo / Redo (50 steps) ───────────────────────────────────── */
 
-const C = {
-  bgBase:        '#070D1A',
-  bgRaised:      '#0D1526',
-  bgElevated:    '#131E33',
-  bgSubtle:      '#162035',
-  brand:         '#1654d9',
-  brandHover:    '#1244b8',
-  brandFaint:    'rgba(22,84,217,0.12)',
-  ai:            '#7E3AF2',
-  aiFaint:       'rgba(126,58,242,0.12)',
-  aiLight:       '#9B59FF',
-  success:       '#18A659',
-  successFaint:  'rgba(24,166,89,0.12)',
-  warning:       '#E88A14',
-  warningFaint:  'rgba(232,138,20,0.12)',
-  error:         '#E83B3B',
-  textPrimary:   '#EFF4FF',
-  textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
-  border:        '#1F2D48',
-};
+interface CanvasBlock {
+  id: string;
+  label: string;
+  sublabel: string;
+  height: number;
+  bg: string;
+}
 
-const F = {
-  display: "'Syne', sans-serif",
-  body:    "'DM Sans', sans-serif",
-  mono:    "'DM Mono', monospace",
-};
+interface EditorSnapshot {
+  blocks: CanvasBlock[];
+  timestamp: number;
+}
+
+const MAX_UNDO_STEPS = 50;
+
+function useUndoRedo(initial: CanvasBlock[]) {
+  const [history, setHistory] = useState<EditorSnapshot[]>([{ blocks: initial, timestamp: Date.now() }]);
+  const [pointer, setPointer] = useState(0);
+
+  const current = history[pointer]!.blocks;
+
+  const push = useCallback((blocks: CanvasBlock[]) => {
+    setHistory(prev => {
+      const trimmed = prev.slice(0, pointer + 1);
+      const next = [...trimmed, { blocks, timestamp: Date.now() }];
+      if (next.length > MAX_UNDO_STEPS) next.shift();
+      return next;
+    });
+    setPointer(prev => Math.min(prev + 1, MAX_UNDO_STEPS - 1));
+  }, [pointer]);
+
+  const undo = useCallback(() => {
+    setPointer(prev => Math.max(0, prev - 1));
+  }, []);
+
+  const redo = useCallback(() => {
+    setPointer(prev => Math.min(history.length - 1, prev + 1));
+  }, [history.length]);
+
+  const canUndo = pointer > 0;
+  const canRedo = pointer < history.length - 1;
+
+  return { current, push, undo, redo, canUndo, canRedo };
+}
+
+/* ─── Publish history mock data ────────────────────────────────── */
+
+interface PublishEntry {
+  id: string;
+  version: string;
+  date: string;
+  time: string;
+  author: string;
+  changes: string;
+  isCurrent: boolean;
+}
+
+const PUBLISH_HISTORY: PublishEntry[] = [
+  { id: 'v6', version: 'v6', date: '02/05/2026', time: '14:30', author: 'Martín M.', changes: 'Actualizado hero y CTA', isCurrent: true },
+  { id: 'v5', version: 'v5', date: '01/05/2026', time: '11:15', author: 'Martín M.', changes: 'Nuevo bloque de propiedades', isCurrent: false },
+  { id: 'v4', version: 'v4', date: '29/04/2026', time: '09:45', author: 'Martín M.', changes: 'Cambio de tema a Clásico', isCurrent: false },
+  { id: 'v3', version: 'v3', date: '25/04/2026', time: '16:20', author: 'Ana G.', changes: 'Formulario de contacto agregado', isCurrent: false },
+  { id: 'v2', version: 'v2', date: '22/04/2026', time: '10:00', author: 'Martín M.', changes: 'Sección servicios', isCurrent: false },
+  { id: 'v1', version: 'v1', date: '20/04/2026', time: '14:00', author: 'Martín M.', changes: 'Publicación inicial', isCurrent: false },
+];
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 
@@ -164,12 +204,16 @@ function Topbar({
   showThemePicker, setShowThemePicker,
   activeTheme, setActiveTheme,
   showPageDropdown, setShowPageDropdown,
+  canUndo, canRedo, onUndo, onRedo, onHistoryOpen,
 }: {
   previewMode: PreviewMode; setPreviewMode: (m: PreviewMode) => void;
   publishOpen: boolean; setPublishOpen: (v: boolean) => void;
   showThemePicker: boolean; setShowThemePicker: (v: boolean) => void;
   activeTheme: string; setActiveTheme: (id: string) => void;
   showPageDropdown: boolean; setShowPageDropdown: (v: boolean) => void;
+  canUndo: boolean; canRedo: boolean;
+  onUndo: () => void; onRedo: () => void;
+  onHistoryOpen: () => void;
 }) {
   const [hoverSave, setHoverSave] = useState(false);
   const [hoverExit, setHoverExit] = useState(false);
@@ -186,7 +230,7 @@ function Topbar({
       flexShrink: 0, position: 'relative', zIndex: 100,
     }}>
       {/* Left group */}
-      <button
+      <button type="button"
         onMouseEnter={() => setHoverExit(true)}
         onMouseLeave={() => setHoverExit(false)}
         style={{
@@ -205,7 +249,7 @@ function Topbar({
       <Divider />
 
       {/* Site name dropdown */}
-      <button style={{
+      <button type="button" style={{
         display: 'flex', alignItems: 'center', gap: 5,
         padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`,
         background: C.bgElevated, cursor: 'pointer', transition: 'all 0.15s',
@@ -220,7 +264,7 @@ function Topbar({
 
       {/* Page breadcrumb */}
       <div style={{ position: 'relative' }}>
-        <button
+        <button type="button"
           onClick={() => setShowPageDropdown(!showPageDropdown)}
           style={{
             display: 'flex', alignItems: 'center', gap: 5,
@@ -281,7 +325,7 @@ function Topbar({
 
       {/* Theme picker button */}
       <div style={{ position: 'relative' }}>
-        <button
+        <button type="button"
           onClick={() => setShowThemePicker(!showThemePicker)}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -307,7 +351,7 @@ function Topbar({
             display: 'flex', gap: 8, zIndex: 200,
           }}>
             {THEMES.map(th => (
-              <button
+              <button type="button"
                 key={th.id}
                 onClick={() => { setActiveTheme(th.id); setShowThemePicker(false); }}
                 style={{
@@ -369,7 +413,7 @@ function Topbar({
         border: `1px solid ${C.border}`, overflow: 'hidden',
       }}>
         {(['desktop', 'mobile'] as PreviewMode[]).map(mode => (
-          <button
+          <button type="button"
             key={mode}
             onClick={() => setPreviewMode(mode)}
             title={mode === 'desktop' ? 'Escritorio' : 'Móvil'}
@@ -387,10 +431,68 @@ function Topbar({
 
       <Divider />
 
+      {/* Undo / Redo */}
+      <div style={{ display: 'flex', gap: 2, background: C.bgBase, borderRadius: 6, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+        <button type="button"
+          onClick={e => { e.stopPropagation(); onUndo(); }}
+          disabled={!canUndo}
+          aria-label="Deshacer (Ctrl+Z)"
+          title="Deshacer"
+          style={{
+            padding: '5px 8px', border: 'none', cursor: canUndo ? 'pointer' : 'default',
+            background: 'transparent',
+            color: canUndo ? C.textSecondary : C.textTertiary,
+            opacity: canUndo ? 1 : 0.4,
+            display: 'flex', alignItems: 'center',
+          }}
+        >
+          <Undo2 size={14} />
+        </button>
+        <div style={{ width: 1, background: C.border, alignSelf: 'stretch' }} />
+        <button type="button"
+          onClick={e => { e.stopPropagation(); onRedo(); }}
+          disabled={!canRedo}
+          aria-label="Rehacer (Ctrl+Shift+Z)"
+          title="Rehacer"
+          style={{
+            padding: '5px 8px', border: 'none', cursor: canRedo ? 'pointer' : 'default',
+            background: 'transparent',
+            color: canRedo ? C.textSecondary : C.textTertiary,
+            opacity: canRedo ? 1 : 0.4,
+            display: 'flex', alignItems: 'center',
+          }}
+        >
+          <Redo2 size={14} />
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* History button */}
+      <button type="button"
+        onClick={e => { e.stopPropagation(); onHistoryOpen(); }}
+        aria-label="Historial de publicación"
+        title="Historial"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '5px 10px', borderRadius: 6,
+          border: `1px solid ${C.border}`,
+          background: C.bgElevated,
+          color: C.textSecondary, cursor: 'pointer', fontFamily: F.body,
+          fontSize: 12, transition: 'all 0.15s',
+        }}
+      >
+        <Clock size={13} />
+        Historial
+      </button>
+
+      <Divider />
+
       {/* Save button */}
-      <button
+      <button type="button"
         onMouseEnter={() => setHoverSave(true)}
         onMouseLeave={() => setHoverSave(false)}
+        aria-label="Guardar cambios"
         style={{
           display: 'flex', alignItems: 'center', gap: 5,
           padding: '6px 12px', borderRadius: 6,
@@ -406,7 +508,7 @@ function Topbar({
 
       {/* Publish button + dropdown */}
       <div style={{ position: 'relative', display: 'flex' }}>
-        <button style={{
+        <button type="button" style={{
           display: 'flex', alignItems: 'center', gap: 5,
           padding: '6px 14px', borderRadius: '6px 0 0 6px',
           border: 'none', background: C.brand, color: '#fff',
@@ -416,7 +518,7 @@ function Topbar({
           <Globe size={13} />
           Publicar
         </button>
-        <button
+        <button type="button"
           onClick={() => setPublishOpen(!publishOpen)}
           style={{
             padding: '6px 8px', borderRadius: '0 6px 6px 0',
@@ -436,7 +538,7 @@ function Topbar({
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, zIndex: 200,
           }}>
             {['Publicar ahora', 'Programar', 'Despublicar'].map((item, i) => (
-              <button
+              <button type="button"
                 key={item}
                 onClick={() => setPublishOpen(false)}
                 style={{
@@ -493,7 +595,7 @@ function BlockPalette() {
 
       {filtered.map(cat => (
         <div key={cat.label} style={{ marginBottom: 4 }}>
-          <button
+          <button type="button"
             onClick={() => toggle(cat.label)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -638,7 +740,7 @@ function LeftSidebar() {
         padding: '0 4px',
       }}>
         {tabs.map(tab => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
@@ -787,7 +889,7 @@ function Canvas({
                       { icon: <Copy size={11} />, title: 'Duplicar' },
                       { icon: <Trash2 size={11} />, title: 'Eliminar' },
                     ].map((action, i) => (
-                      <button
+                      <button type="button"
                         key={i}
                         title={action.title}
                         onClick={e => e.stopPropagation()}
@@ -935,7 +1037,7 @@ function PropertiesPanel({
         <span style={{ fontFamily: F.body, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
           {blockName}
         </span>
-        <button
+        <button type="button"
           onClick={() => setSelectedBlock(null)}
           style={{
             width: 24, height: 24, borderRadius: 5, border: `1px solid ${C.border}`,
@@ -953,7 +1055,7 @@ function PropertiesPanel({
         padding: '0 4px',
       }}>
         {tabs.map(tab => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
@@ -1043,7 +1145,7 @@ function PropertiesPanel({
                   { icon: <Layout size={13} />, label: 'Centro' },
                   { icon: <AlignLeft size={13} style={{ transform: 'scaleX(-1)' }} />, label: 'Der.' },
                 ].map((btn, i) => (
-                  <button
+                  <button type="button"
                     key={i}
                     style={{
                       flex: 1, padding: '6px 4px',
@@ -1113,6 +1215,144 @@ function PropertiesPanel({
   );
 }
 
+/* ─── Publish History Sidebar ───────────────────────────────────── */
+
+function PublishHistorySidebar({
+  open, onClose, onRollback,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onRollback: (versionId: string) => void;
+}) {
+  const [rollingBack, setRollingBack] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  const handleRollback = (id: string) => {
+    setRollingBack(id);
+    setTimeout(() => {
+      onRollback(id);
+      setRollingBack(null);
+    }, 1200);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, right: 0, bottom: 0,
+      width: 340, background: C.bgRaised,
+      borderLeft: `1px solid ${C.border}`,
+      boxShadow: '-12px 0 40px rgba(0,0,0,0.4)',
+      zIndex: 500, display: 'flex', flexDirection: 'column',
+      animation: 'slideInRight 0.2s ease-out',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Clock size={16} color={C.brand} />
+          <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, color: C.textPrimary }}>
+            Historial de publicación
+          </span>
+        </div>
+        <button type="button"
+          onClick={onClose}
+          aria-label="Cerrar historial"
+          style={{
+            width: 32, height: 32, borderRadius: 6, border: `1px solid ${C.border}`,
+            background: 'transparent', color: C.textTertiary, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Entries */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+        {PUBLISH_HISTORY.map((entry, idx) => (
+          <div
+            key={entry.id}
+            style={{
+              position: 'relative', paddingLeft: 24, paddingBottom: 20,
+              borderLeft: idx < PUBLISH_HISTORY.length - 1
+                ? `2px solid ${entry.isCurrent ? C.brand : C.border}`
+                : '2px solid transparent',
+              marginLeft: 8,
+            }}
+          >
+            {/* Timeline dot */}
+            <div style={{
+              position: 'absolute', left: -7, top: 2,
+              width: 12, height: 12, borderRadius: '50%',
+              background: entry.isCurrent ? C.brand : C.bgElevated,
+              border: `2px solid ${entry.isCurrent ? C.brand : C.border}`,
+            }} />
+
+            <div style={{
+              background: entry.isCurrent ? C.brandFaint : C.bgBase,
+              borderRadius: 10, border: `1px solid ${entry.isCurrent ? C.brand : C.border}`,
+              padding: '14px 16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontFamily: F.mono, fontSize: 11, fontWeight: 700,
+                    color: entry.isCurrent ? C.brand : C.textSecondary,
+                    padding: '1px 6px', borderRadius: 4,
+                    background: entry.isCurrent ? `${C.brand}20` : C.bgElevated,
+                  }}>
+                    {entry.version}
+                  </span>
+                  {entry.isCurrent && (
+                    <span style={{
+                      fontFamily: F.mono, fontSize: 9, padding: '1px 6px',
+                      borderRadius: 20, background: C.successFaint, color: C.success,
+                      border: `1px solid ${C.success}40`,
+                    }}>
+                      Actual
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.textTertiary }}>
+                  {entry.date} {entry.time}
+                </span>
+              </div>
+
+              <p style={{ fontFamily: F.body, fontSize: 12, color: C.textPrimary, margin: '0 0 4px' }}>
+                {entry.changes}
+              </p>
+              <p style={{ fontFamily: F.body, fontSize: 11, color: C.textTertiary, margin: 0 }}>
+                por {entry.author}
+              </p>
+
+              {!entry.isCurrent && (
+                <button type="button"
+                  onClick={() => handleRollback(entry.id)}
+                  disabled={rollingBack !== null}
+                  aria-label={`Restaurar a ${entry.version}`}
+                  style={{
+                    marginTop: 10, padding: '5px 12px', borderRadius: 6,
+                    border: `1px solid ${C.border}`, background: C.bgElevated,
+                    color: rollingBack === entry.id ? C.warning : C.textSecondary,
+                    fontFamily: F.body, fontSize: 11, fontWeight: 500,
+                    cursor: rollingBack !== null ? 'wait' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <RotateCcw size={11} />
+                  {rollingBack === entry.id ? 'Restaurando…' : 'Restaurar esta versión'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main ──────────────────────────────────────────────────────── */
 
 export default function SiteEditorPage() {
@@ -1122,8 +1362,22 @@ export default function SiteEditorPage() {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [activeTheme, setActiveTheme]     = useState('clasico');
   const [showPageDropdown, setShowPageDropdown] = useState(false);
+  const [historyOpen, setHistoryOpen]     = useState(false);
 
-  // Close dropdowns when clicking outside
+  const initialBlocks: CanvasBlock[] = CANVAS_BLOCKS.map(b => ({ ...b }));
+  const { undo, redo, canUndo, canRedo } = useUndoRedo(initialBlocks);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) { redo(); } else { undo(); }
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [undo, redo]);
+
   const handleWrapperClick = () => {
     if (publishOpen) setPublishOpen(false);
     if (showThemePicker) setShowThemePicker(false);
@@ -1150,6 +1404,11 @@ export default function SiteEditorPage() {
         setActiveTheme={setActiveTheme}
         showPageDropdown={showPageDropdown}
         setShowPageDropdown={v => { v ? setShowPageDropdown(true) : setShowPageDropdown(false); }}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        onHistoryOpen={() => setHistoryOpen(true)}
       />
 
       <div
@@ -1169,6 +1428,14 @@ export default function SiteEditorPage() {
           setSelectedBlock={setSelectedBlock}
         />
       </div>
+
+      <PublishHistorySidebar
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onRollback={(_versionId) => {
+          setHistoryOpen(false);
+        }}
+      />
     </div>
   );
 }

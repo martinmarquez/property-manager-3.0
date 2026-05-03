@@ -42,7 +42,7 @@ export default function SiteFormsPage() {
           {/* Filter tabs */}
           <div style={{ display: 'flex', gap: 6 }}>
             {(['all', 'unread'] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{
+              <button type="button" key={f} onClick={() => setFilter(f)} style={{
                 padding: '4px 12px', borderRadius: 20, border: `1px solid ${filter === f ? C.brand : C.border}`,
                 background: filter === f ? C.brandFaint : 'transparent',
                 color: filter === f ? C.brand : C.textSecondary,
@@ -130,13 +130,13 @@ export default function SiteFormsPage() {
                 </p>
               </div>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button style={{
+                <button type="button" style={{
                   padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`,
                   background: C.bgElevated, color: C.textSecondary, fontFamily: F.body, fontSize: 12, cursor: 'pointer',
                 }}>
                   📧 Responder
                 </button>
-                <button style={{
+                <button type="button" style={{
                   padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`,
                   background: C.bgElevated, color: C.textSecondary, fontFamily: F.body, fontSize: 12, cursor: 'pointer',
                 }}>

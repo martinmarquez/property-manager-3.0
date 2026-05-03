@@ -51,6 +51,47 @@ import { ReservationDetailPage } from './pages/reservations/ReservationDetailPag
 import CopilotFloat from './components/copilot/CopilotFloat.js';
 import { useCopilotEnabled } from './hooks/useCopilotEnabled.js';
 
+// ─── Phase G: Site module ───────────────────────────────────────────────────
+import SiteOverviewPage from './pages/site/SiteOverviewPage.js';
+import SitePagesPage from './pages/site/SitePagesPage.js';
+import SiteEditorPage from './pages/site/SiteEditorPage.js';
+import SiteThemesPage from './pages/site/SiteThemesPage.js';
+import SiteDomainsPage from './pages/site/SiteDomainsPage.js';
+import SiteBlogPage from './pages/site/SiteBlogPage.js';
+import SiteRedirectsPage from './pages/site/SiteRedirectsPage.js';
+import SiteFormsPage from './pages/site/SiteFormsPage.js';
+import SiteCreationWizard from './pages/site/SiteCreationWizard.js';
+import BillingPage from './pages/settings/billing/BillingPage.js';
+
+// ─── Phase G: Reports module ────────────────────────────────────────────────
+import ReportsIndexPage from './pages/reports/ReportsIndexPage.js';
+import FunnelConversionView from './pages/reports/views/FunnelConversionView.js';
+import AgentProductivityView from './pages/reports/views/AgentProductivityView.js';
+import ListingPerformanceView from './pages/reports/views/ListingPerformanceView.js';
+import PortalROIView from './pages/reports/views/PortalROIView.js';
+import PipelineVelocityView from './pages/reports/views/PipelineVelocityView.js';
+import RevenueForecastView from './pages/reports/views/RevenueForecastView.js';
+import RetentionCohortView from './pages/reports/views/RetentionCohortView.js';
+import ZoneAnalysisView from './pages/reports/views/ZoneAnalysisView.js';
+import AIUsageView from './pages/reports/views/AIUsageView.js';
+import LeadCohortsView from './pages/reports/views/LeadCohortsView.js';
+import SLAAdherenceView from './pages/reports/views/SLAAdherenceView.js';
+import CommissionOwedView from './pages/reports/views/CommissionOwedView.js';
+import InboxActivityView from './pages/reports/views/InboxActivityView.js';
+import ClosingCalendarView from './pages/reports/views/ClosingCalendarView.js';
+import PipelineByBranchView from './pages/reports/views/PipelineByBranchView.js';
+import ReservationRatesView from './pages/reports/views/ReservationRatesView.js';
+import DocumentExpiryView from './pages/reports/views/DocumentExpiryView.js';
+import CapturedListingsView from './pages/reports/views/CapturedListingsView.js';
+import InventoryBalanceView from './pages/reports/views/InventoryBalanceView.js';
+import RevenueTrendView from './pages/reports/views/RevenueTrendView.js';
+import PriceEvolutionView from './pages/reports/views/PriceEvolutionView.js';
+import CustomerAcquisitionView from './pages/reports/views/CustomerAcquisitionView.js';
+
+// ─── Phase G: Appraisals module ─────────────────────────────────────────────
+import AppraisalsPage from './pages/appraisals/AppraisalsPage.js';
+import AppraisalWizardPage from './pages/appraisals/AppraisalWizardPage.js';
+
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
   dsn: import.meta.env.VITE_SENTRY_DSN ?? '',
@@ -93,6 +134,9 @@ const MODULE_PATHS: Record<string, string> = {
   documents:    '/documents',
   reservations: '/reservations',
   calendar:     '/calendar',
+  appraisals:   '/appraisals',
+  site:         '/site',
+  reports:      '/reports',
   settings:     '/settings',
 };
 
@@ -103,6 +147,9 @@ function pathToModule(pathname: string): string {
   if (pathname.startsWith('/contacts'))     return 'contacts';
   if (pathname.startsWith('/leads') || pathname.startsWith('/pipelines')) return 'leads';
   if (pathname.startsWith('/calendar'))     return 'calendar';
+  if (pathname.startsWith('/appraisals'))   return 'appraisals';
+  if (pathname.startsWith('/site'))         return 'site';
+  if (pathname.startsWith('/reports'))      return 'reports';
   if (pathname.startsWith('/settings'))     return 'settings';
   return 'dashboard';
 }
@@ -390,6 +437,14 @@ const organizationSettingsRoute = createRoute({
   },
 });
 
+const billingSettingsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: '/billing',
+  component: function BillingSettingsRoute() {
+    return <BillingPage />;
+  },
+});
+
 // ─── Pipelines routes ────────────────────────────────────────────────────────
 const pipelinesRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -565,7 +620,151 @@ const notFoundRoute = createRoute({
   },
 });
 
-// ─── Router tree ─────────────────────────────────────────────────────────────
+// ─── Phase G: Site module routes ─────────────────────────────────────────────
+const siteRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site',
+  component: function SiteRoute() {
+    return <SiteOverviewPage />;
+  },
+});
+
+const sitePagesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/pages',
+  component: function SitePagesRoute() {
+    return <SitePagesPage />;
+  },
+});
+
+const siteEditorRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/editor/$pageId',
+  component: function SiteEditorRoute() {
+    return <SiteEditorPage />;
+  },
+});
+
+const siteThemesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/themes',
+  component: function SiteThemesRoute() {
+    return <SiteThemesPage />;
+  },
+});
+
+const siteDomainsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/domains',
+  component: function SiteDomainsRoute() {
+    return <SiteDomainsPage />;
+  },
+});
+
+const siteBlogRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/blog',
+  component: function SiteBlogRoute() {
+    return <SiteBlogPage />;
+  },
+});
+
+const siteRedirectsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/redirects',
+  component: function SiteRedirectsRoute() {
+    return <SiteRedirectsPage />;
+  },
+});
+
+const siteFormSubmissionsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/form-submissions',
+  component: function SiteFormSubmissionsRoute() {
+    return <SiteFormsPage />;
+  },
+});
+
+const siteNewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/site/new',
+  component: function SiteNewRoute() {
+    return <SiteCreationWizard />;
+  },
+});
+
+// ─── Phase G: Reports routes ────────────────────────────────────────────────
+const REPORT_VIEW_MAP: Record<string, React.ComponentType> = {
+  'funnel-conversion':    FunnelConversionView,
+  'agent-productivity':   AgentProductivityView,
+  'listing-performance':  ListingPerformanceView,
+  'portal-roi':           PortalROIView,
+  'pipeline-velocity':    PipelineVelocityView,
+  'revenue-forecast':     RevenueForecastView,
+  'retention-cohort':     RetentionCohortView,
+  'zone-analysis':        ZoneAnalysisView,
+  'ai-usage':             AIUsageView,
+  'lead-cohorts':         LeadCohortsView,
+  'sla-adherence':        SLAAdherenceView,
+  'commission-owed':      CommissionOwedView,
+  'inbox-activity':       InboxActivityView,
+  'closing-calendar':     ClosingCalendarView,
+  'pipeline-by-branch':   PipelineByBranchView,
+  'reservation-rates':    ReservationRatesView,
+  'document-expiry':      DocumentExpiryView,
+  'captured-listings':    CapturedListingsView,
+  'inventory-balance':    InventoryBalanceView,
+  'revenue-trend':        RevenueTrendView,
+  'price-evolution':      PriceEvolutionView,
+  'customer-acquisition': CustomerAcquisitionView,
+};
+
+const reportsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/reports',
+  component: function ReportsRoute() {
+    return <ReportsIndexPage />;
+  },
+});
+
+const reportViewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/reports/$slug',
+  component: function ReportViewRoute() {
+    const { slug } = reportViewRoute.useParams();
+    const View = REPORT_VIEW_MAP[slug];
+    if (!View) return <div style={{ padding: 40, textAlign: 'center' }}>Reporte no encontrado</div>;
+    return <View />;
+  },
+});
+
+// ─── Phase G: Appraisals routes ─────────────────────────────────────────────
+const appraisalsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/appraisals',
+  component: function AppraisalsRoute() {
+    return <AppraisalsPage onNewAppraisal={() => router.navigate({ to: '/appraisals/new' })} />;
+  },
+});
+
+const appraisalNewRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/appraisals/new',
+  component: function AppraisalNewRoute() {
+    return <AppraisalWizardPage onClose={() => router.navigate({ to: '/appraisals' })} />;
+  },
+});
+
+const appraisalEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/appraisals/$appraisalId',
+  component: function AppraisalEditRoute() {
+    const { appraisalId } = appraisalEditRoute.useParams();
+    return <AppraisalWizardPage appraisalId={appraisalId} onClose={() => router.navigate({ to: '/appraisals' })} />;
+  },
+});
+
+// ─── Router tree ────────────────────────────────���────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -597,11 +796,26 @@ const routeTree = rootRoute.addChildren([
     documentViewRoute,
     reservationsRoute,
     reservationDetailRoute,
+    siteRoute,
+    sitePagesRoute,
+    siteEditorRoute,
+    siteThemesRoute,
+    siteDomainsRoute,
+    siteBlogRoute,
+    siteRedirectsRoute,
+    siteFormSubmissionsRoute,
+    siteNewRoute,
+    reportsRoute,
+    reportViewRoute,
+    appraisalsRoute,
+    appraisalNewRoute,
+    appraisalEditRoute,
     searchRoute,
     copilotRoute,
     settingsRoute.addChildren([
       settingsIndexRoute,
       organizationSettingsRoute,
+      billingSettingsRoute,
     ]),
   ]),
   notFoundRoute,
