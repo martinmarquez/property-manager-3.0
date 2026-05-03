@@ -294,3 +294,153 @@ See [docs/runbooks/secrets.md](secrets.md) for the full secrets list per app.
 | `corredor-web` | Cloudflare Pages | Always up (CDN) | — |
 
 Fly.io replaces machines that fail 3 consecutive health checks automatically.
+
+---
+
+## Smoke Test Checklist
+
+Run manually after every production deploy (or automated via `e2e-smoke.yml`):
+
+```
+[ ] API health endpoint returns 200:
+      curl https://api.corredor.ar/health
+
+[ ] Auth flow — login returns a session token:
+      curl -X POST https://api.corredor.ar/api/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"email":"smoke@corredor.ar","password":"<smoke-pass>"}'
+
+[ ] Tenant listing loads (authenticated):
+      curl https://api.corredor.ar/api/tenants \
+        -H "Authorization: Bearer <smoke-token>"
+
+[ ] Property listing loads for a known tenant
+
+[ ] Web portal loads in browser (no JS errors):
+      open https://app.corredor.ar
+
+[ ] Admin panel loads:
+      open https://admin.corredor.ar
+
+[ ] BullMQ worker is processing (check queue depth, should be draining):
+      flyctl logs --app corredor-worker-prod --tail --lines 50
+
+[ ] Sentry — no new error spike in the last 10 min:
+      open https://sentry.io → corredor project → Issues (sorted by Last seen)
+
+[ ] Check Nightly Regression last run if deploy was after 03:00 UTC
+```
+
+For critical-path E2E smoke (automated):
+
+```bash
+# Trigger smoke suite against production
+gh workflow run e2e-smoke.yml --field env=production
+```
+
+---
+
+## Canary Deploy Strategy
+
+Fly.io's rolling deploy acts as a lightweight canary: new machines are health-checked before old ones are drained. For higher-risk changes, use a manual staged rollout:
+
+### Option A — Partial machine rollout (Fly rolling)
+
+The default. Fly deploys new machines one at a time, waits for health checks, then drains the old. No explicit action needed.
+
+```bash
+# Default rolling deploy — safe for most changes
+flyctl deploy --config infra/fly/api.fly.toml --remote-only --wait-timeout 300
+```
+
+Monitor during rollout (see next section).
+
+### Option B — Manual staged rollout (high-risk changes)
+
+For schema-breaking changes, new billing logic, or AI model swaps:
+
+```bash
+# Step 1: Deploy to 1 of N machines (set count to 1 temporarily)
+flyctl scale count 1 --app corredor-api-prod
+
+# Step 2: Deploy new image
+flyctl deploy --config infra/fly/api.fly.toml --remote-only
+
+# Step 3: Monitor for 10 minutes (see Monitoring section below)
+#   Check: error rate, latency, BullMQ queue depth
+
+# Step 4: If healthy, scale back to full capacity
+flyctl scale count 2 --app corredor-api-prod
+
+# Step 5: If unhealthy, roll back immediately
+flyctl deploy --app corredor-api-prod \
+  --image registry.fly.io/corredor-api-prod:<previous-sha> --remote-only
+```
+
+### Option C — Feature flag canary (gradual user rollout)
+
+Use the database-backed feature flag system for per-tenant or percentage-based rollout:
+
+```sql
+-- Enable for 10% of tenants (uses rollout percentage column)
+UPDATE "featureFlag"
+SET enabled = true, "rolloutPercentage" = 10
+WHERE key = 'new_billing_flow';
+
+-- Increase to 50% after validation
+UPDATE "featureFlag"
+SET "rolloutPercentage" = 50
+WHERE key = 'new_billing_flow';
+
+-- Full rollout
+UPDATE "featureFlag"
+SET "rolloutPercentage" = 100
+WHERE key = 'new_billing_flow';
+```
+
+---
+
+## Monitoring During Rollout
+
+Open these tabs before triggering a production deploy. Keep them visible throughout the rollout.
+
+### What to watch
+
+| Signal | Where | Healthy threshold |
+|--------|-------|------------------|
+| API error rate | Sentry → corredor-api → Issues | No new P1/P2 errors |
+| Machine health | `flyctl status --app corredor-api-prod` | All machines `started` |
+| Response latency | Fly dashboard → Metrics | p99 < 2s |
+| BullMQ queue depth | Admin queue board or Redis | Jobs draining, not accumulating |
+| Database connections | Neon dashboard → Monitoring | No connection pool exhaustion |
+
+### Live commands during rollout
+
+```bash
+# Terminal 1 — watch Fly machine status
+watch -n 5 flyctl status --app corredor-api-prod
+
+# Terminal 2 — tail API logs
+flyctl logs --app corredor-api-prod --tail
+
+# Terminal 3 — tail worker logs
+flyctl logs --app corredor-worker-prod --tail
+
+# Terminal 4 — spot-check health
+watch -n 10 'curl -s https://api.corredor.ar/health | jq .'
+```
+
+### Rollout abort criteria
+
+Abort and roll back if any of these occur within 10 min of deploying:
+
+```
+- Error rate increases > 5% vs pre-deploy baseline
+- Any machine enters failed/stopped state
+- p99 latency exceeds 3s
+- BullMQ failed job count grows
+- Any Sentry P1 (crash) error in the new release
+- Customer reports of broken core flow (auth, property listing, billing)
+```
+
+Roll back procedure: see [rollback.md](rollback.md).
