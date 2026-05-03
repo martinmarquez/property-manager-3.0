@@ -108,3 +108,9 @@ export {
   CSP_NONCE_KEY,
 } from "./middleware/security-headers.js";
 export type { SecurityHeadersOptions } from "./middleware/security-headers.js";
+
+// Billing domain
+export * from "./billing/index.js";
+
+// Email
+export * from "./email/index.js";

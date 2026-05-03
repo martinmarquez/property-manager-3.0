@@ -1,9 +1,12 @@
 import type { Job } from 'bullmq';
 import { and, eq, sql } from 'drizzle-orm';
-import { reportDigestSubscription } from '@corredor/db';
+import { reportDigestSubscription, user } from '@corredor/db';
 import { createNodeDb } from '@corredor/db';
-import { BaseWorker, QUEUE_NAMES } from '@corredor/core';
+import { BaseWorker, QUEUE_NAMES, REPORT_DEFINITIONS } from '@corredor/core';
+import type { Mailer } from '@corredor/core';
 import type Redis from 'ioredis';
+import { render } from '@react-email/render';
+import { DigestEmail } from '../email/digest-template.js';
 
 // ---------------------------------------------------------------------------
 // Job data
@@ -44,10 +47,14 @@ const MV_MAP: Record<string, string> = {
 
 export class AnalyticsDigestWorker extends BaseWorker<DigestJobData, DigestResult> {
   private readonly db: ReturnType<typeof createNodeDb>;
+  private readonly mailer: Mailer | null;
+  private readonly appUrl: string;
 
-  constructor(redis: Redis, databaseUrl: string) {
+  constructor(redis: Redis, databaseUrl: string, mailer?: Mailer | null) {
     super(QUEUE_NAMES.ANALYTICS_DIGEST, { redis, concurrency: 2 });
     this.db = createNodeDb(databaseUrl);
+    this.mailer = mailer ?? null;
+    this.appUrl = process.env['APP_URL'] ?? 'https://app.corredor.ar';
   }
 
   protected async process(job: Job<DigestJobData>): Promise<DigestResult> {
@@ -60,8 +67,25 @@ export class AnalyticsDigestWorker extends BaseWorker<DigestJobData, DigestResul
     const currentDom = now.getUTCDate();
 
     const subs = await this.db
-      .select()
+      .select({
+        id: reportDigestSubscription.id,
+        tenantId: reportDigestSubscription.tenantId,
+        userId: reportDigestSubscription.userId,
+        reportSlug: reportDigestSubscription.reportSlug,
+        frequency: reportDigestSubscription.frequency,
+        dayOfWeek: reportDigestSubscription.dayOfWeek,
+        hourUtc: reportDigestSubscription.hourUtc,
+        timezone: reportDigestSubscription.timezone,
+        filters: reportDigestSubscription.filters,
+        active: reportDigestSubscription.active,
+        unsubscribeToken: reportDigestSubscription.unsubscribeToken,
+        lastSentAt: reportDigestSubscription.lastSentAt,
+        lastSendError: reportDigestSubscription.lastSendError,
+        userEmail: user.email,
+        userFullName: user.fullName,
+      })
       .from(reportDigestSubscription)
+      .innerJoin(user, eq(reportDigestSubscription.userId, user.id))
       .where(
         and(
           eq(reportDigestSubscription.active, true),
@@ -110,35 +134,79 @@ export class AnalyticsDigestWorker extends BaseWorker<DigestJobData, DigestResul
           continue;
         }
 
+        const reportDef = REPORT_DEFINITIONS.find((r) => r.id === sub.reportSlug);
+        const reportTitle = reportDef?.title ?? sub.reportSlug.replace(/_/g, ' ');
+        const unsubscribeUrl = `${this.appUrl}/reportes/unsubscribe?token=${sub.unsubscribeToken}`;
+        const reportUrl = `${this.appUrl}/reportes/${sub.reportSlug}`;
+
         if (dryRun) {
           this.logger.info('digest.dry_run', {
+            userId: sub.userId,
+            email: sub.userEmail,
+            slug: sub.reportSlug,
+            rowCount: rows.length,
+          });
+        } else if (!this.mailer) {
+          this.logger.warn('digest.no_mailer', {
             userId: sub.userId,
             slug: sub.reportSlug,
             rowCount: rows.length,
           });
+          result.skipped++;
+          continue;
         } else {
-          // TODO: Render HTML email from React Email template and send via SES/Postmark
-          // For now, log the digest delivery intent
-          this.logger.info('digest.send', {
+          const html = await render(
+            DigestEmail({
+              reportTitle,
+              reportSlug: sub.reportSlug,
+              frequency: frequency as 'daily' | 'weekly' | 'monthly',
+              recipientName: sub.userFullName,
+              rows,
+              unsubscribeUrl,
+              reportUrl,
+            }),
+          );
+
+          await this.mailer.sendMail({
+            to: sub.userEmail,
+            subject: `${reportTitle} — Resumen ${frequency === 'daily' ? 'diario' : frequency === 'weekly' ? 'semanal' : 'mensual'}`,
+            html,
+            headers: {
+              'List-Unsubscribe': `<${unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          });
+
+          this.logger.info('digest.sent', {
             userId: sub.userId,
-            tenantId: sub.tenantId,
+            email: sub.userEmail,
             slug: sub.reportSlug,
             rowCount: rows.length,
-            unsubscribeToken: sub.unsubscribeToken,
           });
         }
 
         await this.db
           .update(reportDigestSubscription)
-          .set({ lastSentAt: now, updatedAt: now })
+          .set({ lastSentAt: now, lastSendError: null, updatedAt: now })
           .where(eq(reportDigestSubscription.id, sub.id));
 
         result.sent++;
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
         this.logger.error('digest.subscription_error', {
           subscriptionId: sub.id,
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMsg,
         });
+
+        try {
+          await this.db
+            .update(reportDigestSubscription)
+            .set({ lastSendError: errorMsg.slice(0, 500), updatedAt: now })
+            .where(eq(reportDigestSubscription.id, sub.id));
+        } catch {
+          // best-effort error tracking
+        }
+
         result.errors++;
       }
     }
@@ -152,7 +220,7 @@ export class AnalyticsDigestWorker extends BaseWorker<DigestJobData, DigestResul
   }
 
   private shouldSend(
-    sub: typeof reportDigestSubscription.$inferSelect,
+    sub: { hourUtc: number; dayOfWeek: number | null },
     frequency: string,
     currentHour: number,
     currentDow: number,

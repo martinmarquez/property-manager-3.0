@@ -17,18 +17,22 @@
     "@corredor/core": "workspace:*",
     "@corredor/db": "workspace:*",
     "@corredor/documents": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.8",
     "@sentry/node": "^8.0.0",
     "bullmq": "^5.30.0",
     "csv-parse": "^5.6.0",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.4.0",
-    "playwright-core": "^1.50.0"
+    "playwright-core": "^1.50.0",
+    "react": "^19.2.5"
   },
   "devDependencies": {
     "@corredor/ai": "workspace:*",
     "@corredor/config": "workspace:*",
     "@corredor/portals": "workspace:*",
     "@corredor/telemetry": "workspace:*",
+    "@types/react": "^19.2.14",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

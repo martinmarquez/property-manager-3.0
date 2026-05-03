@@ -20,6 +20,7 @@ initOtel({
 //         ai-embed, ai-eval, email-send, doc-pdf, import-csv
 
 import Redis from 'ioredis';
+import { createMailer } from '@corredor/core';
 import { ImportCsvWorker } from './workers/import-csv.js';
 import { ImportContactsCsvWorker } from './workers/import-contacts-csv.js';
 import { DocSignWebhookWorker } from './workers/doc-sign-webhook.js';
@@ -75,8 +76,25 @@ if (!ragIngestWorker) {
   logger.warn('rag-ingest worker disabled — OPENAI_API_KEY not set');
 }
 
+// Email transport — Mailhog in dev, SES SMTP in prod
+const smtpHost = process.env['SMTP_HOST'];
+const mailer = smtpHost
+  ? createMailer({
+      host: smtpHost,
+      port: Number(process.env['SMTP_PORT'] ?? '1025'),
+      secure: process.env['SMTP_SECURE'] === 'true',
+      auth: process.env['SMTP_USER']
+        ? { user: process.env['SMTP_USER'], pass: process.env['SMTP_PASS'] ?? '' }
+        : undefined,
+      from: process.env['EMAIL_FROM'] ?? 'no-reply@corredor.local',
+    })
+  : null;
+if (!mailer) {
+  logger.warn('email transport disabled — SMTP_HOST not set');
+}
+
 // Phase G: Analytics digest worker — daily/weekly scheduled report email digests
-const analyticsDigestWorker = new AnalyticsDigestWorker(redis, databaseUrl);
+const analyticsDigestWorker = new AnalyticsDigestWorker(redis, databaseUrl, mailer);
 
 // Phase G: Sitio (website builder) workers
 const siteFormToLeadWorker = new SiteFormToLeadWorker(redis, databaseUrl);

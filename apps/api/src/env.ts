@@ -63,6 +63,22 @@ const envSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_API_TOKEN: z.string().optional(),
   CLOUDFLARE_ZONE_ID: z.string().optional(),
+
+  // Email — SMTP transport (Mailhog in dev, SES SMTP in prod)
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().int().default(1025),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().default('no-reply@corredor.local'),
+  APP_URL: z.string().default('https://app.corredor.ar'),
+
+  // Cloudflare R2 — private bucket for PDF storage (Phase G)
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().default('corredor-appraisals'),
+  R2_PUBLIC_URL: z.string().optional(),
 });
 
 function parseEnv() {
