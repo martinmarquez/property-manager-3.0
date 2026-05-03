@@ -1,6 +1,7 @@
+import type React from 'react';
 import type { HeroProps } from '../lib/types';
 
-export function Hero(props: HeroProps) {
+export function Hero(props: HeroProps): React.JSX.Element {
   const {
     headline,
     subheadline,

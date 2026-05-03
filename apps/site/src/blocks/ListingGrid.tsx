@@ -1,3 +1,4 @@
+import type React from 'react';
 import { getListings } from '../lib/site-data';
 import type { ListingGridProps, ListingCardData } from '../lib/types';
 import { ListingCard } from './shared/ListingCard';
@@ -6,7 +7,7 @@ interface ListingGridServerProps extends ListingGridProps {
   tenantId: string;
 }
 
-export async function ListingGrid(props: ListingGridServerProps) {
+export async function ListingGrid(props: ListingGridServerProps): Promise<React.JSX.Element> {
   const {
     tenantId,
     title,

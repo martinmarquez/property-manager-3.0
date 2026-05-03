@@ -1,7 +1,8 @@
+import type React from 'react';
 import { Star, Quote } from 'lucide-react';
 import type { TestimonialsProps } from '../lib/types';
 
-export function Testimonials(props: TestimonialsProps) {
+export function Testimonials(props: TestimonialsProps): React.JSX.Element | null {
   const { title = 'Lo que dicen nuestros clientes', items = [], layout = 'grid' } = props;
 
   if (items.length === 0) return null;

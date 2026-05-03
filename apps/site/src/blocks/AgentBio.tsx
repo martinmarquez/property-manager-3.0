@@ -1,7 +1,8 @@
+import type React from 'react';
 import { Phone, Mail, MessageCircle } from 'lucide-react';
 import type { AgentBioProps } from '../lib/types';
 
-export function AgentBio(props: AgentBioProps) {
+export function AgentBio(props: AgentBioProps): React.JSX.Element {
   const { name, role, photoUrl, bio, phone, email, whatsapp } = props;
 
   return (

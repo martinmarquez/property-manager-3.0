@@ -1,3 +1,4 @@
+import type React from 'react';
 import {
   Bed, Bath, Car, Maximize, Calendar, MapPin, Home,
   ChevronLeft, ChevronRight,
@@ -10,7 +11,7 @@ interface ListingDetailServerProps extends ListingDetailProps {
   tenantId: string;
 }
 
-export async function ListingDetail(props: ListingDetailServerProps) {
+export async function ListingDetail(props: ListingDetailServerProps): Promise<React.JSX.Element> {
   const { tenantId, propertyId } = props;
   const listing = await getListingById(tenantId, propertyId);
 

@@ -1,3 +1,4 @@
+import type React from 'react';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import type { FooterProps } from '../lib/types';
 
@@ -19,7 +20,7 @@ const SOCIAL_ICONS: Record<string, (p: { className?: string }) => React.JSX.Elem
   ),
 };
 
-export function Footer(props: FooterProps) {
+export function Footer(props: FooterProps): React.JSX.Element {
   const {
     companyName,
     logoUrl,

@@ -1,8 +1,9 @@
+import type React from 'react';
 import { Bed, Bath, Maximize } from 'lucide-react';
 import type { ListingCardData } from '../../lib/types';
 import { formatPrice, formatArea, translatePropertyType, translateOperation } from '../../lib/format';
 
-export function ListingCard({ listing }: { listing: ListingCardData }) {
+export function ListingCard({ listing }: { listing: ListingCardData }): React.JSX.Element {
   return (
     <a
       href={`/propiedades/${listing.id}`}

@@ -1,7 +1,8 @@
+import type React from 'react';
 import { Calendar, ArrowRight } from 'lucide-react';
 import type { BlogProps } from '../lib/types';
 
-export function Blog(props: BlogProps) {
+export function Blog(props: BlogProps): React.JSX.Element | null {
   const { title = 'Blog', posts = [], layout = 'grid' } = props;
 
   if (posts.length === 0) return null;

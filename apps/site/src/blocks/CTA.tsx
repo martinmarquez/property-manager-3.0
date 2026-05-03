@@ -1,7 +1,8 @@
+import type React from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { CTAProps } from '../lib/types';
 
-export function CTA(props: CTAProps) {
+export function CTA(props: CTAProps): React.JSX.Element {
   const {
     headline,
     body,

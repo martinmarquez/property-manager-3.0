@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { MapProps, ListingCardData } from '../lib/types';
 
@@ -14,7 +15,7 @@ interface MapBlockClientProps extends MapProps {
   }>;
 }
 
-export function MapBlock(props: MapBlockClientProps) {
+export function MapBlock(props: MapBlockClientProps): React.JSX.Element {
   const {
     center = [-34.6037, -58.3816],
     zoom = 12,

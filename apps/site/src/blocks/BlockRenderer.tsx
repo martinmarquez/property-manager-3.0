@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { BlockData } from '../lib/types';
 import { Hero } from './Hero';
 import { ListingGrid } from './ListingGrid';
@@ -24,7 +25,7 @@ interface BlockRendererProps {
   pageId: string;
 }
 
-export async function BlockRenderer({ block, tenantId, siteId, pageId }: BlockRendererProps) {
+export async function BlockRenderer({ block, tenantId, siteId, pageId }: BlockRendererProps): Promise<React.JSX.Element | null> {
   const p = block.props as unknown;
 
   switch (block.blockType) {

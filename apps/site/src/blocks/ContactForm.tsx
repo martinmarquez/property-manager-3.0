@@ -1,12 +1,13 @@
 'use client';
 
+import type React from 'react';
 import { useState, type FormEvent } from 'react';
 import { Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import type { ContactFormProps } from '../lib/types';
 
 const DEFAULT_FIELDS = ['nombre', 'email', 'telefono', 'mensaje'];
 
-export function ContactForm(props: ContactFormProps & { siteId: string; pageId: string; blockId: string }) {
+export function ContactForm(props: ContactFormProps & { siteId: string; pageId: string; blockId: string }): React.JSX.Element {
   const {
     title = 'Contactanos',
     subtitle,
