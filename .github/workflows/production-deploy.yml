@@ -2,7 +2,8 @@ name: Production Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 concurrency:
   group: production

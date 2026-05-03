@@ -2,8 +2,10 @@ name: E2E Smoke
 
 on:
   workflow_run:
-    workflows: ["Preview Deploy"]
-    types: [completed]
+    workflows:
+      - Preview Deploy
+    types:
+      - completed
 
 concurrency:
   group: e2e-${{ github.event.workflow_run.head_sha }}

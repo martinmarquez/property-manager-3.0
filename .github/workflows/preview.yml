@@ -2,7 +2,10 @@ name: Preview Deploy
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
