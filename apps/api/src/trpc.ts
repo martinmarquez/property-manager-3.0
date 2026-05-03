@@ -7,6 +7,7 @@ import { createDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
 import { checkRateLimit, RateLimitPresets } from '@corredor/core';
 import { logger } from '@corredor/telemetry';
 import { getSession, refreshSession, destroySession, getSessionId, IDLE_TIMEOUT_SECONDS } from './middleware/session.js';
+import { FeatureGateError, assertFeature } from './lib/billing/assert-feature.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,6 +84,9 @@ const t = initTRPC.context<TRPCContext>().create({
       data: {
         ...shape.data,
         zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+        upsell: error.cause instanceof FeatureGateError
+          ? { requiredPlan: error.cause.requiredPlan, featureName: error.cause.featureName }
+          : null,
       },
     };
   },
@@ -280,3 +284,26 @@ export const protectedProcedureNoTx = t.procedure
   .use(rbacMiddleware)
   .use(rateLimitMiddleware)
   .use(auditLogMiddleware);
+
+/**
+ * Middleware factory that gates a procedure on a plan_feature key.
+ * Throws FORBIDDEN with an upsell payload when the tenant's plan
+ * does not include the feature.
+ *
+ * Usage:
+ *   const siteProcedure = protectedProcedure.use(withFeatureGate('site_builder'));
+ */
+export function withFeatureGate(featureKey: string) {
+  return middleware(async ({ ctx, next }) => {
+    const authedCtx = ctx as unknown as AuthenticatedContext;
+    await assertFeature(authedCtx, featureKey);
+    return next({
+      ctx: {
+        tenantId: authedCtx.tenantId,
+        userId: authedCtx.userId,
+        sessionId: authedCtx.sessionId,
+        roles: authedCtx.roles,
+      },
+    });
+  });
+}
