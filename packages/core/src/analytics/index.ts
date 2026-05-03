@@ -319,3 +319,6 @@ export const REPORT_DEFINITIONS = [
     defaultDays: 30,
   },
 ] as const;
+
+export { registerMvRefreshEventHandlers, REFRESHABLE_MVS } from './mv-refresh-handlers.js';
+export type { MvRefreshJobData, RefreshableMv } from './mv-refresh-handlers.js';

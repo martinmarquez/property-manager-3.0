@@ -40,13 +40,34 @@ export const QUEUE_NAMES = {
   // Import — medium priority
   IMPORT_CSV: "import-csv",
 
+  // Sitio (website builder) — high/medium priority
+  SITE_FORM_TO_LEAD: "site-form-to-lead",
+  SITE_REVALIDATE: "site-revalidate",
+  SITE_DOMAIN_SSL_POLL: "site-domain-ssl-poll",
+
+  // Billing — high priority
+  BILLING_STRIPE_WEBHOOK: "billing-stripe-webhook",
+  BILLING_MP_WEBHOOK: "billing-mp-webhook",
+  BILLING_AFIP_INVOICE: "billing-afip-invoice",
+  BILLING_DUNNING: "billing-dunning",
+  BILLING_USAGE_REFRESH: "billing-usage-refresh",
+
+  // Appraisals — medium priority
+  APPRAISAL_AI_NARRATIVE: "appraisal-ai-narrative",
+  APPRAISAL_PDF_GENERATE: "appraisal-pdf-generate",
+
   // Marketing — low priority
   CAMPAIGN_SEND: "campaign-send",
   NURTURE_STEP: "nurture-step",
 
+  // Reports — medium priority
+  REPORT_EXPORT: "report-export",
+  ANALYTICS_DIGEST: "analytics-digest",
+
   // Maintenance — low priority
   CLEANUP: "cleanup",
   ANALYTICS_REFRESH: "analytics-refresh",
+  MV_REFRESH: "analytics-mv-refresh",
 
   // Dead-letter — catch-all for exhausted retries
   DEAD_LETTER: "dead-letter",
@@ -134,10 +155,23 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.DOC_GENERATE]:     { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
   [QUEUE_NAMES.DOC_SIGN_WEBHOOK]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
   [QUEUE_NAMES.IMPORT_CSV]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.SITE_FORM_TO_LEAD]:   { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 10 },
+  [QUEUE_NAMES.SITE_REVALIDATE]:     { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 5  },
+  [QUEUE_NAMES.SITE_DOMAIN_SSL_POLL]:{ priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.BILLING_STRIPE_WEBHOOK]: { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 5  },
+  [QUEUE_NAMES.BILLING_MP_WEBHOOK]:     { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 5  },
+  [QUEUE_NAMES.BILLING_AFIP_INVOICE]:   { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.BILLING_DUNNING]:        { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
+  [QUEUE_NAMES.BILLING_USAGE_REFRESH]:  { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
+  [QUEUE_NAMES.APPRAISAL_AI_NARRATIVE]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.APPRAISAL_PDF_GENERATE]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
+  [QUEUE_NAMES.REPORT_EXPORT]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.ANALYTICS_DIGEST]:    { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 2  },
   [QUEUE_NAMES.CAMPAIGN_SEND]:    { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 2  },
   [QUEUE_NAMES.NURTURE_STEP]:     { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 2  },
   [QUEUE_NAMES.CLEANUP]:          { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.ANALYTICS_REFRESH]:{ priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
+  [QUEUE_NAMES.MV_REFRESH]:       { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 3  },
   [QUEUE_NAMES.DEAD_LETTER]:      { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
 };
 
