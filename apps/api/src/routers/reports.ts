@@ -1,4 +1,3 @@
-/// <reference path="../exceljs.d.ts" />
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
