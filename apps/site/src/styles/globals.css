@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════
+   Theme tokens — CSS custom properties driven by site_theme
+   Each theme defines its own set; the server injects the
+   matching data-theme attribute on <html>.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Moderno (default) ——————————————————————————————————————— */
+[data-theme='moderno'],
+:root {
+  --surface-base: #0A1628;
+  --surface-raised: #0F1F3A;
+  --surface-elevated: #152A4A;
+  --accent: #0ED2A0;
+  --accent-hover: #0BB88C;
+  --accent-faint: rgba(14, 210, 160, 0.1);
+  --ink: #EFF4FF;
+  --ink-muted: #8DA0C0;
+  --ink-faint: #506180;
+  --divider: #1C3050;
+  --font-display: 'DM Sans';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+  --radius: 8px;
+}
+
+/* Clásico ————————————————————————————————————————————————— */
+[data-theme='clasico'] {
+  --surface-base: #070D1A;
+  --surface-raised: #0D1526;
+  --surface-elevated: #131E33;
+  --accent: #1654D9;
+  --accent-hover: #1244B8;
+  --accent-faint: rgba(22, 84, 217, 0.12);
+  --ink: #EFF4FF;
+  --ink-muted: #8DA0C0;
+  --ink-faint: #506180;
+  --divider: #1F2D48;
+  --font-display: 'Syne';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+  --radius: 6px;
+}
+
+/* Oscuro —————————————————————————————————————————————————— */
+[data-theme='oscuro'] {
+  --surface-base: #0A0A0A;
+  --surface-raised: #141414;
+  --surface-elevated: #1E1E1E;
+  --accent: #E0E0E0;
+  --accent-hover: #FFFFFF;
+  --accent-faint: rgba(224, 224, 224, 0.08);
+  --ink: #FFFFFF;
+  --ink-muted: #A0A0A0;
+  --ink-faint: #606060;
+  --divider: #2A2A2A;
+  --font-display: 'DM Sans';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+  --radius: 4px;
+}
+
+/* Tierra —————————————————————————————————————————————————— */
+[data-theme='tierra'] {
+  --surface-base: #1C1008;
+  --surface-raised: #2C1810;
+  --surface-elevated: #3A2418;
+  --accent: #C8875A;
+  --accent-hover: #B07548;
+  --accent-faint: rgba(200, 135, 90, 0.12);
+  --ink: #F5EDE0;
+  --ink-muted: #C4AD94;
+  --ink-faint: #7A6650;
+  --divider: #4A3628;
+  --font-display: 'Syne';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+  --radius: 10px;
+}
+
+/* Minimal ————————————————————————————————————————————————— */
+[data-theme='minimal'] {
+  --surface-base: #FAFAFA;
+  --surface-raised: #FFFFFF;
+  --surface-elevated: #F0F0F0;
+  --accent: #1A1A1A;
+  --accent-hover: #333333;
+  --accent-faint: rgba(26, 26, 26, 0.06);
+  --ink: #1A1A1A;
+  --ink-muted: #666666;
+  --ink-faint: #999999;
+  --divider: #E0E0E0;
+  --font-display: 'DM Mono';
+  --font-body: 'DM Sans';
+  --font-mono: 'DM Mono';
+  --radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Base layer
+   ═══════════════════════════════════════════════════════════ */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-surface-base text-ink font-body;
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Utility classes for site blocks
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  .site-section {
+    @apply w-full px-4 md:px-8 lg:px-12;
+  }
+
+  .site-container {
+    @apply mx-auto w-full max-w-site;
+  }
+
+  .site-heading {
+    @apply font-display font-bold tracking-tight;
+  }
+
+  .site-label {
+    @apply font-mono text-xs uppercase tracking-widest text-ink-faint;
+  }
+}

@@ -1,3 +1,4 @@
+/// <reference path="../exceljs.d.ts" />
 import { randomBytes, createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { and, eq, sql, gt, isNull } from 'drizzle-orm';

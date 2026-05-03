@@ -36,4 +36,9 @@ export type {
   UserCreatedEvent,
   UserInvitedEvent,
   UserPasswordChangedEvent,
+  // Portal lead
+  PortalLeadCreatedEvent,
+  // Subscription (billing)
+  SubscriptionCreatedEvent,
+  SubscriptionCancelledEvent,
 } from "./types.js";

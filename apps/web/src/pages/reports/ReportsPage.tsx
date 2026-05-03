@@ -140,7 +140,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
       />
       {/* Last point dot */}
       {data.length > 0 && (() => {
-        const last = data[data.length - 1];
+        const last = data[data.length - 1]!;
         const lx = w;
         const ly = h - ((last - min) / range) * (h - 4) - 2;
         return <circle cx={lx} cy={ly} r={3} fill={color} />;

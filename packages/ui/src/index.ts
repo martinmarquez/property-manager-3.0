@@ -21,7 +21,7 @@ export type { TOTPSetupProps } from './components/auth/TOTPSetup.js';
 
 // ── Layout ───────────────────────────────────────────────
 export { AppShell } from './components/layout/AppShell.js';
-export type { AppShellProps, AppShellUser, NavModule } from './components/layout/AppShell.js';
+export type { AppShellProps, AppShellUser, NavModule, SubscriptionStatus } from './components/layout/AppShell.js';
 
 export { EmptyState, OnboardingChecklist } from './components/layout/EmptyState.js';
 export type { EmptyStateProps, OnboardingChecklistProps, ChecklistItem } from './components/layout/EmptyState.js';

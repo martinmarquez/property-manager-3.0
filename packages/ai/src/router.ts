@@ -20,10 +20,18 @@ export type FeatureId =
   | 'pipeline.insights'
   | 'portal.optimizer'
   | 'duplicate.detect'
+  | 'appraisal.narrative'
   | 'copilot'
   | 'copilot.classify';
 
 export const ROUTES: Partial<Record<FeatureId, Partial<Record<Capability, ModelChoice>>>> = {
+  'appraisal.narrative': {
+    chat: {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6-20250514',
+      fallback: { provider: 'openai', model: 'gpt-4.1' },
+    },
+  },
   'property.description': {
     chat: {
       provider: 'anthropic',

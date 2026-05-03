@@ -311,6 +311,43 @@ export interface UserPasswordChangedEvent {
 }
 
 // ---------------------------------------------------------------------------
+// Portal lead events
+// ---------------------------------------------------------------------------
+
+export interface PortalLeadCreatedEvent {
+  type: "portal_lead.created";
+  payload: {
+    tenantId: string;
+    portalLeadId: string;
+    portalId: string;
+    listingId?: string;
+    contactId?: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Subscription (billing) events
+// ---------------------------------------------------------------------------
+
+export interface SubscriptionCreatedEvent {
+  type: "subscription.created";
+  payload: {
+    tenantId: string;
+    subscriptionId: string;
+    planCode: string;
+  };
+}
+
+export interface SubscriptionCancelledEvent {
+  type: "subscription.cancelled";
+  payload: {
+    tenantId: string;
+    subscriptionId: string;
+    planCode: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Union type
 // ---------------------------------------------------------------------------
 
@@ -347,7 +384,10 @@ export type DomainEvent =
   | DocumentExpiredEvent
   | UserCreatedEvent
   | UserInvitedEvent
-  | UserPasswordChangedEvent;
+  | UserPasswordChangedEvent
+  | PortalLeadCreatedEvent
+  | SubscriptionCreatedEvent
+  | SubscriptionCancelledEvent;
 
 export type DomainEventType = DomainEvent["type"];
 

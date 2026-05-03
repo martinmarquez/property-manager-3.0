@@ -12,6 +12,8 @@
  *   Themes:               themes.list
  */
 
+import crypto from 'node:crypto';
+import dns from 'node:dns/promises';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { eq, and, isNull, asc, desc, sql, gte, lte } from 'drizzle-orm';
@@ -26,7 +28,7 @@ import {
   contact,
 } from '@corredor/db';
 import { router, protectedProcedure, publicProcedure, withFeatureGate } from '../trpc.js';
-import { QUEUE_NAMES } from '@corredor/core';
+import { QUEUE_NAMES, checkRateLimit, RateLimitPresets } from '@corredor/core';
 
 const siteProcedure = protectedProcedure.use(withFeatureGate('site_builder'));
 
@@ -490,7 +492,20 @@ const domainsRouter = router({
     .mutation(async ({ ctx, input }) => {
       await verifySiteOwnership(ctx.db, ctx.tenantId, input.siteId);
 
-      // Check uniqueness across all tenants
+      const rlKey = `ratelimit:${RateLimitPresets.DOMAIN_ADD.scope}:tenant:${ctx.tenantId}`;
+      const rlResult = await checkRateLimit(ctx.redis, rlKey, RateLimitPresets.DOMAIN_ADD);
+      if (!rlResult.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `Domain registration rate limit exceeded. Retry after ${rlResult.retryAfterSeconds}s`,
+        });
+      }
+
+      // Advisory lock on hostname to prevent race condition between check + insert
+      await ctx.db.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext('site_domain_hostname'), hashtext(${input.hostname}))`
+      );
+
       const [existing] = await ctx.db
         .select({ id: siteDomain.id })
         .from(siteDomain)
@@ -499,21 +514,86 @@ const domainsRouter = router({
         throw new TRPCError({ code: 'CONFLICT', message: 'Domain already registered' });
       }
 
-      // Create Cloudflare Custom Hostname via API
-      const cfResult = await createCloudflareHostname(input.hostname);
+      const ownershipToken = crypto.randomBytes(32).toString('hex');
 
       const [domain] = await ctx.db
         .insert(siteDomain)
         .values({
-          tenantId:             ctx.tenantId,
-          siteId:               input.siteId,
-          hostname:             input.hostname,
+          tenantId:       ctx.tenantId,
+          siteId:         input.siteId,
+          hostname:       input.hostname,
+          dnsTarget:      'cname.corredor.app',
+          ownershipToken,
+          status:         'unverified',
+          createdBy:      ctx.userId,
+          updatedBy:      ctx.userId,
+        })
+        .returning();
+
+      return {
+        ...domain!,
+        verificationRecord: {
+          type: 'TXT',
+          name: `_corredor-verify.${input.hostname}`,
+          value: ownershipToken,
+        },
+      };
+    }),
+
+  confirmOwnership: siteProcedure
+    .input(z.object({ domainId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [domain] = await ctx.db
+        .select()
+        .from(siteDomain)
+        .where(and(
+          eq(siteDomain.id, input.domainId),
+          eq(siteDomain.tenantId, ctx.tenantId),
+          isNull(siteDomain.deletedAt),
+        ));
+      if (!domain) throw new TRPCError({ code: 'NOT_FOUND', message: 'Domain not found' });
+
+      if (domain.status !== 'unverified') {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Domain already verified or in progress' });
+      }
+
+      if (!domain.ownershipToken) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'No ownership token found' });
+      }
+
+      // Independent DNS TXT lookup to verify ownership
+      const txtName = `_corredor-verify.${domain.hostname}`;
+      let verified = false;
+      try {
+        const records = await dns.resolveTxt(txtName);
+        const flat = records.map((r) => r.join('')).map((s) => s.trim());
+        verified = flat.includes(domain.ownershipToken);
+      } catch {
+        // ENOTFOUND / ENODATA — record does not exist yet
+      }
+
+      if (!verified) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `TXT record not found. Add a TXT record for ${txtName} with value: ${domain.ownershipToken}`,
+        });
+      }
+
+      // Ownership confirmed — create Cloudflare Custom Hostname and move to pending
+      const cfResult = await createCloudflareHostname(domain.hostname);
+
+      const [updated] = await ctx.db
+        .update(siteDomain)
+        .set({
+          status:               'pending',
           dnsTarget:            cfResult.dnsTarget,
           cloudflareHostnameId: cfResult.hostnameId,
-          status:               'pending',
-          createdBy:            ctx.userId,
+          verifiedAt:           new Date(),
+          updatedAt:            new Date(),
           updatedBy:            ctx.userId,
+          version:              domain.version + 1,
         })
+        .where(and(eq(siteDomain.id, input.domainId), eq(siteDomain.tenantId, ctx.tenantId)))
         .returning();
 
       // Enqueue SSL polling
@@ -521,7 +601,7 @@ const domainsRouter = router({
       if (queue) {
         await queue.add('poll-ssl', {
           tenantId: ctx.tenantId,
-          domainId: domain!.id,
+          domainId: domain.id,
           cfHostnameId: cfResult.hostnameId,
         }, {
           delay: 30_000,
@@ -530,7 +610,7 @@ const domainsRouter = router({
         });
       }
 
-      return domain!;
+      return updated!;
     }),
 
   verify: siteProcedure

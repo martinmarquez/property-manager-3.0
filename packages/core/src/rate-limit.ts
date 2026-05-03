@@ -320,6 +320,15 @@ export const RateLimitPresets = {
     capacity: 500,
     refillRate: 500 / 60,
   } satisfies Omit<RateLimitConfig, "keyExtractor">,
+
+  /**
+   * Domain registration — 5 req/hour per tenant (RENA-179)
+   */
+  DOMAIN_ADD: {
+    scope: "domain_add",
+    capacity: 5,
+    refillRate: 5 / 3600,
+  } satisfies Omit<RateLimitConfig, "keyExtractor">,
 } as const;
 
 // ── AI Token Budget Middleware ──────────────────────────────────────────────

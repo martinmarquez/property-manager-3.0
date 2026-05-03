@@ -12,6 +12,10 @@ import { copilotRouter } from './routers/copilot.js';
 import { leadsRouter } from './routers/leads.js';
 import { pipelinesRouter } from './routers/pipelines.js';
 import { analyticsRouter } from './routers/analytics.js';
+import { billingRouter } from './routers/billing.js';
+import { reportsRouter } from './routers/reports.js';
+import { siteRouter } from './routers/site.js';
+import { appraisalsRouter } from './routers/appraisals.js';
 
 /**
  * Root tRPC router.
@@ -32,6 +36,8 @@ import { analyticsRouter } from './routers/analytics.js';
  *   leads.*  pipelines.*  inbox.*
  *   portals.*   calendar.*  billing.*
  *   analytics.*             — Phase G: billing dashboard, appraisal usage, report adoption, site metrics
+ *   reports.*               — Phase G: report data endpoints, CSV/XLSX export, share links, digest subscriptions
+ *   site.*                  — Phase G: website builder CRUD, pages, domains, forms, themes, public listing feed
  */
 export const appRouter = router({
   system:              healthRouter,
@@ -47,6 +53,10 @@ export const appRouter = router({
   leads:               leadsRouter,
   pipelines:           pipelinesRouter,
   analytics:           analyticsRouter,
+  billing:             billingRouter,
+  reports:             reportsRouter,
+  site:                siteRouter,
+  appraisals:          appraisalsRouter,
 });
 
 export type AppRouter = typeof appRouter;

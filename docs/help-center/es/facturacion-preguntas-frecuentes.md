@@ -121,10 +121,10 @@ Si AFIP rechaza la autorización, Corredor te notifica por correo y reintenta au
 
 ### ¿Puedo reactivar mi cuenta después de cancelar?
 
-Sí. Si volvés a suscribirte dentro de los 90 días, recuperás todos tus datos. Después de ese plazo, los datos pueden eliminarse definitivamente.
+Sí. Si volvés a suscribirte, recuperás todos tus datos. Contactá al equipo de soporte si necesitás información sobre el período de retención de datos aplicable a tu cuenta.
 
 ---
 
 ## Más preguntas
 
-¿No encontraste lo que buscabas? Escribinos a **soporte@corredor.app** o iniciá un chat desde el ícono `?` en la esquina inferior derecha de la aplicación.
+¿No encontraste lo que buscabas? Iniciá un chat desde el ícono `?` en la esquina inferior derecha de la aplicación.

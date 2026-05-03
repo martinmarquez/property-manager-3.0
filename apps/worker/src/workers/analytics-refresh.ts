@@ -82,10 +82,37 @@ export class AnalyticsRefreshWorker extends BaseWorker<AnalyticsRefreshJobData, 
       sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_plan_distribution`,
     );
 
+    // Phase G — Reports materialized views (0021 + 0023 migrations)
+    await this._refreshIfExists('analytics.mv_pipeline_conversion');
+    await this._refreshIfExists('analytics.mv_listing_performance');
+    await this._refreshIfExists('analytics.mv_agent_productivity');
+    await this._refreshIfExists('analytics.mv_portal_roi');
+    await this._refreshIfExists('analytics.mv_revenue_forecast');
+    await this._refreshIfExists('analytics.mv_retention_cohort');
+    await this._refreshIfExists('analytics.mv_zone_heatmap');
+    await this._refreshIfExists('analytics.mv_sla_adherence');
+    await this._refreshIfExists('analytics.mv_commission_owed');
+
     this.logger.info('analytics.refresh.done', {
       snapshotDate,
       tenantCount: tenantIds.length,
     });
+  }
+
+  private async _refreshIfExists(mvName: string): Promise<void> {
+    try {
+      await this.db.execute(sql.raw(
+        `REFRESH MATERIALIZED VIEW CONCURRENTLY ${mvName}`,
+      ));
+      this.logger.info('analytics.refresh.mv_done', { mv: mvName });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('does not exist')) {
+        this.logger.warn('analytics.refresh.mv_missing', { mv: mvName });
+      } else {
+        throw err;
+      }
+    }
   }
 
   private async _getAllTenantIds(): Promise<string[]> {

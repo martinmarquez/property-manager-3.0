@@ -57,7 +57,7 @@ Cada comparable muestra:
 ### Ajustar criterios de búsqueda
 
 Si los comparables no son representativos, usá los filtros del panel derecho para ampliar o acotar la búsqueda:
-- Radio de búsqueda (hasta 5 km)
+- Radio de búsqueda
 - Rango de superficie (± metros cuadrados)
 - Rango de antigüedad
 - Estado de conservación

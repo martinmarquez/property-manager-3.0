@@ -76,6 +76,13 @@ const msg = defineMessages({
   errLimit:       { id: 'gallery.error.limit' },
 });
 
+const errorMsgMap: Record<string, (typeof msg)[keyof typeof msg]> = {
+  'gallery.error.size.photo': msg.errSizePhoto,
+  'gallery.error.size.video': msg.errSizeVideo,
+  'gallery.error.size.floorplan': msg.errSizeFloor,
+  'gallery.error.type': msg.errType,
+};
+
 /* ─── File validation ─── */
 function classifyFile(file: File): { mediaType: MediaItem['mediaType']; error?: string } {
   const name = file.name.toLowerCase();
@@ -514,7 +521,7 @@ export function GalleryEditor({ items, onChange }: GalleryEditorProps) {
         }
         const { mediaType, error } = classifyFile(file);
         if (error) {
-          errors.push(intl.formatMessage({ id: error }));
+          errors.push(intl.formatMessage(errorMsgMap[error] ?? msg.errType));
           continue;
         }
 

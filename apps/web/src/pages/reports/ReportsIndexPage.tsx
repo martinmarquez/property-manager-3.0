@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   BarChart2, TrendingUp, TrendingDown, LineChart, PieChart,
   Download, Mail, Calendar, Filter, Search, Clock,
@@ -153,7 +154,7 @@ const PURPLE = '#7E3AF2';
 
 const OPERATIONAL_CARDS: ReportCard[] = [
   {
-    id: 'op1',
+    id: 'funnel-conversion',
     icon: <Filter size={16} color="#fff" />,
     iconBg: C.warning,
     name: 'Conversión de Funnel',
@@ -167,7 +168,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [22, 25, 24, 27, 26, 29, 28, 30, 31, 29, 32, 34] },
   },
   {
-    id: 'op2',
+    id: 'agent-productivity',
     icon: <Users size={16} color="#fff" />,
     iconBg: C.brand,
     name: 'Productividad de Agentes',
@@ -181,7 +182,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [6.2, 6.8, 7.0, 7.1, 7.4, 7.6, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4] },
   },
   {
-    id: 'op3',
+    id: 'listing-performance',
     icon: <Home size={16} color="#fff" />,
     iconBg: TEAL,
     name: 'Performance de Propiedades',
@@ -195,7 +196,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [155, 152, 150, 148, 149, 147, 145, 144, 143, 142, 143, 142] },
   },
   {
-    id: 'op4',
+    id: 'portal-roi',
     icon: <BarChart2 size={16} color="#fff" />,
     iconBg: PURPLE,
     name: 'ROI de Portales',
@@ -209,7 +210,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [88, 92, 96, 98, 100, 104, 108, 110, 114, 118, 121, 124] },
   },
   {
-    id: 'op5',
+    id: 'sla-adherence',
     icon: <Clock size={16} color="#fff" />,
     iconBg: C.warning,
     name: 'SLA de Consultas',
@@ -223,7 +224,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [3.8, 3.6, 3.5, 3.4, 3.2, 3.1, 3.0, 2.9, 2.8, 2.6, 2.4, 2.3] },
   },
   {
-    id: 'op6',
+    id: 'inbox-activity',
     icon: <Mail size={16} color="#fff" />,
     iconBg: C.brand,
     name: 'Actividad de Inbox',
@@ -237,7 +238,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [560, 590, 610, 640, 670, 695, 710, 730, 755, 780, 820, 847] },
   },
   {
-    id: 'op7',
+    id: 'closing-calendar',
     icon: <Calendar size={16} color="#fff" />,
     iconBg: C.success,
     name: 'Calendario de Cierres',
@@ -251,7 +252,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [12, 14, 15, 16, 17, 18, 18, 19, 20, 20, 22, 23] },
   },
   {
-    id: 'op8',
+    id: 'pipeline-by-branch',
     icon: <Filter size={16} color="#fff" />,
     iconBg: C.bgSubtle,
     name: 'Pipeline por Rama',
@@ -265,7 +266,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [2.8, 2.9, 3.0, 3.1, 3.2, 3.4, 3.5, 3.7, 3.8, 3.9, 4.1, 4.2] },
   },
   {
-    id: 'op9',
+    id: 'reservation-rates',
     icon: <Check size={16} color="#fff" />,
     iconBg: C.success,
     name: 'Tasas de Reserva',
@@ -279,7 +280,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [62, 65, 66, 68, 69, 70, 71, 72, 73, 74, 75, 76] },
   },
   {
-    id: 'op10',
+    id: 'document-expiry',
     icon: <FileText size={16} color="#fff" />,
     iconBg: C.error,
     name: 'Vencimiento de Docs',
@@ -294,7 +295,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [7, 7, 7, 8, 8, 7, 7, 7, 7, 7, 7, 7] },
   },
   {
-    id: 'op11',
+    id: 'captured-listings',
     icon: <TrendingUp size={16} color="#fff" />,
     iconBg: C.brand,
     name: 'Captaciones del Mes',
@@ -308,7 +309,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [16, 18, 19, 20, 21, 22, 22, 23, 24, 25, 27, 28] },
   },
   {
-    id: 'op12',
+    id: 'inventory-balance',
     icon: <BarChart2 size={16} color="#fff" />,
     iconBg: TEAL,
     name: 'Nuevos vs Vendidos',
@@ -325,7 +326,7 @@ const OPERATIONAL_CARDS: ReportCard[] = [
 
 const STRATEGIC_CARDS: ReportCard[] = [
   {
-    id: 'st1',
+    id: 'revenue-trend',
     icon: <TrendingUp size={16} color="#fff" />,
     iconBg: C.success,
     name: 'Tendencia de Ingresos',
@@ -339,7 +340,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [180, 195, 200, 210, 215, 225, 235, 245, 255, 265, 278, 287] },
   },
   {
-    id: 'st2',
+    id: 'pipeline-velocity',
     icon: <BarChart2 size={16} color="#fff" />,
     iconBg: C.brand,
     name: 'Pronóstico de Pipeline',
@@ -353,7 +354,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [900, 920, 940, 960, 980, 1000, 1040, 1080, 1100, 1130, 1160, 1200] },
   },
   {
-    id: 'st3',
+    id: 'zone-analysis',
     icon: <PieChart size={16} color="#fff" />,
     iconBg: PURPLE,
     name: 'Participación de Mercado',
@@ -367,7 +368,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [16, 16, 16.5, 17, 17, 17.2, 17.5, 17.8, 18, 18.1, 18.3, 18.4] },
   },
   {
-    id: 'st4',
+    id: 'retention-cohort',
     icon: <Users size={16} color="#fff" />,
     iconBg: C.warning,
     name: 'Análisis de Retención',
@@ -381,7 +382,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [88, 87, 87, 86, 86, 86, 85, 85, 85, 84, 84, 84] },
   },
   {
-    id: 'st5',
+    id: 'price-evolution',
     icon: <TrendingUp size={16} color="#fff" />,
     iconBg: TEAL,
     name: 'Evolución de Precios',
@@ -395,7 +396,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [2650, 2680, 2700, 2720, 2740, 2760, 2780, 2790, 2800, 2815, 2830, 2840] },
   },
   {
-    id: 'st6',
+    id: 'customer-acquisition',
     icon: <AlertTriangle size={16} color="#fff" />,
     iconBg: C.error,
     name: 'Costo de Adquisición',
@@ -409,7 +410,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [560, 540, 525, 510, 500, 490, 480, 470, 460, 450, 435, 420] },
   },
   {
-    id: 'st7',
+    id: 'lead-cohorts',
     icon: <BarChart2 size={16} color="#fff" />,
     iconBg: C.brand,
     name: 'LTV por Segmento',
@@ -423,7 +424,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [10.2, 10.5, 10.8, 11.0, 11.2, 11.4, 11.6, 11.8, 12.0, 12.1, 12.3, 12.4] },
   },
   {
-    id: 'st8',
+    id: 'ai-usage',
     icon: <BarChart2 size={16} color="#fff" />,
     iconBg: PURPLE,
     name: 'Análisis de Portales',
@@ -438,7 +439,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'bar', points: [3.1, 3.0, 3.2, 3.1, 3.3, 3.4, 3.2, 3.5, 3.6, 3.5, 3.7, 3.6] },
   },
   {
-    id: 'st9',
+    id: 'revenue-forecast',
     icon: <TrendingUp size={16} color="#fff" />,
     iconBg: C.success,
     name: 'Expansión de Cartera',
@@ -452,7 +453,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
     sparkline: { type: 'line', points: [4, 5, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14] },
   },
   {
-    id: 'st10',
+    id: 'commission-owed',
     icon: <FileText size={16} color="#fff" />,
     iconBg: C.bgSubtle,
     name: 'Reporte Ejecutivo',
@@ -470,7 +471,7 @@ const STRATEGIC_CARDS: ReportCard[] = [
 
 /* ─── Single card component ──────────────────────────────────────── */
 
-function Card({ card }: { card: ReportCard }) {
+function Card({ card, onClick }: { card: ReportCard; onClick?: () => void }) {
   const [hovered, setHovered] = useState(false);
 
   const deltaColor = card.deltaFlat
@@ -489,6 +490,7 @@ function Card({ card }: { card: ReportCard }) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
       style={{
         background: hovered ? C.bgElevated : C.bgRaised,
         border: `1px solid ${hovered ? '#2A3D5C' : C.border}`,
@@ -635,9 +637,11 @@ function SectionHeader({ title, count }: { title: string; count: number }) {
 /* ─── Main page ──────────────────────────────────────────────────── */
 
 export default function ReportsIndexPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<Category>('all');
   const [searchFocused, setSearchFocused] = useState(false);
+  const goToReport = useCallback((slug: string) => navigate({ to: `/reports/${slug}` }), [navigate]);
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -793,7 +797,7 @@ export default function ReportsIndexPage() {
             gap: 14,
           }}>
             {filteredOp.map(card => (
-              <Card key={card.id} card={card} />
+              <Card key={card.id} card={card} onClick={() => goToReport(card.id)} />
             ))}
           </div>
         </div>
@@ -809,7 +813,7 @@ export default function ReportsIndexPage() {
             gap: 14,
           }}>
             {filteredSt.map(card => (
-              <Card key={card.id} card={card} />
+              <Card key={card.id} card={card} onClick={() => goToReport(card.id)} />
             ))}
           </div>
         </div>

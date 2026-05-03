@@ -9,3 +9,6 @@ export type { AnthropicClient } from './client.js';
 
 // Copilot: classifier, generator, quota
 export * from './copilot/index.js';
+
+// Appraisals: AI narrative generation
+export * from './appraisals/index.js';

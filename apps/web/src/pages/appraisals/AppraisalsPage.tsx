@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useIntl, defineMessages } from 'react-intl';
 import {
-  Plus, Search, Download, Filter,
+  Plus, Search, Download, Filter, Calendar,
   TrendingUp, CheckCircle2, AlertTriangle, Clock,
   Eye, Copy, Trash2, MoreHorizontal,
   ChevronLeft, ChevronRight, ChevronDown,
@@ -346,6 +346,8 @@ export default function AppraisalsPage({ onNewAppraisal }: { onNewAppraisal?: ()
   const intl = useIntl();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<AppraisalStatus | 'all'>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
 
@@ -382,7 +384,9 @@ export default function AppraisalsPage({ onNewAppraisal }: { onNewAppraisal?: ()
     const matchSearch = !q || a.address.toLowerCase().includes(q) ||
       a.clientName.toLowerCase().includes(q) || a.id.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || a.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchDateFrom = !dateFrom || a.date >= dateFrom;
+    const matchDateTo = !dateTo || a.date <= dateTo;
+    return matchSearch && matchStatus && matchDateFrom && matchDateTo;
   });
 
   const total = filtered.length;
@@ -498,6 +502,39 @@ export default function AppraisalsPage({ onNewAppraisal }: { onNewAppraisal?: ()
               {sf.label}
             </button>
           ))}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+            <Calendar size={13} style={{ color: C.textTertiary, flexShrink: 0 }} aria-hidden="true" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+              aria-label={intl.formatMessage(m.filterPeriod) + ' desde'}
+              style={{
+                padding: '7px 10px', borderRadius: 7, width: 130,
+                background: C.bgElevated, border: `1px solid ${C.border}`,
+                color: C.textSecondary, fontFamily: F.mono, fontSize: 12, outline: 'none',
+                colorScheme: 'dark',
+              }}
+              onFocus={e => (e.target.style.borderColor = C.brand)}
+              onBlur={e => (e.target.style.borderColor = C.border)}
+            />
+            <span style={{ color: C.textTertiary, fontSize: 11 }}>–</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => { setDateTo(e.target.value); setPage(1); }}
+              aria-label={intl.formatMessage(m.filterPeriod) + ' hasta'}
+              style={{
+                padding: '7px 10px', borderRadius: 7, width: 130,
+                background: C.bgElevated, border: `1px solid ${C.border}`,
+                color: C.textSecondary, fontFamily: F.mono, fontSize: 12, outline: 'none',
+                colorScheme: 'dark',
+              }}
+              onFocus={e => (e.target.style.borderColor = C.brand)}
+              onBlur={e => (e.target.style.borderColor = C.border)}
+            />
+          </div>
 
           <div style={{ flex: 1 }} />
 

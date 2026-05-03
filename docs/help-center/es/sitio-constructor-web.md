@@ -158,10 +158,7 @@ Si el visitante completa su correo o teléfono, Corredor puede crear automática
 Cada cuenta de Corredor puede tener un sitio activo por organización.
 
 **¿El sitio funciona bien en celulares?**
-Sí. Todos los temas son responsive. Podés ver la vista previa en modo mobile desde el editor usando el ícono de teléfono en la barra superior.
-
-**¿Puedo conectar Google Analytics al sitio?**
-Sí. Ingresá tu ID de medición en **Configuración del sitio → Integraciones → Google Analytics**.
+Sí. Todos los temas son responsive y se adaptan automáticamente a dispositivos móviles.
 
 **¿El sitio afecta el rendimiento del CRM?**
 No. El sitio corre en infraestructura separada (Cloudflare Pages) y no comparte recursos con el resto de la aplicación.

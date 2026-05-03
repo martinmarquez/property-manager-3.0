@@ -52,3 +52,5 @@ tmp/
 
 # AFIP WSAA certificates — never commit private keys or signed certs
 infra/afip/certs/
+.vercel
+.claude/

@@ -52,6 +52,7 @@ export const siteBlockTypeEnum = pgEnum('site_block_type', [
 ]);
 
 export const siteDomainStatusEnum = pgEnum('site_domain_status', [
+  'unverified',
   'pending',
   'verifying',
   'active',
@@ -179,10 +180,11 @@ export const siteDomain = pgTable('site_domain', {
   siteId:              uuid('site_id').notNull().references(() => site.id),
   hostname:             text('hostname').notNull().unique(),
   dnsTarget:            text('dns_target').notNull(),
+  ownershipToken:       text('ownership_token'),
   verifiedAt:           timestamp('verified_at', { withTimezone: true }),
   sslActiveAt:          timestamp('ssl_active_at', { withTimezone: true }),
   cloudflareHostnameId: text('cloudflare_hostname_id'),
-  status:               siteDomainStatusEnum('status').notNull().default('pending'),
+  status:               siteDomainStatusEnum('status').notNull().default('unverified'),
   lastPolledAt:         timestamp('last_polled_at', { withTimezone: true }),
   errorMessage:         text('error_message'),
   createdAt:            timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),

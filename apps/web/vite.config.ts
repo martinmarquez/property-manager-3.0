@@ -17,6 +17,9 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       manifest: {
         name: 'Corredor CRM',
         short_name: 'Corredor',
@@ -47,8 +50,17 @@ export default defineConfig({
   ],
   build: {
     target: 'es2022',
-    // Generate source maps for Sentry (deleted after upload in production builds)
     sourcemap: true,
+    rollupOptions: {
+      external: [
+        'bullmq',
+        'ioredis',
+        '@sentry/node',
+        '@opentelemetry/api',
+        '@opentelemetry/sdk-node',
+        'nodemailer',
+      ],
+    },
   },
   test: {
     environment: 'jsdom',

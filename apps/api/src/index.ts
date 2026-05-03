@@ -36,6 +36,8 @@ import { csrfMiddleware } from './middleware/csrf.js';
 import { createContext } from './trpc.js';
 import { appRouter } from './router.js';
 import { createEsignWebhookRoutes } from './routes/webhooks-esign.js';
+import { createStripeWebhookRoutes } from './routes/webhooks-stripe.js';
+import { createMercadoPagoWebhookRoutes } from './routes/webhooks-mercadopago.js';
 import { createCopilotStreamRoutes } from './routes/copilot-stream.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
@@ -114,6 +116,14 @@ app.get('/health', async (c) => {
 app.route('/webhooks/esign', createEsignWebhookRoutes(redis, {
   SIGNATURIT_WEBHOOK_SECRET: env.SIGNATURIT_WEBHOOK_SECRET,
   DOCUSIGN_WEBHOOK_SECRET: env.DOCUSIGN_WEBHOOK_SECRET,
+}));
+
+// ── Billing webhooks (no auth — signature-verified) ─────────────────────
+app.route('/webhooks/stripe', createStripeWebhookRoutes(redis, {
+  STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
+}));
+app.route('/webhooks/mercadopago', createMercadoPagoWebhookRoutes(redis, {
+  MP_WEBHOOK_SECRET: env.MP_WEBHOOK_SECRET,
 }));
 
 // ── Copilot SSE streaming (outside tRPC — needs raw SSE response) ────────
