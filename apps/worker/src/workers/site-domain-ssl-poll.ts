@@ -22,7 +22,7 @@ export class SiteDomainSslPollWorker extends BaseWorker<SiteDomainSslPollJobData
   }
 
   protected async process(job: Job<SiteDomainSslPollJobData>): Promise<void> {
-    const { tenantId, domainId, cfHostnameId } = job.data;
+    const { domainId, cfHostnameId } = job.data;
 
     if (!cfHostnameId) {
       this.logger.warn('SSL poll skipped — no Cloudflare hostname ID', { domainId });

@@ -160,8 +160,6 @@ export function useAutocomplete({
 
 // ─── useEntityCounts (parallel per-type queries for sidebar badges) ─────────
 
-const ALL_ENTITY_TYPES: EntityType[] = ['property', 'contact', 'lead', 'document'];
-
 export function useEntityCounts(query: string, debounceMs = 300): Record<EntityType, number | undefined> {
   const debouncedQuery = useDebounce(query, debounceMs);
   const shouldFetch = debouncedQuery.trim().length >= 1;

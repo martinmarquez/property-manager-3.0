@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { Job } from 'bullmq';
 import { createNodeDb } from '@corredor/db';
 import { BaseWorker, QUEUE_NAMES } from '@corredor/core';
-import type { MvRefreshJobData, RefreshableMv } from '@corredor/core';
+import type { MvRefreshJobData } from '@corredor/core';
 import { REFRESHABLE_MVS } from '@corredor/core';
 import type Redis from 'ioredis';
 

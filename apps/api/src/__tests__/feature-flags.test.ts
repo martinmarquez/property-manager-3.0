@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { checkFeatureFlag, FeatureDisabledError } from '../lib/feature-flags.js';
+import type { AnyDb } from '../trpc.js';
 
-function createMockDb(rows: Record<string, unknown>[]) {
+function createMockDb(rows: Record<string, unknown>[]): AnyDb {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -10,7 +11,7 @@ function createMockDb(rows: Record<string, unknown>[]) {
         }),
       }),
     }),
-  } as any;
+  } as unknown as AnyDb;
 }
 
 describe('checkFeatureFlag', () => {

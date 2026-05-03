@@ -635,7 +635,7 @@ export const appraisalsRouter = router({
   generatePdf: appraisalProcedure
     .input(z.object({ appraisalId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const target = await getAppraisalOrThrow(ctx, input.appraisalId);
+      await getAppraisalOrThrow(ctx, input.appraisalId);
 
       const [report] = await ctx.db
         .select()

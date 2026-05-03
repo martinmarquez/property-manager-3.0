@@ -1,7 +1,7 @@
 /// <reference path="../exceljs.d.ts" />
-import { randomBytes, createHmac } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { z } from 'zod';
-import { and, eq, sql, gt, isNull } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   reportDigestSubscription,
@@ -9,8 +9,6 @@ import {
 } from '@corredor/db';
 import {
   REPORT_DEFINITIONS,
-  QUEUE_NAMES,
-  createQueue,
   checkRateLimit,
 } from '@corredor/core';
 import {
@@ -337,7 +335,8 @@ const exportRouter = router({
       // XLSX via ExcelJS — return base64-encoded workbook
       // ExcelJS is loaded dynamically so it's not a hard dependency
       try {
-        const ExcelJS = await import('exceljs');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ExcelJS = await import('exceljs') as any;
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet(input.slug);
 
@@ -355,9 +354,10 @@ const exportRouter = router({
           }
 
           // Auto-fit columns
-          sheet.columns.forEach((col) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          sheet.columns.forEach((col: any) => {
             let maxLen = 10;
-            col.eachCell?.({ includeEmpty: false }, (cell) => {
+            col.eachCell?.({ includeEmpty: false }, (cell: { value?: unknown }) => {
               const len = String(cell.value ?? '').length;
               if (len > maxLen) maxLen = Math.min(len, 50);
             });

@@ -1,0 +1,16 @@
+# Gitleaks ignore file — false-positive fingerprints only.
+# Format: sha:file:rule:line
+# Each line represents a known-safe match that triggered a detection rule.
+
+# packages/db/src/schema/billing.ts — unique constraint name
+# "usage_counter_tenant_key_period_unique" matches cloudflare-token pattern (38-char alphanum+underscore)
+c5d0736746e3b81729f2b771b72cf9faf10c7876:packages/db/src/schema/billing.ts:cloudflare-token:207
+
+# apps/web/src/pages/site/SiteBlogPage.tsx — URL slugs in demo blog fixture data
+# Spanish-language slugs (e.g. "guia-de-alquiler-…", "tendencias-del-mercado-…") match the
+# cloudflare-token length/charset pattern but are not secrets.
+735b96f5b915facacb122a0703ab915b0b3412a0:apps/web/src/pages/site/SiteBlogPage.tsx:cloudflare-token:41
+735b96f5b915facacb122a0703ab915b0b3412a0:apps/web/src/pages/site/SiteBlogPage.tsx:cloudflare-token:76
+735b96f5b915facacb122a0703ab915b0b3412a0:apps/web/src/pages/site/SiteBlogPage.tsx:cloudflare-token:99
+735b96f5b915facacb122a0703ab915b0b3412a0:apps/web/src/pages/site/SiteBlogPage.tsx:cloudflare-token:118
+735b96f5b915facacb122a0703ab915b0b3412a0:apps/web/src/pages/site/SiteBlogPage.tsx:cloudflare-token:163

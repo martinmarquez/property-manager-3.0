@@ -828,7 +828,7 @@ export default function ReportsIndexPage() {
         }}>
           <LineChart size={40} color={C.border} style={{ margin: '0 auto 16px' }} />
           <p style={{ fontFamily: F.body, fontSize: 15, color: C.textSecondary, marginBottom: 6 }}>
-            Sin resultados para "{searchQuery}"
+            Sin resultados para &quot;{searchQuery}&quot;
           </p>
           <p style={{ fontFamily: F.body, fontSize: 13, color: C.textTertiary, margin: 0 }}>
             Intentá con otro término o cambiá la categoría

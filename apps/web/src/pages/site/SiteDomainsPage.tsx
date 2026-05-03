@@ -187,7 +187,7 @@ function Step3({ domain, onNext }: { domain: string; onNext: () => void }) {
         Certificado SSL / HTTPS
       </h2>
       <p style={{ fontFamily: F.body, fontSize: 13, color: C.textSecondary, margin: '0 0 24px' }}>
-        Corredor gestiona automáticamente el certificado TLS para <strong>{domain}</strong> via Let's Encrypt.
+        Corredor gestiona automáticamente el certificado TLS para <strong>{domain}</strong> via Let&apos;s Encrypt.
       </p>
 
       <div style={{

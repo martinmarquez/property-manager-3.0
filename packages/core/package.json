@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./i18n/messages/*.json": "./src/i18n/messages/*.json"
   },
+  "sideEffects": false,
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

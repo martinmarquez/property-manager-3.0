@@ -372,12 +372,12 @@ export default function CopilotFloat({ context }: { context?: Record<string, unk
   const isMobile = useMediaQuery(BREAKPOINTS.mobile);
   const enabled = useCopilotEnabled();
 
-  if (!enabled) return null;
-
   const handleOpenFull = useCallback(() => {
     setOpen(false);
     navigate({ to: '/copilot' });
   }, [navigate]);
+
+  if (!enabled) return null;
 
   return (
     <>

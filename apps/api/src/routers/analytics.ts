@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { kpiSnapshotDaily, analyticsEvent } from '@corredor/db';
 import { REPORT_DEFINITIONS, KPI_METRICS } from '@corredor/core';
-import { router, protectedProcedure, protectedProcedureNoTx } from '../trpc.js';
+import { router, protectedProcedureNoTx } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
 
 // ---------------------------------------------------------------------------
@@ -89,8 +89,8 @@ const billingRouter = router({
     .query(async ({ ctx }) => {
       const { db } = ctx as unknown as AuthenticatedContext;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw = await db.execute(sql`SELECT * FROM mv_billing_metrics LIMIT 1`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = ((raw as any).rows ?? [])[0] as {
         mrr_ars: string;
         arr_ars: string;
@@ -143,8 +143,8 @@ const billingRouter = router({
     .query(async ({ ctx }) => {
       const { db } = ctx as unknown as AuthenticatedContext;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw = await db.execute(sql`SELECT plan_code, tenant_count FROM mv_plan_distribution ORDER BY tenant_count DESC`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = ((raw as any).rows ?? []) as Array<{ plan_code: string; tenant_count: string }>;
 
       return rows.map((r) => ({

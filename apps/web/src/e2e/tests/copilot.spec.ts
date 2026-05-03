@@ -238,7 +238,7 @@ test.describe('AI Copilot — página completa /copilot', () => {
 
   test('el panel de chat en /copilot tiene un área de mensajes', async ({ page }) => {
     // At minimum the page should have a message container
-    const messageArea = page.locator('[role="log"], [aria-label*="mensaje"], [aria-label*="chat"]')
+    page.locator('[role="log"], [aria-label*="mensaje"], [aria-label*="chat"]')
       .or(page.locator('.messages, [data-messages]'))
       .first();
     // Soft check — just ensure the page rendered something interactive
@@ -262,7 +262,7 @@ test.describe('AI Copilot — página completa /copilot', () => {
 
   test('prompt sugeridos son visibles en el estado inicial', async ({ page }) => {
     // CopilotPage renders suggested prompts when no messages
-    const suggestions = page.locator('[data-suggested-prompt], button').filter({ hasText: /propied|contact|buscar/i });
+    page.locator('[data-suggested-prompt], button').filter({ hasText: /propied|contact|buscar/i });
     // At least one of the suggested prompts should be visible (if rendered)
     // This is a soft check since suggestions depend on the component state
     const inputArea = page.locator('input').first();

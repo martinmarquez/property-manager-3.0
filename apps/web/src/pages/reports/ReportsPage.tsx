@@ -340,7 +340,7 @@ export default function ReportsPage() {
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <span style={{ fontSize: 36, display: 'block', marginBottom: 12 }}>📊</span>
           <p style={{ fontFamily: F.body, fontSize: 14, color: C.textTertiary }}>
-            No se encontraron reportes para "{search}"
+            No se encontraron reportes para &quot;{search}&quot;
           </p>
         </div>
       )}
