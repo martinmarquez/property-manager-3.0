@@ -49,6 +49,7 @@ export const QUEUE_NAMES = {
   BILLING_STRIPE_WEBHOOK: "billing-stripe-webhook",
   BILLING_MP_WEBHOOK: "billing-mp-webhook",
   BILLING_AFIP_INVOICE: "billing-afip-invoice",
+  BILLING_AFIP_PDF: "billing-afip-pdf",
   BILLING_DUNNING: "billing-dunning",
   BILLING_USAGE_REFRESH: "billing-usage-refresh",
 
@@ -161,6 +162,7 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.BILLING_STRIPE_WEBHOOK]: { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 5  },
   [QUEUE_NAMES.BILLING_MP_WEBHOOK]:     { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 5  },
   [QUEUE_NAMES.BILLING_AFIP_INVOICE]:   { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },
+  [QUEUE_NAMES.BILLING_AFIP_PDF]:       { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
   [QUEUE_NAMES.BILLING_DUNNING]:        { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 2  },
   [QUEUE_NAMES.BILLING_USAGE_REFRESH]:  { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.APPRAISAL_AI_NARRATIVE]: { priority: QUEUE_PRIORITY.MEDIUM, defaultConcurrency: 3  },

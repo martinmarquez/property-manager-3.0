@@ -21,10 +21,12 @@
     "@react-email/render": "^2.0.8",
     "@sentry/node": "^8.0.0",
     "bullmq": "^5.30.0",
+    "bwip-js": "^4.10.1",
     "csv-parse": "^5.6.0",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.4.0",
     "playwright-core": "^1.50.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.5"
   },
   "devDependencies": {
@@ -32,6 +34,8 @@
     "@corredor/config": "workspace:*",
     "@corredor/portals": "workspace:*",
     "@corredor/telemetry": "workspace:*",
+    "@types/bwip-js": "^3.2.3",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",

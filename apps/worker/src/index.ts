@@ -35,7 +35,9 @@ import { BillingUsageRefreshWorker } from './workers/billing-usage-refresh.js';
 import { BillingStripeWebhookWorker } from './workers/billing-stripe-webhook.js';
 import { BillingMPWebhookWorker } from './workers/billing-mp-webhook.js';
 import { BillingAfipInvoiceWorker } from './workers/billing-afip-invoice.js';
+import { createBillingAfipPdfWorker } from './workers/billing-afip-pdf.js';
 import { BillingDunningWorker } from './workers/billing-dunning.js';
+import { createAppraisalNarrativeWorker } from './workers/appraisal-narrative.js';
 import { createAppraisalPdfWorker } from './workers/appraisal-pdf.js';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import type { MvRefreshJobData } from '@corredor/core';
@@ -113,7 +115,21 @@ const billingAfipInvoiceWorker = new BillingAfipInvoiceWorker(redis, databaseUrl
   certificate: process.env['AFIP_CERTIFICATE'] ?? '',
   sandbox: process.env['AFIP_SANDBOX'] !== 'false',
 });
+const billingAfipPdfWorker = createBillingAfipPdfWorker(
+  redis,
+  mailer,
+  process.env['AFIP_CUIT'] ?? '',
+);
+if (!billingAfipPdfWorker) {
+  logger.warn('billing-afip-pdf worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
+}
 const billingDunningWorker = new BillingDunningWorker(redis, databaseUrl);
+
+// Phase G: Appraisal AI narrative worker — Anthropic LLM appraisal narrative generation
+const appraisalNarrativeWorker = createAppraisalNarrativeWorker(redis);
+if (!appraisalNarrativeWorker) {
+  logger.warn('appraisal-narrative worker disabled — ANTHROPIC_API_KEY not set');
+}
 
 // Phase G: Appraisal PDF generation worker — Playwright HTML→PDF, R2 upload, presigned URLs
 const appraisalPdfWorker = createAppraisalPdfWorker(redis);
@@ -127,7 +143,9 @@ const mvRefreshWorker = new MvRefreshWorker(redis, databaseUrl);
 const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'analytics-mv-refresh'];
 if (docGenerateWorker) activeQueues.push('doc-generate');
 if (ragIngestWorker) activeQueues.push('rag-ingest');
+if (appraisalNarrativeWorker) activeQueues.push('appraisal-ai-narrative');
 if (appraisalPdfWorker) activeQueues.push('appraisal-pdf-generate');
+if (billingAfipPdfWorker) activeQueues.push('billing-afip-pdf');
 logger.info('worker ready', { queues: activeQueues });
 
 // Register BullMQ repeatable cron jobs for scheduled MV refresh
@@ -167,6 +185,8 @@ void billingUsageRefreshWorker;
 void billingStripeWebhookWorker;
 void billingMPWebhookWorker;
 void billingAfipInvoiceWorker;
+void billingAfipPdfWorker;
 void billingDunningWorker;
+void appraisalNarrativeWorker;
 void appraisalPdfWorker;
 void mvRefreshWorker;
