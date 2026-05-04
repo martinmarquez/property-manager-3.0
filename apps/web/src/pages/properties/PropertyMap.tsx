@@ -17,11 +17,11 @@ import type { PropertyRow } from '../../routes/properties/-types.js';
 const C = {
   bgBase:       '#070D1A',
   brand:        '#1654d9',
-  brandLight:   '#4669ff',
+  brandLight:   '#5577FF',
   border:       '#1F2D48',
   textPrimary:  '#EFF4FF',
   textSecondary:'#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
   bgRaised:     '#0D1526',
 };
 
@@ -44,7 +44,7 @@ const TILE_URL = 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json';
 
 const STATUS_COLORS: Record<string, string> = {
   active: '#18A659', reserved: '#F59E0B',
-  sold: '#6B7FD7', paused: '#506180', archived: '#3A4E6A',
+  sold: '#6B7FD7', paused: '#6B809E', archived: '#3A4E6A',
 };
 
 const OP_LABELS: Record<string, string> = {
@@ -80,7 +80,7 @@ function buildGeoJSON(rows: PropertyRow[]) {
           coveredAreaM2: r.coveredAreaM2,
           featured: r.featured,
           referenceCode: r.referenceCode,
-          color: STATUS_COLORS[r.status] ?? '#506180',
+          color: STATUS_COLORS[r.status] ?? '#6B809E',
         },
       })),
   };
@@ -241,7 +241,7 @@ export function PropertyMap({ rows, isLoading, polygon, onPolygonChange, onCardC
               </div>
               <div style="font-size:14px;font-weight:600;color:#EFF4FF;margin-bottom:4px;font-family:'DM Mono',monospace">${price}</div>
               <div style="font-size:12px;color:#8DA0C0;margin-bottom:4px">${addr}</div>
-              ${details ? `<div style="font-size:11px;color:#506180">${details}</div>` : ''}
+              ${details ? `<div style="font-size:11px;color:#6B809E">${details}</div>` : ''}
             </div>`;
 
           const popup = new maplibregl.Popup({ offset: 12, closeButton: true, maxWidth: '220px' })

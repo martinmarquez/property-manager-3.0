@@ -9,10 +9,10 @@ const C = {
   bgOverlay:     '#121D33',
   border:        '#1F2D48',
   brand:         '#1654d9',
-  brandLight:    '#4669ff',
+  brandLight:    '#5577FF',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:         '#E83B3B',
   success:       '#18A659',
 };
@@ -38,7 +38,7 @@ const msgs = defineMessages({
 });
 
 const PRESET_COLORS = [
-  '#4669ff', '#18A659', '#E88A14', '#9B59B6',
+  '#5577FF', '#18A659', '#E88A14', '#9B59B6',
   '#E83B3B', '#14B8C8', '#F59E0B', '#EC4899',
 ];
 
@@ -240,7 +240,7 @@ export function PipelineConfigPage() {
         activePipeline.stages.map((s) => ({
           id: s.id,
           name: s.name,
-          color: s.color ?? '#4669ff',
+          color: s.color ?? '#5577FF',
           slaHours: s.slaHours ?? 48,
           kind: (s.kind as StageKind) ?? 'open',
         })),
@@ -305,7 +305,7 @@ export function PipelineConfigPage() {
       {
         id: crypto.randomUUID(),
         name: '',
-        color: PRESET_COLORS[prev.length % PRESET_COLORS.length] ?? '#4669ff',
+        color: PRESET_COLORS[prev.length % PRESET_COLORS.length] ?? '#5577FF',
         slaHours: 48,
         kind: 'open' as StageKind,
       },

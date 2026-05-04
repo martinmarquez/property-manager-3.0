@@ -22,7 +22,7 @@ const C = {
   borderStrong: '#253350',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:    '#E83B3B',
   errorBg:  '#260C0C',
   errorBorder: '#4A1A1A',

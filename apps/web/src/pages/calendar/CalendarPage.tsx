@@ -8,10 +8,10 @@ const C = {
   border:        '#1F2D48',
   borderStrong:  '#253350',
   brand:         '#1654d9',
-  brandLight:    '#4669ff',
+  brandLight:    '#5577FF',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   success:       '#18A659',
   warning:       '#E88A14',
   error:         '#E83B3B',
@@ -25,7 +25,7 @@ const F = {
 
 /* ── Event types ── */
 export const EVENT_TYPES = {
-  visita:      { color: '#4669ff', label: 'Visita' },
+  visita:      { color: '#5577FF', label: 'Visita' },
   llamada:     { color: '#18A659', label: 'Llamada' },
   seguimiento: { color: '#E88A14', label: 'Seguimiento' },
   tasacion:    { color: '#9B59B6', label: 'Tasación' },

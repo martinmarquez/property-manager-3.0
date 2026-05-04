@@ -12,7 +12,7 @@ const C = {
   brand:         '#1654d9',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   success:       '#22C55E',
   warning:       '#F59E0B',
   error:         '#EF4444',

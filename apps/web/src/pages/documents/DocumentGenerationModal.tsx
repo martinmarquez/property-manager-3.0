@@ -21,7 +21,7 @@ const C = {
   dangerSubtle: 'rgba(220,38,38,0.12)',
   textPrimary: '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
 } as const
 
 const F = {

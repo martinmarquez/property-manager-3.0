@@ -18,7 +18,7 @@ const C = {
   border:       '#1F2D48',
   textPrimary:  '#EFF4FF',
   textSecondary:'#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
   brand:        '#1654d9',
 };
 
@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<PropertyStatus, string> = {
   active:   '#18A659',
   reserved: '#F59E0B',
   sold:     '#6B7FD7',
-  paused:   '#506180',
+  paused:   '#6B809E',
   archived: '#3A4E6A',
 };
 
@@ -125,7 +125,7 @@ export function PropertyTable({ rows, isLoading, onRowClick }: PropertyTableProp
         ) : (
           <div style={{ width: 48, height: 36, borderRadius: 4, background: '#162035',
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#506180" strokeWidth="1.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B809E" strokeWidth="1.5">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
@@ -178,7 +178,7 @@ export function PropertyTable({ rows, isLoading, onRowClick }: PropertyTableProp
             <span style={{
               fontFamily: p.hasPricePublic ? "'DM Mono', monospace" : undefined,
               fontSize: p.hasPricePublic ? 13 : 12,
-              color: p.hasPricePublic ? C.textPrimary : '#506180',
+              color: p.hasPricePublic ? C.textPrimary : '#6B809E',
             }}>
               {priceText}
             </span>

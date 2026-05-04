@@ -16,10 +16,10 @@ const C = {
   bgRaised:     '#0D1526',
   border:       '#1F2D48',
   brand:        '#1654d9',
-  brandLight:   '#4669ff',
+  brandLight:   '#5577FF',
   textPrimary:  '#EFF4FF',
   textSecondary:'#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
 };
 
 const messages = defineMessages({

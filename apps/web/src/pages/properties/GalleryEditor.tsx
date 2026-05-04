@@ -12,7 +12,7 @@ const C = {
   brandHover:    '#1244b8',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:         '#EF4444',
   success:       '#22C55E',
   warning:       '#F59E0B',
@@ -792,7 +792,7 @@ function FloorplanIcon() {
 
 function PhotoIcon() {
   return (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#506180" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6B809E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
       <circle cx="8.5" cy="8.5" r="1.5"/>
       <polyline points="21 15 16 10 5 21"/>

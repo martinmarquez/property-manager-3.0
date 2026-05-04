@@ -11,7 +11,8 @@
     "lint": "eslint src --ext .ts,.tsx",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:a11y": "playwright test --grep Accessibility"
   },
   "dependencies": {
     "@corredor/api": "workspace:^",
@@ -44,6 +45,7 @@
     "@corredor/config": "workspace:*",
     "@corredor/core": "workspace:*",
     "@corredor/ui": "workspace:*",
+    "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.49.0",
     "@sentry/vite-plugin": "^2.0.0",
     "@types/react": "^19.0.0",
