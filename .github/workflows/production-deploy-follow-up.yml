@@ -42,8 +42,6 @@ jobs:
 
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          org: ${{ secrets.FLY_ORG }}
 
       - name: Deploy API to Fly.io
         run: cd apps/api && flyctl deploy --remote-only
