@@ -11,8 +11,8 @@
 --
 -- Table name mapping from spec → actual schema:
 --   listing           → property_listing (0004_properties_base.sql)
---   subscription      → billing_subscription (0021_billing.sql)
---   plan              → billing_plan (0021_billing.sql)
+--   subscription      → subscription (0021_billing.sql)
+--   plan              → plan (0021_billing.sql)
 --   inbox_thread      → conversation (0012_inbox_channels.sql)
 --   inbox_message     → message (0012_inbox_channels.sql)
 --   ai_conversation   → copilot_session (0015_phase_f_ai.sql)
@@ -109,7 +109,7 @@ CREATE INDEX IF NOT EXISTS mv_portal_roi_tenant_month
 -- ============================================================================
 -- MV-05: mv_revenue_forecast
 -- MRR, ARR, churn rate, and weighted pipeline value per tenant.
--- Source: billing_subscription, billing_plan, lead, pipeline_stage
+-- Source: subscription, plan, lead, pipeline_stage
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_revenue_forecast AS
@@ -123,8 +123,8 @@ WITH mrr AS (
         ELSE 0
       END
     ) AS mrr_usd
-  FROM billing_subscription bs
-  JOIN billing_plan bp ON bp.code = bs.plan_code
+  FROM subscription bs
+  JOIN plan bp ON bp.code = bs.plan_code
   WHERE bs.status = 'active'
   GROUP BY bs.tenant_id
 ),
@@ -139,7 +139,7 @@ churn AS (
         WHERE created_at < DATE_TRUNC('month', NOW())
       ), 0
     ) AS monthly_churn_rate
-  FROM billing_subscription
+  FROM subscription
   GROUP BY tenant_id
 ),
 pipeline_value AS (
