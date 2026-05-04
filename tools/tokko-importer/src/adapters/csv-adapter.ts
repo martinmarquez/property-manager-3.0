@@ -42,11 +42,9 @@ export function parseCsvProperties(csvPath: string): TokkoProperty[] {
       const currency = (r['Moneda'] ?? r['currency'] ?? 'USD').trim();
       const locationName = r['Barrio/Localidad'] ?? r['location_name'];
 
-      return {
+      const result: TokkoProperty = {
         id,
-        reference_code: r['Código'] ?? r['reference_code'],
         type: { name: r['Tipo'] ?? r['type_name'] ?? '' },
-        address: r['Dirección'] ?? r['address'],
         location: { ...(locationName !== undefined && { name: locationName }) },
         operations: op
           ? [{
@@ -62,14 +60,27 @@ export function parseCsvProperties(csvPath: string): TokkoProperty[] {
         age: parseNum(r['Antigüedad'] ?? r['age']) ?? undefined,
         description: r['Descripción'] ?? r['description'],
         status: r['Estado'] ?? r['status'],
-        created_at: r['Fecha de Alta'] ?? r['created_at'],
-        updated_at: r['Última Modificación'] ?? r['updated_at'],
         deleted: (r['Eliminado'] ?? '').toLowerCase() === 'sí' || (r['Eliminado'] ?? '').toLowerCase() === 'si',
         photos: [],
         videos: [],
         floor_plans: [],
         tags: [],
       };
+
+      // Add optional fields only if they have values
+      const ref = r['Código'] ?? r['reference_code'];
+      if (ref) result.reference_code = ref;
+
+      const address = r['Dirección'] ?? r['address'];
+      if (address) result.address = address;
+
+      const createdAt = r['Fecha de Alta'] ?? r['created_at'];
+      if (createdAt) result.created_at = createdAt;
+
+      const updatedAt = r['Última Modificación'] ?? r['updated_at'];
+      if (updatedAt) result.updated_at = updatedAt;
+
+      return result;
     })
     .filter((p) => p.id > 0);
 }
@@ -84,7 +95,7 @@ export function parseCsvContacts(csvPath: string): TokkoContact[] {
       const id = parseInt(r['ID'] ?? r['id'] ?? '0', 10);
       if (!id) return { id: 0 };
 
-      return {
+      const contact: TokkoContact = {
         id,
         first_name: (r['Nombre'] ?? r['first_name']) ?? null,
         last_name: (r['Apellido'] ?? r['last_name']) ?? null,
@@ -96,9 +107,13 @@ export function parseCsvContacts(csvPath: string): TokkoContact[] {
         notes: (r['Notas'] ?? r['notes']) ?? null,
         birth_date: (r['Fecha de Nacimiento'] ?? r['birth_date']) ?? null,
         country: (r['País'] ?? r['country']) ?? null,
-        created_at: r['Fecha de Alta'] ?? r['created_at'],
         tags: [],
       };
+
+      const createdAt = r['Fecha de Alta'] ?? r['created_at'];
+      if (createdAt) contact.created_at = createdAt;
+
+      return contact;
     })
     .filter((c) => c.id > 0);
 }

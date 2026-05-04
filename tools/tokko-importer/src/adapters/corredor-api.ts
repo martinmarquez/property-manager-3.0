@@ -35,13 +35,17 @@ export class CorredorClient {
     let lastError: CorredorApiError | undefined;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const res = await fetch(`${this.baseUrl}${path}`, {
+      const options: RequestInit = {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`,
         },
-        body: body ? JSON.stringify(body) : undefined,
+      };
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(`${this.baseUrl}${path}`, options);
       });
 
       if (res.ok) return res.json() as Promise<T>;
