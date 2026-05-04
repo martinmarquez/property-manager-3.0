@@ -238,8 +238,8 @@ SELECT
   COUNT(DISTINCT i.id)                               AS inquiry_count,
   COUNT(DISTINCT l.id)                               AS active_listing_count,
   ROUND(
-    COUNT(DISTINCT i.id)::float
-    / NULLIF(COUNT(DISTINCT l.id), 0), 2
+    (COUNT(DISTINCT i.id)::float
+    / NULLIF(COUNT(DISTINCT l.id), 0))::numeric, 2
   )                                                  AS demand_supply_ratio,
   NOW()                                              AS refreshed_at
 FROM inquiry i
@@ -308,10 +308,10 @@ SELECT
     END
   )                                                  AS estimated_time_saved_min,
   ROUND(
-    100.0 * COUNT(DISTINCT ct.id) FILTER (WHERE ct.feedback = 'positive')
-    / NULLIF(COUNT(DISTINCT ct.id) FILTER (WHERE ct.feedback IS NOT NULL), 0), 2
+    (100.0 * COUNT(DISTINCT ct.id) FILTER (WHERE ct.feedback = 'positive')
+    / NULLIF(COUNT(DISTINCT ct.id) FILTER (WHERE ct.feedback IS NOT NULL), 0))::numeric, 2
   )                                                  AS positive_feedback_pct,
-  ROUND(AVG(ct.total_ms) FILTER (WHERE ct.total_ms IS NOT NULL), 2) AS avg_response_ms,
+  ROUND(AVG(ct.total_ms) FILTER (WHERE ct.total_ms IS NOT NULL)::numeric, 2) AS avg_response_ms,
   NOW()                                              AS refreshed_at
 FROM copilot_turn ct
 JOIN copilot_session cs ON cs.id = ct.session_id
@@ -352,20 +352,20 @@ SELECT
            OR first_msg.sent_at > c.sla_first_response_at)
   )                                                  AS first_response_sla_breached,
   ROUND(
-    100.0 * COUNT(DISTINCT c.id) FILTER (
+    (100.0 * COUNT(DISTINCT c.id) FILTER (
       WHERE c.sla_first_response_at IS NOT NULL
         AND first_msg.sent_at IS NOT NULL
         AND first_msg.sent_at <= c.sla_first_response_at
     ) / NULLIF(
       COUNT(DISTINCT c.id) FILTER (WHERE c.sla_first_response_at IS NOT NULL), 0
-    ), 2
+    ))::numeric, 2
   )                                                  AS sla_compliance_rate_pct,
   ROUND(
     AVG(
       EXTRACT(EPOCH FROM (
         COALESCE(first_msg.sent_at, NOW()) - c.created_at
       )) / 60
-    ) FILTER (WHERE c.sla_first_response_at IS NOT NULL), 2
+    ) FILTER (WHERE c.sla_first_response_at IS NOT NULL)::numeric, 2
   )                                                  AS avg_first_reply_min,
   NOW()                                              AS refreshed_at
 FROM conversation c
