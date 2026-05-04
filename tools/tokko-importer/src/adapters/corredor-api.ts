@@ -46,7 +46,6 @@ export class CorredorClient {
         options.body = JSON.stringify(body);
       }
       const res = await fetch(`${this.baseUrl}${path}`, options);
-      });
 
       if (res.ok) return res.json() as Promise<T>;
 
