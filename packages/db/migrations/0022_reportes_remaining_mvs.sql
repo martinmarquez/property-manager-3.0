@@ -116,24 +116,19 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_revenue_forecast AS
 WITH mrr AS (
   SELECT
     bs.tenant_id,
-    SUM(
-      CASE bs.billing_interval
-        WHEN 'monthly' THEN bp.price_usd_monthly
-        WHEN 'annual'  THEN ROUND(bp.price_usd_annual / 12.0, 2)
-        ELSE 0
-      END
-    ) AS mrr_usd
+    SUM(COALESCE(bp.price_usd, 0)) AS mrr_usd
   FROM subscription bs
   JOIN plan bp ON bp.code = bs.plan_code
   WHERE bs.status = 'active'
+    AND bp.is_active = TRUE
   GROUP BY bs.tenant_id
 ),
 churn AS (
   SELECT
     tenant_id,
     COUNT(*) FILTER (
-      WHERE status = 'canceled'
-        AND canceled_at >= DATE_TRUNC('month', NOW())
+      WHERE status = 'cancelled'
+        AND cancelled_at >= DATE_TRUNC('month', NOW())
     )::float / NULLIF(
       COUNT(*) FILTER (
         WHERE created_at < DATE_TRUNC('month', NOW())
@@ -197,7 +192,7 @@ monthly_activity AS (
   SELECT
     tenant_id,
     DATE_TRUNC('month', created_at) AS activity_month
-  FROM billing_subscription
+  FROM subscription
   WHERE status = 'active'
   UNION
   SELECT
