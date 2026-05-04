@@ -1,0 +1,116 @@
+default_platform(:ios)
+
+# ── Shared helpers ────────────────────────────────────────────────────────────
+
+def version_from_package
+  require 'json'
+  JSON.parse(File.read('../package.json'))['version']
+end
+
+# ── iOS ───────────────────────────────────────────────────────────────────────
+
+platform :ios do
+  desc 'Sync code-signing certs from Match (read-only in CI)'
+  lane :certs do
+    app_store_connect_api_key(
+      key_id:        ENV['APP_STORE_CONNECT_API_KEY_ID'],
+      issuer_id:     ENV['APP_STORE_CONNECT_API_ISSUER_ID'],
+      key_content:   ENV['APP_STORE_CONNECT_API_KEY_CONTENT'],
+      is_key_content_base64: true,
+      in_house: false,
+    )
+    match(
+      type:           'appstore',
+      app_identifier: 'ar.corredor.app',
+      git_url:        ENV['MATCH_GIT_URL'],
+      readonly:       true,
+      verbose:        false,
+    )
+  end
+
+  desc 'Build and upload to TestFlight'
+  lane :beta do
+    certs
+
+    increment_build_number(
+      build_number:  ENV.fetch('BUILD_NUMBER', Time.now.strftime('%Y%m%d%H%M')),
+      xcodeproj:     'ios/App/App.xcodeproj',
+    )
+    update_app_version(
+      version_number: version_from_package,
+      xcodeproj:      'ios/App/App.xcodeproj',
+    )
+
+    build_app(
+      workspace:     'ios/App/App.xcworkspace',
+      scheme:        'App',
+      configuration: 'Release',
+      export_method: 'app-store',
+      output_directory: 'build/ios',
+      output_name:      'Corredor.ipa',
+      clean:            true,
+    )
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "Build #{ENV.fetch('GITHUB_SHA', 'local')[0..7]} — #{ENV.fetch('GITHUB_REF_NAME', 'main')}",
+    )
+  end
+
+  desc 'Run unit tests'
+  lane :test do
+    run_tests(
+      workspace: 'ios/App/App.xcworkspace',
+      scheme:    'App',
+      devices:   ['iPhone 16'],
+    )
+  end
+end
+
+# ── Android ───────────────────────────────────────────────────────────────────
+
+platform :android do
+  desc 'Build and deploy AAB to Play Console internal track'
+  lane :beta do
+    # Decode keystore from base64 env var
+    keystore_path = '/tmp/corredor.jks'
+    File.binwrite(keystore_path, Base64.decode64(ENV['ANDROID_KEYSTORE_BASE64']))
+
+    gradle(
+      task:            'bundle',
+      build_type:      'Release',
+      project_dir:     'android',
+      properties: {
+        'android.injected.signing.store.file'     => keystore_path,
+        'android.injected.signing.store.password' => ENV['ANDROID_KEYSTORE_PASSWORD'],
+        'android.injected.signing.key.alias'      => ENV['ANDROID_KEY_ALIAS'],
+        'android.injected.signing.key.password'   => ENV['ANDROID_KEY_PASSWORD'],
+      },
+    )
+
+    # Derive version name from package.json
+    version_name = version_from_package
+    version_code = ENV.fetch('BUILD_NUMBER', Time.now.strftime('%Y%m%d%H%M')).to_i
+
+    upload_to_play_store(
+      package_name:          'ar.corredor.app',
+      track:                 'internal',
+      aab:                   'android/app/build/outputs/bundle/release/app-release.aab',
+      json_key_data:         ENV['PLAY_STORE_JSON_KEY_DATA'],
+      version_name:          version_name,
+      version_code:          version_code,
+      skip_upload_apk:       true,
+      skip_upload_metadata:  true,
+      skip_upload_images:    true,
+      skip_upload_screenshots: true,
+      release_status:        'draft',
+    )
+
+    File.delete(keystore_path) if File.exist?(keystore_path)
+  end
+
+  desc 'Run instrumented tests'
+  lane :test do
+    gradle(task: 'test', project_dir: 'android')
+  end
+end

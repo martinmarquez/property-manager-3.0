@@ -53,6 +53,7 @@ paths = [
     '''packages/db/migrations/.*\.sql''',
     '''packages/db/src/schema/.*\.ts''',
     '''apps/web/src/pages/site/.*\.tsx''',
+    '''infra/k6/seed/.*\.sql''',
   ]
 
 # ── Allowlist ──────────────────────────────────────────────────────────────

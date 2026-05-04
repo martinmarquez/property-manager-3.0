@@ -1,0 +1,100 @@
+name: Mobile — iOS Build + TestFlight
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/web/**'
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-ios.yml'
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: 'Upload to TestFlight'
+        required: false
+        default: 'true'
+        type: boolean
+
+concurrency:
+  group: mobile-ios
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: iOS Build
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web bundle
+        run: pnpm --filter @corredor/web build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
+
+      - name: Install Capacitor CLI
+        run: pnpm --filter @corredor/mobile add -D @capacitor/cli || true
+
+      - name: Bootstrap iOS project
+        run: |
+          cd apps/mobile
+          # Only run cap add ios if ios/ does not exist (not committed, see .gitignore)
+          if [ ! -d ios ]; then
+            pnpm exec cap add ios
+          fi
+          pnpm exec cap sync ios
+        env:
+          CAPACITOR_KEYCHAIN_GROUP: ar.corredor.app
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Install CocoaPods
+        run: |
+          cd apps/mobile/ios/App
+          pod install --repo-update
+
+      - name: Run Fastlane beta lane
+        run: bundle exec fastlane ios beta
+        working-directory: apps/mobile
+        env:
+          APP_STORE_CONNECT_API_KEY_ID:       ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID:    ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT:  ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_GIT_URL:                      ${{ secrets.IOS_MATCH_GIT_URL }}
+          MATCH_PASSWORD:                     ${{ secrets.IOS_MATCH_PASSWORD }}
+          APPLE_ID:                           ${{ secrets.APPLE_ID }}
+          APP_STORE_CONNECT_TEAM_ID:          ${{ secrets.APP_STORE_CONNECT_TEAM_ID }}
+          DEVELOPER_PORTAL_TEAM_ID:           ${{ secrets.DEVELOPER_PORTAL_TEAM_ID }}
+          BUILD_NUMBER:                       ${{ github.run_number }}
+          GITHUB_SHA:                         ${{ github.sha }}
+          GITHUB_REF_NAME:                    ${{ github.ref_name }}
+          # Only upload when on main push or explicitly requested
+          SKIP_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_to_testflight == 'false' && 'true' || 'false' }}
+
+      - name: Upload IPA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-${{ github.sha }}
+          path: apps/mobile/build/ios/Corredor.ipa
+          retention-days: 30

@@ -85,6 +85,10 @@ export const ANALYTICS_EVENTS = {
   BILLING_CHECKOUT_STARTED:    'billing.checkout_started',
   BILLING_CHECKOUT_COMPLETED:  'billing.checkout_completed',
   BILLING_PAYMENT_FAILED:      'billing.payment_failed',
+  // Phase H — Referral program
+  REFERRAL_LINK_GENERATED:     'referral.link_generated',
+  REFERRAL_LINK_CLICKED:       'referral.link_clicked',
+  REFERRAL_SIGNUP_ATTRIBUTED:  'referral.signup_attributed',
 } as const;
 
 // ---------------------------------------------------------------------------
