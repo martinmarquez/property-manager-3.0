@@ -23,7 +23,7 @@
     "@types/node": "^22.0.0",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
-    "turbo": "^2.3.3",
+    "turbo": "^2.9.8",
     "typescript": "^5.7.0"
   },
   "pnpm": {
