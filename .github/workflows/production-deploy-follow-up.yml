@@ -1,0 +1,25 @@
+name: Production Deploy - Follow-up
+
+on:
+  workflow_run:
+    workflows:
+      - Production Deploy
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Deploy Step
+        run: echo "Deploying to production"
