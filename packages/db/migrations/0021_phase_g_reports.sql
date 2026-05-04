@@ -113,7 +113,7 @@ LEFT JOIN LATERAL (
   SELECT m.created_at
   FROM message m
   WHERE m.conversation_id = conv.id
-    AND m.direction = 'outbound'
+    AND m.direction = 'out'
   ORDER BY m.created_at ASC
   LIMIT 1
 ) first_reply ON true
