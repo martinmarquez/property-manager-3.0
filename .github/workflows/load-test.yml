@@ -36,7 +36,7 @@ jobs:
     if: ${{ inputs.seed_data == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Seed 1M listings + 100k contacts
         run: psql "$DATABASE_URL" -f infra/k6/seed/seed.sql
@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Start InfluxDB + Grafana
         run: docker compose -f infra/k6/docker-compose.yml up -d influxdb grafana
