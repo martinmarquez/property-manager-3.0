@@ -20,7 +20,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@formatjs/cli": "^6.14.2",
-    "@formatjs/intl": "^4.1.6",
+    "@formatjs/intl": "^4.1.8",
     "@tanstack/react-query": "^5.62.0",
     "@tanstack/react-query-devtools": "^5",
     "@tanstack/react-router": "^1.79.0",
