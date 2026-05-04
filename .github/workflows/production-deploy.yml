@@ -52,7 +52,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_RELEASE: ${{ github.sha }}
 
-      - name: Upload source maps — API
+      - name: Upload source maps - API
         if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
         run: |
           pnpm dlx @sentry/cli sourcemaps inject apps/api/dist
@@ -66,7 +66,7 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
-      - name: Upload source maps — Worker
+      - name: Upload source maps - Worker
         if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
         run: |
           pnpm dlx @sentry/cli sourcemaps inject apps/worker/dist
@@ -148,7 +148,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_SITE }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
 
-      - name: Deploy Tenant Sites (Cloudflare Pages — Next.js ISR)
+      - name: Deploy Tenant Sites (Cloudflare Pages - Next.js ISR)
         # Phase G: multi-tenant website builder output (apps/tenant-site).
         # Requires: CLOUDFLARE_TENANT_SITES_PROJECT_NAME secret set to "corredor-tenant-sites".
         # One-time bootstrap: wrangler pages project create corredor-tenant-sites
