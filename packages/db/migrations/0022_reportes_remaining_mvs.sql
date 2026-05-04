@@ -198,8 +198,8 @@ monthly_activity AS (
   SELECT
     tenant_id,
     DATE_TRUNC('month', updated_at)
-  FROM billing_subscription
-  WHERE status = 'canceled'
+  FROM subscription
+  WHERE status = 'cancelled'
     AND updated_at IS NOT NULL
 )
 SELECT

@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #FFFFFF;
+  --bg-subtle: #F8FAFC;
+  --bg-muted: #F1F5F9;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-inverse: #FFFFFF;
+}
+
+.dark {
+  --bg-base: #080D1B;
+  --bg-subtle: #0D1526;
+  --bg-muted: #131E33;
+  --text-primary: #EFF4FF;
+  --text-secondary: #8DA0C0;
+  --text-tertiary: #6B809E;
+  --text-inverse: #080D1B;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-base text-ink font-body text-body-md;
+  }
+}
+
+@layer components {
+  .section-padding {
+    @apply py-20 md:py-28 lg:py-32;
+  }
+
+  .section-container {
+    @apply mx-auto max-w-content px-5 sm:px-8;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-body font-semibold
+           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-brand-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-600 text-white px-6 py-3
+           hover:bg-brand-500 hover:shadow-brand active:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply btn border border-border bg-surface-base text-ink px-6 py-3
+           hover:bg-surface-subtle hover:border-brand-400 active:bg-surface-muted;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-secondary px-4 py-2
+           hover:text-ink hover:bg-surface-subtle;
+  }
+
+  .btn-lg {
+    @apply text-body-lg px-8 py-4 rounded-xl;
+  }
+
+  .btn-sm {
+    @apply text-body-sm px-4 py-2;
+  }
+
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(22,84,217,0.15) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .hero-glow {
+    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(22,84,217,0.20) 0%, transparent 70%);
+  }
+
+  .glass-nav {
+    @apply backdrop-blur-xl;
+    background: rgba(255,255,255,0.82);
+  }
+
+  .dark .glass-nav {
+    background: rgba(8,13,27,0.85);
+  }
+
+  .screenshot-tilt {
+    transform: perspective(1200px) rotateX(4deg) rotateY(-2deg);
+  }
+}
+
+@layer utilities {
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

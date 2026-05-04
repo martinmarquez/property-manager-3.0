@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Corredor — CRM inmobiliario con IA para Argentina",
+    "description": "Gestioná propiedades, leads y operaciones desde un solo lugar. Copiloto IA, portal de propietarios e integración con portales argentinos."
+  },
+  "nav": {
+    "product": "Producto",
+    "pricing": "Precios",
+    "blog": "Blog",
+    "about": "Empresa",
+    "login": "Iniciar sesión",
+    "cta": "Empezar gratis",
+    "menu": "Menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "hero": {
+    "badge": "Nuevo → Copiloto IA incluido",
+    "title": "El CRM inmobiliario que\ntu equipo va a usar",
+    "subtitle": "Propiedades, leads, contratos y cobros en un solo lugar — con un copiloto de IA que trabaja mientras dormís.",
+    "cta": "Empezar gratis",
+    "demo": "Ver demo",
+    "trust": "Usado por +200 corredores en Argentina"
+  },
+  "features": {
+    "badge": "18 módulos integrados",
+    "title": "Todo lo que necesitás, nada que sobre",
+    "subtitle": "Cada módulo resuelve un problema real de la operación diaria de una inmobiliaria argentina.",
+    "modules": {
+      "properties": { "title": "Propiedades", "desc": "Fichas completas con fotos, planos, video-tour y geolocalización." },
+      "contacts": { "title": "Contactos", "desc": "CRM unificado de propietarios, inquilinos, compradores y colegas." },
+      "pipeline": { "title": "Pipeline de ventas", "desc": "Kanban visual para seguir cada oportunidad de venta o alquiler." },
+      "inbox": { "title": "Bandeja unificada", "desc": "WhatsApp, email y portales en una sola bandeja con asignación automática." },
+      "tasks": { "title": "Tareas", "desc": "Asigná y seguí tareas del equipo con fechas límite y prioridades." },
+      "showings": { "title": "Visitas", "desc": "Agendá visitas, confirmá asistencia y registrá feedback al instante." },
+      "contracts": { "title": "Contratos", "desc": "Generá contratos digitales con firma electrónica integrada." },
+      "billing": { "title": "Cobros y expensas", "desc": "Liquidaciones automáticas, recibos y seguimiento de pagos." },
+      "ownerPortal": { "title": "Portal propietarios", "desc": "Cada propietario ve sus propiedades, cobros y documentos online." },
+      "tenantPortal": { "title": "Portal inquilinos", "desc": "Reclamos, recibos de pago y documentos para cada inquilino." },
+      "analytics": { "title": "Analíticas", "desc": "Dashboards en tiempo real de ventas, ocupación y rendimiento del equipo." },
+      "portals": { "title": "Portales", "desc": "Publicación automática en ZonaProp, Argenprop, Mercado Libre y más." },
+      "website": { "title": "Sitio web", "desc": "Web propia con buscador de propiedades, SEO optimizado y tu marca." },
+      "documents": { "title": "Documentos", "desc": "Repositorio central de escrituras, boletos, garantías y más." },
+      "copilot": { "title": "Copiloto IA", "desc": "Respuestas automáticas, resúmenes de leads y recomendaciones inteligentes." },
+      "reports": { "title": "Reportes", "desc": "Exportá reportes personalizados en PDF y Excel para propietarios." },
+      "teams": { "title": "Equipos", "desc": "Roles, permisos y métricas por agente, sucursal o franquicia." },
+      "integrations": { "title": "Integraciones", "desc": "API abierta y conectores con Tokko, Zonaprop, Google y WhatsApp." }
+    }
+  },
+  "migration": {
+    "title": "Migrar es más fácil de lo que pensás",
+    "subtitle": "Pasá de tu sistema actual a Corredor en 3 pasos simples.",
+    "steps": {
+      "export": { "title": "Exportá tus datos", "desc": "Descargá un CSV desde tu CRM actual o mandanos el archivo." },
+      "import": { "title": "Importamos todo", "desc": "Nuestro equipo mapea y migra propiedades, contactos e historial." },
+      "work": { "title": "Empezá a trabajar", "desc": "Tu equipo arranca con todos los datos listos desde el día uno." }
+    },
+    "cta": "Agendar migración gratuita",
+    "ctaSecondary": "Ver guía de migración"
+  },
+  "testimonials": {
+    "title": "Lo que dicen nuestros clientes",
+    "items": [
+      {
+        "quote": "Corredor nos ahorró 15 horas semanales en tareas administrativas. El copiloto de IA es un game-changer para responder consultas de portales.",
+        "name": "María González",
+        "role": "Directora",
+        "company": "González Propiedades"
+      },
+      {
+        "quote": "Migramos desde Tokko en 48 horas. Lo que más nos sorprendió fue que no perdimos ni un solo dato del historial de clientes.",
+        "name": "Carlos Benedetti",
+        "role": "Broker",
+        "company": "Benedetti & Asociados"
+      },
+      {
+        "quote": "El portal de propietarios eliminó el 80% de las llamadas que recibíamos pidiendo estados de cuenta. Los propietarios están encantados.",
+        "name": "Luciana Martínez",
+        "role": "Gerente de Administración",
+        "company": "Martínez Inmobiliaria"
+      }
+    ]
+  },
+  "cta": {
+    "badge": "Empezá hoy",
+    "title": "Tu inmobiliaria merece herramientas de primer nivel",
+    "subtitle": "Unite a +200 corredores que ya gestionan su operación con Corredor.",
+    "primary": "Empezar gratis",
+    "secondary": "Agendar demo",
+    "social": "{count} corredores activos"
+  },
+  "pricing": {
+    "badge": "Precios simples",
+    "title": "Un plan para cada inmobiliaria",
+    "subtitle": "Sin sorpresas, sin contratos anuales obligatorios. Pagá en pesos o en dólares.",
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "annualDiscount": "Ahorrá 20%",
+    "currency": { "ars": "ARS", "usd": "USD" },
+    "perMonth": "/mes",
+    "bnaRate": "Tipo de cambio BNA: {rate} ARS/USD al {date}",
+    "popular": "Más elegido",
+    "enterprise": "Personalizado",
+    "contactSales": "Contactar ventas",
+    "startTrial": "Probar gratis",
+    "startPlan": "Empezar",
+    "features": "Incluye:",
+    "plans": {
+      "trial": {
+        "name": "Prueba",
+        "price": "0",
+        "desc": "14 días para probarlo todo, sin tarjeta.",
+        "features": ["Todas las funciones", "Hasta 50 propiedades", "1 usuario", "Soporte por email"]
+      },
+      "solo": {
+        "name": "Solo",
+        "price": "29",
+        "desc": "Para corredores independientes.",
+        "features": ["200 propiedades", "1 usuario", "Copiloto IA básico", "Publicación en 2 portales", "Soporte por email"]
+      },
+      "agency": {
+        "name": "Agencia",
+        "price": "79",
+        "desc": "Para equipos de hasta 10 personas.",
+        "features": ["Propiedades ilimitadas", "Hasta 10 usuarios", "Copiloto IA avanzado", "Todos los portales", "Portal propietarios", "Portal inquilinos", "Soporte prioritario"]
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "149",
+        "desc": "Para inmobiliarias con múltiples sucursales.",
+        "features": ["Todo de Agencia", "Usuarios ilimitados", "Multi-sucursal", "API completa", "Reportes personalizados", "Gerente de cuenta dedicado", "SLA 99.9%"]
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "custom",
+        "desc": "Para franquicias y operaciones a gran escala.",
+        "features": ["Todo de Pro", "SSO / SAML", "Auditoría avanzada", "Despliegue on-premise", "Integraciones personalizadas", "Soporte 24/7"]
+      }
+    },
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "items": [
+        {
+          "q": "¿Puedo cambiar de plan en cualquier momento?",
+          "a": "Sí, podés subir o bajar de plan cuando quieras. El cambio se aplica de forma prorrateada en tu próxima factura."
+        },
+        {
+          "q": "¿Qué pasa cuando termina la prueba gratuita?",
+          "a": "Tu cuenta pasa a modo lectura. No perdés ningún dato — simplemente elegís un plan para seguir operando."
+        },
+        {
+          "q": "¿Aceptan pagos en pesos argentinos?",
+          "a": "Sí, podés pagar con tarjeta de crédito o débito en ARS, o por transferencia bancaria. También aceptamos USD para empresas que prefieran facturar en dólares."
+        },
+        {
+          "q": "¿Incluyen migración de datos?",
+          "a": "Sí, para planes Agencia, Pro y Enterprise incluimos migración gratuita asistida. Para el plan Solo, ofrecemos herramientas de auto-importación."
+        },
+        {
+          "q": "¿Hay descuento para colegios de corredores?",
+          "a": "Sí, ofrecemos precios especiales para colegios profesionales y cámaras inmobiliarias. Contactanos para más detalles."
+        }
+      ]
+    },
+    "compare": {
+      "title": "Comparar planes",
+      "categories": {
+        "core": "Funciones principales",
+        "ai": "IA y automatización",
+        "support": "Soporte"
+      }
+    }
+  },
+  "about": {
+    "badge": "Nuestra historia",
+    "title": "Tecnología hecha para la inmobiliaria argentina",
+    "subtitle": "Corredor nació de la frustración de usar herramientas genéricas que no entienden la operación local.",
+    "mission": {
+      "title": "Nuestra misión",
+      "text": "Darle a cada corredor inmobiliario argentino las herramientas que antes solo tenían las grandes franquicias internacionales — pero pensadas para la realidad local, con pesos, portales argentinos y normativa vigente."
+    },
+    "story": {
+      "title": "¿Por qué Corredor?",
+      "text": "Después de años usando CRMs genéricos y planillas de Excel, un grupo de corredores y desarrolladores decidió construir la herramienta que les hubiera gustado tener desde el día uno. Corredor es el resultado de cientos de horas de conversaciones con inmobiliarias de todo el país."
+    },
+    "team": {
+      "title": "El equipo",
+      "members": [
+        { "name": "Martín Márquez", "role": "CEO & Co-founder", "initials": "MM" },
+        { "name": "Sofía Delgado", "role": "CTO & Co-founder", "initials": "SD" },
+        { "name": "Federico Ruiz", "role": "Head of Product", "initials": "FR" },
+        { "name": "Valentina Herrera", "role": "Head of Design", "initials": "VH" },
+        { "name": "Nicolás Paz", "role": "Head of Sales", "initials": "NP" }
+      ]
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Novedades, guías y mejores prácticas para la inmobiliaria moderna.",
+    "readMore": "Leer más",
+    "readTime": "{min} min de lectura",
+    "featured": "Destacado",
+    "allPosts": "Todos los artículos",
+    "categories": {
+      "product": "Producto",
+      "guides": "Guías",
+      "news": "Novedades",
+      "market": "Mercado"
+    }
+  },
+  "footer": {
+    "tagline": "El CRM inmobiliario con IA para Argentina.",
+    "product": {
+      "title": "Producto",
+      "features": "Funcionalidades",
+      "pricing": "Precios",
+      "tour": "Tour del producto",
+      "integrations": "Integraciones",
+      "changelog": "Novedades"
+    },
+    "company": {
+      "title": "Empresa",
+      "about": "Sobre nosotros",
+      "blog": "Blog",
+      "careers": "Trabajá con nosotros",
+      "contact": "Contacto"
+    },
+    "resources": {
+      "title": "Recursos",
+      "docs": "Documentación",
+      "api": "API",
+      "guides": "Guías",
+      "migration": "Migración"
+    },
+    "legal": {
+      "title": "Legal",
+      "terms": "Términos",
+      "privacy": "Privacidad",
+      "cookies": "Cookies"
+    },
+    "madeIn": "Hecho en Argentina 🇦🇷",
+    "rights": "© {year} Corredor. Todos los derechos reservados."
+  },
+  "tour": {
+    "badge": "Tour del producto",
+    "title": "Conocé Corredor por dentro",
+    "subtitle": "Recorré los módulos principales y descubrí cómo Corredor simplifica tu operación diaria.",
+    "sections": {
+      "properties": {
+        "title": "Gestión de propiedades",
+        "desc": "Fichas completas con fotos HD, planos, video-tours y geolocalización precisa. Publicación automática en los principales portales argentinos.",
+        "features": ["Fotos HD y video-tours", "Geolocalización con mapa", "Publicación multi-portal", "Historial de cambios"]
+      },
+      "pipeline": {
+        "title": "Pipeline de ventas",
+        "desc": "Tablero Kanban visual para seguir cada oportunidad desde el primer contacto hasta el cierre. Nunca más pierdas un lead.",
+        "features": ["Kanban drag & drop", "Seguimiento automático", "Alertas de inactividad", "Métricas de conversión"]
+      },
+      "inbox": {
+        "title": "Bandeja unificada",
+        "desc": "WhatsApp, email, portales — todo en una sola bandeja. Asignación automática al agente correcto con respuestas sugeridas por IA.",
+        "features": ["WhatsApp Business API", "Email integrado", "Auto-asignación", "Respuestas IA"]
+      },
+      "copilot": {
+        "title": "Copiloto IA",
+        "desc": "Tu asistente inteligente que responde consultas, genera descripciones de propiedades y resume conversaciones automáticamente.",
+        "features": ["Respuestas automáticas", "Generación de textos", "Resumen de leads", "Recomendaciones"]
+      },
+      "billing": {
+        "title": "Cobros y liquidaciones",
+        "desc": "Automatizá liquidaciones de alquileres, generá recibos y llevá el control de pagos con integración bancaria.",
+        "features": ["Liquidaciones automáticas", "Recibos digitales", "Control de pagos", "Integración bancaria"]
+      }
+    },
+    "cta": "Empezar gratis"
+  }
+}
