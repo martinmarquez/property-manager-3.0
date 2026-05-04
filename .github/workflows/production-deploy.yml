@@ -7,11 +7,23 @@ on:
 
 jobs:
   ci:
+    name: CI Gate
     runs-on: ubuntu-latest
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
     steps:
-      - run: echo "CI"
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo typecheck
 
   deploy:
+    name: Deploy to Production
     needs: ci
     runs-on: ubuntu-latest
     steps:
