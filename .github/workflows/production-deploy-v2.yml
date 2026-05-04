@@ -1,0 +1,165 @@
+name: 'Production Deploy'
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm turbo typecheck
+
+      - name: Lint
+        run: pnpm turbo lint
+
+      - name: Test
+        run: pnpm turbo test
+        env:
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+
+      - name: Build
+        run: pnpm turbo build
+        env:
+          # Web: @sentry/vite-plugin uploads source maps during build when SENTRY_AUTH_TOKEN is set
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+
+      - name: Upload source maps - API
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
+        run: |
+          pnpm dlx @sentry/cli sourcemaps inject apps/api/dist
+          pnpm dlx @sentry/cli sourcemaps upload \
+            --release "$GITHUB_SHA" \
+            --dist "api" \
+            apps/api/dist
+          find apps/api/dist -name "*.map" -delete
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+      - name: Upload source maps - Worker
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
+        run: |
+          pnpm dlx @sentry/cli sourcemaps inject apps/worker/dist
+          pnpm dlx @sentry/cli sourcemaps upload \
+            --release "$GITHUB_SHA" \
+            --dist "worker" \
+            apps/worker/dist
+          find apps/worker/dist -name "*.map" -delete
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+  deploy:
+    name: Deploy to Production
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Drizzle migrations (production)
+        run: pnpm --filter @corredor/db migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+
+      - name: Deploy API
+        run: flyctl deploy --config infra/fly/api.fly.toml --remote-only --wait-timeout 300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy Worker
+        run: flyctl deploy --config infra/fly/worker.fly.toml --remote-only --wait-timeout 300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy Web (Cloudflare Pages)
+        run: pnpm --filter @corredor/web build && pnpm dlx wrangler pages deploy apps/web/dist --project-name corredor-web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
+          # Pass Sentry vars so @sentry/vite-plugin uploads maps during this build too
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+
+      - name: Deploy Admin (Cloudflare Pages)
+        run: pnpm --filter @corredor/admin build && pnpm dlx wrangler pages deploy apps/admin/dist --project-name corredor-admin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
+
+      - name: Deploy Site (Vercel)
+        run: |
+          cd apps/site
+          pnpm dlx vercel pull --yes --environment=production --token="${VERCEL_TOKEN}"
+          pnpm dlx vercel build --prod --token="${VERCEL_TOKEN}"
+          pnpm dlx vercel deploy --prebuilt --prod --token="${VERCEL_TOKEN}"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_SITE }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
+
+      - name: Deploy Tenant Sites (Cloudflare Pages - Next.js ISR)
+        # Phase G: multi-tenant website builder output (apps/tenant-site).
+        # Requires: CLOUDFLARE_TENANT_SITES_PROJECT_NAME secret set to "corredor-tenant-sites".
+        # One-time bootstrap: wrangler pages project create corredor-tenant-sites
+        if: ${{ secrets.CLOUDFLARE_TENANT_SITES_PROJECT_NAME != '' }}
+        run: |
+          pnpm --filter @corredor/tenant-site build
+          pnpm dlx wrangler pages deploy .vercel/output/static \
+            --project-name "$CLOUDFLARE_TENANT_SITES_PROJECT_NAME" \
+            --commit-hash "${{ github.sha }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_TENANT_SITES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_TENANT_SITES_PROJECT_NAME }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
