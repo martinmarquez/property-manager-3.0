@@ -65,6 +65,7 @@ jobs:
 
   deploy:
     name: Deploy to Production
+    needs: ci
     runs-on: ubuntu-latest
 
     steps:
