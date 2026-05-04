@@ -7,7 +7,7 @@ import { createUnzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { TokkoProperty, TokkoContact } from '../types.js';
+import type { TokkoProperty, TokkoPropertyPhoto, TokkoContact } from '../types.js';
 
 interface CsvRow {
   [key: string]: string;
@@ -54,12 +54,12 @@ export function parseCsvProperties(csvPath: string): TokkoProperty[] {
               prices: price !== null ? [{ price, currency, period: null }] : [],
             }]
           : [],
-        surface_total: parseNum(r['Superficie Total'] ?? r['surface_total']) ?? undefined,
-        surface_covered: parseNum(r['Superficie Cubierta'] ?? r['surface_covered']) ?? undefined,
-        rooms: parseNum(r['Ambientes'] ?? r['rooms']) ?? undefined,
-        bedrooms: parseNum(r['Dormitorios'] ?? r['bedrooms']) ?? undefined,
-        bathrooms: parseNum(r['Baños'] ?? r['bathrooms']) ?? undefined,
-        age: parseNum(r['Antigüedad'] ?? r['age']) ?? undefined,
+        surface_total: parseNum(r['Superficie Total'] ?? r['surface_total']) ?? null,
+        surface_covered: parseNum(r['Superficie Cubierta'] ?? r['surface_covered']) ?? null,
+        rooms: parseNum(r['Ambientes'] ?? r['rooms']) ?? null,
+        bedrooms: parseNum(r['Dormitorios'] ?? r['bedrooms']) ?? null,
+        bathrooms: parseNum(r['Baños'] ?? r['bathrooms']) ?? null,
+        age: parseNum(r['Antigüedad'] ?? r['age']) ?? null,
         description: r['Descripción'] ?? r['description'],
         status: r['Estado'] ?? r['status'],
         ...(r['Fecha de Alta'] ?? r['created_at'] ? { created_at: r['Fecha de Alta'] ?? r['created_at'] } : {}),
