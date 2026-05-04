@@ -68,8 +68,8 @@ CREATE INDEX IF NOT EXISTS mv_listing_performance_geo
 -- ============================================================================
 -- MV-04: mv_portal_roi
 -- Per-portal leads vs publications — portal ROI signal.
--- Source: analytics_event (portal events with portal_id in properties JSONB)
--- Note: portal_lead table not yet in schema; using analytics_event approach.
+-- Source: analytics_events (portal events with portal_id in properties JSONB)
+-- Note: portal_lead table not yet in schema; using analytics_events approach.
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_portal_roi AS
@@ -91,7 +91,7 @@ SELECT
       ), 4
   )                                                   AS leads_per_listing,
   NOW()                                               AS refreshed_at
-FROM analytics_event ae
+FROM analytics_events ae
 WHERE ae.event_type IN ('portal.lead_received', 'portal.property_synced')
   AND ae.properties->>'portal_id' IS NOT NULL
 GROUP BY

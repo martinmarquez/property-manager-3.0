@@ -6,7 +6,7 @@
 -- ============================================================================
 -- MV-02: mv_listing_performance
 -- Per-property listing KPIs: views, inquiries, days on market, price changes.
--- Source: property, property_listing, analytics_event, property_history
+-- Source: property, property_listing, analytics_events, property_history
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_listing_performance AS
@@ -38,7 +38,7 @@ LEFT JOIN LATERAL (
 ) pl ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'property.viewed'
@@ -46,7 +46,7 @@ LEFT JOIN LATERAL (
 ) views ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'property.lead_generated'
@@ -54,7 +54,7 @@ LEFT JOIN LATERAL (
 ) inquiries ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'property.price_changed'
@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS mv_listing_performance_status
 -- ============================================================================
 -- MV-04: mv_portal_roi
 -- Per-portal ROI: publications, leads received, sync errors, cost per lead.
--- Source: portal_connection, property_portal_publication, analytics_event
+-- Source: portal_connection, property_portal_publication, analytics_events
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_portal_roi AS
@@ -97,7 +97,7 @@ LEFT JOIN property_portal_publication ppp
   AND ppp.status = 'published'
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = pc.tenant_id
     AND event_type = 'portal.lead_received'
     AND properties->>'portal_id' = pc.id::text
@@ -203,7 +203,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS mv_revenue_forecast_pk
 -- ============================================================================
 -- MV-06: mv_retention_cohort
 -- Monthly cohort retention: contacts created in month M, active in month M+N.
--- Source: contact, analytics_event
+-- Source: contact, analytics_events
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_retention_cohort AS
@@ -222,7 +222,7 @@ FROM contact c
 CROSS JOIN LATERAL (
   SELECT generate_series(0, 11) AS month_offset
 ) months
-LEFT JOIN analytics_event ae
+LEFT JOIN analytics_events ae
   ON ae.tenant_id = c.tenant_id
   AND ae.entity_id = c.id::text
   AND ae.entity_type = 'contact'
@@ -239,7 +239,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS mv_retention_cohort_pk
 -- ============================================================================
 -- MV-07: mv_zone_heatmap
 -- Geographic demand heatmap: inquiry/lead density by lat/lng grid cell.
--- Source: property, analytics_event (inquiries + leads)
+-- Source: property, analytics_events (inquiries + leads)
 -- ============================================================================
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_zone_heatmap AS
@@ -263,7 +263,7 @@ LEFT JOIN LATERAL (
 ) pl ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'property.viewed'
@@ -271,7 +271,7 @@ LEFT JOIN LATERAL (
 ) views ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'property.lead_generated'
@@ -279,7 +279,7 @@ LEFT JOIN LATERAL (
 ) inquiries ON true
 LEFT JOIN LATERAL (
   SELECT COUNT(*)::int AS cnt
-  FROM analytics_event
+  FROM analytics_events
   WHERE tenant_id = p.tenant_id
     AND entity_id = p.id::text
     AND event_type = 'lead.created'
