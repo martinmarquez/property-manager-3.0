@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS report_share_link (
 );
 
 CREATE INDEX IF NOT EXISTS idx_share_link_token
-  ON report_share_link (token) WHERE expires_at > now();
+  ON report_share_link (token);
 CREATE INDEX IF NOT EXISTS idx_share_link_tenant
   ON report_share_link (tenant_id, report_slug);
 
