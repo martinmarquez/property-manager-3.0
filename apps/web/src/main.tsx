@@ -92,6 +92,9 @@ import CustomerAcquisitionView from './pages/reports/views/CustomerAcquisitionVi
 import AppraisalsPage from './pages/appraisals/AppraisalsPage.js';
 import AppraisalWizardPage from './pages/appraisals/AppraisalWizardPage.js';
 
+// ─── Growth / Analytics dashboard ────────────────────────────────────────────
+import { GrowthDashboardPage } from './pages/analytics/GrowthDashboardPage.js';
+
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
   dsn: import.meta.env.VITE_SENTRY_DSN ?? '',
@@ -612,7 +615,7 @@ const notFoundRoute = createRoute({
           {intl.formatMessage(notFoundMessages.title)}
         </span>
         <p style={{ color: '#8DA0C0', margin: 0 }}>{intl.formatMessage(notFoundMessages.message)}</p>
-        <a href="/" style={{ color: '#4669ff', textDecoration: 'none', fontSize: '0.875rem' }}>
+        <a href="/" style={{ color: '#5577FF', textDecoration: 'none', fontSize: '0.875rem' }}>
           {intl.formatMessage(notFoundMessages.back)}
         </a>
       </div>

@@ -25,10 +25,10 @@ const C = {
   bgRaised:     '#0D1526',
   border:       '#1F2D48',
   brand:        '#1654d9',
-  brandLight:   '#4669ff',
+  brandLight:   '#5577FF',
   textPrimary:  '#EFF4FF',
   textSecondary:'#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
 };
 
 const messages = defineMessages({
@@ -242,7 +242,7 @@ function Divider() {
 
 const STATUS_COLORS: Record<PropertyStatus, string> = {
   active: '#18A659', reserved: '#F59E0B',
-  sold: '#6B7FD7', paused: '#506180', archived: '#3A4E6A',
+  sold: '#6B7FD7', paused: '#6B809E', archived: '#3A4E6A',
 };
 
 /* ── Main component ── */
@@ -262,7 +262,7 @@ export function FilterPanel({ open, filter, onChange, onClear, onClose }: Filter
     { value: 'active',   label: intl.formatMessage(messages.statusActive),   color: '#18A659' },
     { value: 'reserved', label: intl.formatMessage(messages.statusReserved), color: '#F59E0B' },
     { value: 'sold',     label: intl.formatMessage(messages.statusSold),     color: '#6B7FD7' },
-    { value: 'paused',   label: intl.formatMessage(messages.statusPaused),   color: '#506180' },
+    { value: 'paused',   label: intl.formatMessage(messages.statusPaused),   color: '#6B809E' },
     { value: 'archived', label: intl.formatMessage(messages.statusArchived), color: '#3A4E6A' },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [intl.locale]);

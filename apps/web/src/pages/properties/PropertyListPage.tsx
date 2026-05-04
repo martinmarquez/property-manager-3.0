@@ -33,7 +33,7 @@ const C = {
   brand:        '#1654d9',
   textPrimary:  '#EFF4FF',
   textSecondary:'#8DA0C0',
-  textTertiary: '#506180',
+  textTertiary: '#6B809E',
 };
 
 const F = {
@@ -208,7 +208,7 @@ export function PropertyListPage() {
                 padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500,
                 background: activeFilterCount > 0 ? `${C.brand}20` : C.bgRaised,
                 border: `1px solid ${activeFilterCount > 0 ? C.brand : C.border}`,
-                color: activeFilterCount > 0 ? '#4669ff' : C.textSecondary,
+                color: activeFilterCount > 0 ? '#5577FF' : C.textSecondary,
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >

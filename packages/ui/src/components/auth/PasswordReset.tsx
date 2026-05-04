@@ -17,7 +17,7 @@ const C = {
   border:    '#1F2D48',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:    '#E83B3B',
   errorBg:  '#260C0C',
   errorBorder: '#4A1A1A',
@@ -224,7 +224,7 @@ export function PasswordResetNew({ onSubmit, onLogin, error: serverError }: Pass
     : /[A-Z]/.test(password) && /[0-9]/.test(password) ? 4 : 3;
 
   const strengthLabel = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'][strength];
-  const strengthColor = ['', '#E83B3B', '#E88A14', '#4669ff', C.success][strength];
+  const strengthColor = ['', '#E83B3B', '#E88A14', '#5577FF', C.success][strength];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -36,7 +36,14 @@ jobs:
         run: pnpm --filter @corredor/web exec playwright install chromium --with-deps
 
       - name: Run E2E smoke tests
-        run: pnpm --filter @corredor/web test:e2e
+        run: pnpm --filter @corredor/web test:e2e -- --grep-invert "Accessibility"
+        env:
+          BASE_URL: https://corredor-web-pr-${{ github.event.workflow_run.pull_requests[0].number }}.fly.dev
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+
+      - name: Run Axe accessibility audit
+        run: pnpm --filter @corredor/web test:a11y
         env:
           BASE_URL: https://corredor-web-pr-${{ github.event.workflow_run.pull_requests[0].number }}.fly.dev
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}

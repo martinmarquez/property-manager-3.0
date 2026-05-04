@@ -10,7 +10,7 @@ const C = {
   brand:         '#1654d9',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
 };
 
 const F = {
@@ -156,7 +156,7 @@ export function ContactListPage() {
                 padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500,
                 background: kind === k ? `${C.brand}20` : C.bgRaised,
                 border: `1px solid ${kind === k ? C.brand : C.border}`,
-                color: kind === k ? '#4669ff' : C.textSecondary,
+                color: kind === k ? '#5577FF' : C.textSecondary,
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
@@ -207,7 +207,7 @@ export function ContactListPage() {
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500,
                       background: c.kind === 'person' ? '#1654d920' : '#9333ea20',
-                      color: c.kind === 'person' ? '#4669ff' : '#c084fc',
+                      color: c.kind === 'person' ? '#5577FF' : '#c084fc',
                     }}>
                       {c.kind === 'person' ? intl.formatMessage(msgs.kindPerson) : intl.formatMessage(msgs.kindCompany)}
                     </span>

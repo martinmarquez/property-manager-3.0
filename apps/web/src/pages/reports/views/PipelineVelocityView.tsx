@@ -43,7 +43,7 @@ const STAGE_SLA_HOURS: Record<Stage, number> = {
 const STAGE_COLORS: Record<Stage, string> = {
   Consulta: C.brand,
   Lead: '#2880FF',
-  Propuesta: '#4669ff',
+  Propuesta: '#5577FF',
   Negociacion: C.warning,
   Cierre: C.success,
 };
@@ -201,7 +201,7 @@ export default function PipelineVelocityView() {
             value: '$45K',
             delta: '+1.1%',
             positive: true,
-            color: '#4669ff',
+            color: '#5577FF',
           },
         ]}
       />

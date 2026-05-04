@@ -19,7 +19,7 @@ const C = {
   brandHover:    '#1244b8',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:         '#EF4444',
   success:       '#22C55E',
   warning:       '#F59E0B',

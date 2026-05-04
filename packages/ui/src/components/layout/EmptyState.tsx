@@ -16,7 +16,7 @@ const C = {
   borderStrong: '#253350',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   success:   '#18A659',
   successBg: '#0A2217',
 };
@@ -322,7 +322,7 @@ export function OnboardingChecklist({ items, onItemClick, onDismiss }: Onboardin
           width: `${pct}%`,
           background: pct === 100
             ? C.success
-            : `linear-gradient(90deg, ${C.brand}, #4669ff)`,
+            : `linear-gradient(90deg, ${C.brand}, #5577FF)`,
           borderRadius: 999,
           transition: 'width 400ms cubic-bezier(0.16,1,0.3,1)',
         }} />
