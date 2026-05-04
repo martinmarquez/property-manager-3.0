@@ -69,7 +69,7 @@ export function parseCsvProperties(csvPath: string): TokkoProperty[] {
         videos: [] as Array<{ url: string }>,
         floor_plans: [] as Array<{ image: string }>,
         tags: [] as Array<{ name: string }>,
-      };
+      } as TokkoProperty;
     })
     .filter((p) => p.id > 0);
 }
