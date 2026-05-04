@@ -3,8 +3,8 @@ app = "corredor-worker-prod"
 primary_region = "scl"
 
 [build]
-dockerfile = "apps/worker/Dockerfile"
-build-context = "."
+dockerfile = "Dockerfile"
+build-context = ".."
 
 [env]
 NODE_ENV = "production"
