@@ -4,7 +4,7 @@ primary_region = "scl"
 
 [build]
 dockerfile = "Dockerfile"
-build-context = ".."
+build-context = "../"
 
 [env]
 NODE_ENV = "production"
