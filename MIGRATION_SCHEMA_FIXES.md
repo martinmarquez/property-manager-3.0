@@ -112,13 +112,25 @@ FILTER (WHERE ce.end_at < NOW())
 | message | id, conversation_id, direction, created_at | Messages within conversations |
 | calendar_event | id, created_by, tenant_id, start_at, end_at | Scheduled events |
 
+### 6. Message Direction Enum Value (line 116)
+**Issue**: Used invalid enum value for message_direction
+
+#### Fix: 'outbound' → 'out'
+- **Location**: Line 116 (LATERAL subquery WHERE clause)
+- **Error**: `invalid input value for enum message_direction: "outbound"`
+- **Actual Enum Values**: `'in'`, `'out'` (not `'outbound'`)
+- **Commit**: fccb12c
+- **Impact**: First reply time calculation in mv_agent_productivity materialized view
+
 ## Deployment Timeline
 
 | Commit | Description | Status |
 |--------|-------------|--------|
 | 1213e79 | Fix: correct column names in 0021_phase_g_reports migration | ✅ CI Pass (25301286282) |
-| 0c0bf57 | Fix: correct property_listing join in mv_agent_productivity | ⏳ CI Run 25301537276 |
-| ee5556d | Fix: correct column names in mv_agent_productivity materialized view | ⏳ CI Run 25301591247 |
+| 0c0bf57 | Fix: correct property_listing join in mv_agent_productivity | ✅ CI Pass (25301537276) |
+| ee5556d | Fix: correct column names in mv_agent_productivity materialized view | ✅ CI Pass (25301591247) |
+| 607c548 | docs: Migration 0021 schema fixes summary | ✅ Documented |
+| fccb12c | Fix: correct message direction enum value | ⏳ CI Run 25301699410 |
 
 ## Verification Steps
 
