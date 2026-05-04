@@ -14,7 +14,7 @@
     "eval:classifier": "tsx src/copilot/__tests__/classifier.eval.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0",
+    "@anthropic-ai/sdk": "^0.92.0",
     "openai": "^4.76.0",
     "zod": "^3.23.0"
   },
