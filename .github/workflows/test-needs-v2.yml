@@ -1,0 +1,20 @@
+name: Test Needs V2
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  job1:
+    name: Job 1
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Job 1"
+
+  job2:
+    name: Job 2
+    # needs:
+    #   - job1
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Job 2"
