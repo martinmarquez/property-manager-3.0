@@ -13,9 +13,6 @@ jobs:
   ci:
     name: CI Gate
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
     env:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -26,10 +23,10 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22
           cache: "pnpm"
 
       - name: Install dependencies
