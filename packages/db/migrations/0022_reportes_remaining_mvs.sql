@@ -159,10 +159,10 @@ pipeline_value AS (
 )
 SELECT
   m.tenant_id,
-  ROUND(m.mrr_usd, 2)                               AS mrr_usd,
-  ROUND(m.mrr_usd * 12, 2)                          AS arr_usd,
+  ROUND(m.mrr_usd::numeric, 2)                      AS mrr_usd,
+  ROUND((m.mrr_usd * 12)::numeric, 2)               AS arr_usd,
   ROUND(
-    m.mrr_usd / NULLIF(c.monthly_churn_rate, 0), 2
+    (m.mrr_usd / NULLIF(c.monthly_churn_rate, 0))::numeric, 2
   )                                                  AS ltv_usd,
   ROUND(c.monthly_churn_rate::numeric, 4)            AS monthly_churn_rate,
   COALESCE(ROUND(pv.weighted_pipeline_usd::numeric, 2), 0) AS weighted_pipeline_usd,
