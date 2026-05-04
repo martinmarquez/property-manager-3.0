@@ -14,6 +14,12 @@ jobs:
     name: Deploy to Production
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
       - name: Checkout
@@ -21,5 +27,44 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Deploy Step
-        run: echo "Deploying to production"
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @property-manager/db migrate
+
+      - name: Deploy API to Fly.io
+        run: |
+          echo "Deploying API to Fly.io"
+          # fly deploy --config fly.api.toml
+
+      - name: Deploy Worker to Fly.io
+        run: |
+          echo "Deploying Worker to Fly.io"
+          # fly deploy --config fly.worker.toml
+
+      - name: Deploy Web to Cloudflare Pages
+        run: |
+          echo "Deploying Web to Cloudflare Pages"
+          # npx wrangler pages deploy packages/web/dist
+
+      - name: Deploy Admin to Cloudflare Pages
+        run: |
+          echo "Deploying Admin to Cloudflare Pages"
+          # npx wrangler pages deploy packages/admin/dist
+
+      - name: Deploy Site to Vercel
+        run: |
+          echo "Deploying Site to Vercel"
+          # vercel --prod --token $VERCEL_TOKEN
