@@ -65,10 +65,10 @@ export function parseCsvProperties(csvPath: string): TokkoProperty[] {
         ...(r['Fecha de Alta'] ?? r['created_at'] ? { created_at: r['Fecha de Alta'] ?? r['created_at'] } : {}),
         ...(r['Última Modificación'] ?? r['updated_at'] ? { updated_at: r['Última Modificación'] ?? r['updated_at'] } : {}),
         deleted: (r['Eliminado'] ?? '').toLowerCase() === 'sí' || (r['Eliminado'] ?? '').toLowerCase() === 'si',
-        photos: [],
-        videos: [],
-        floor_plans: [],
-        tags: [],
+        photos: [] as TokkoPropertyPhoto[],
+        videos: [] as Array<{ url: string }>,
+        floor_plans: [] as Array<{ image: string }>,
+        tags: [] as Array<{ name: string }>,
       };
     })
     .filter((p) => p.id > 0);
@@ -97,7 +97,7 @@ export function parseCsvContacts(csvPath: string): TokkoContact[] {
         birth_date: (r['Fecha de Nacimiento'] ?? r['birth_date']) ?? null,
         country: (r['País'] ?? r['country']) ?? null,
         ...(r['Fecha de Alta'] ?? r['created_at'] ? { created_at: r['Fecha de Alta'] ?? r['created_at'] } : {}),
-        tags: [],
+        tags: [] as Array<{ name: string }>,
       };
     })
     .filter((c) => c.id > 0);
