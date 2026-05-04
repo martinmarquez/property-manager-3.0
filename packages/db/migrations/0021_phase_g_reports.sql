@@ -97,11 +97,14 @@ LEFT JOIN lead l
   AND l.tenant_id = u.tenant_id
   AND l.created_at >= DATE_TRUNC('month', NOW())
   AND l.deleted_at IS NULL
+LEFT JOIN property p
+  ON p.created_by = u.id
+  AND p.tenant_id = u.tenant_id
+  AND p.created_at >= DATE_TRUNC('month', NOW())
+  AND p.deleted_at IS NULL
 LEFT JOIN property_listing pl
-  ON pl.created_by = u.id
+  ON pl.property_id = p.id
   AND pl.tenant_id = u.tenant_id
-  AND pl.created_at >= DATE_TRUNC('month', NOW())
-  AND pl.deleted_at IS NULL
 LEFT JOIN conversation conv
   ON conv.assigned_to_id = u.id
   AND conv.tenant_id = u.tenant_id
