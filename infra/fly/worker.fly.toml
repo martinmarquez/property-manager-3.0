@@ -7,7 +7,13 @@ primary_region = "gru"
 [env]
   NODE_ENV = "production"
 
+# Worker does not serve HTTP traffic — no http_service block.
+# Auto-stop keeps it dormant when the BullMQ queue is empty.
+[machine]
+  auto_stop   = true
+  auto_start  = true
+
 # 2 Playwright/Chromium instances need ~450 MB each; 1024 MB gives headroom.
 [[vm]]
-  size = "shared-cpu-2x"
+  size   = "shared-cpu-2x"
   memory = "1024mb"

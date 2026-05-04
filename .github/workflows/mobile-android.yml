@@ -1,0 +1,99 @@
+name: Mobile — Android Build + Play Console
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/web/**'
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-android.yml'
+  workflow_dispatch:
+    inputs:
+      upload_to_play:
+        description: 'Upload to Play Console internal track'
+        required: false
+        default: 'true'
+        type: boolean
+
+concurrency:
+  group: mobile-android
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Android Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web bundle
+        run: pnpm --filter @corredor/web build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
+
+      - name: Bootstrap Android project
+        run: |
+          cd apps/mobile
+          if [ ! -d android ]; then
+            pnpm exec cap add android
+          fi
+          pnpm exec cap sync android
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Decode Play Store service account JSON
+        run: |
+          echo "$PLAY_STORE_JSON_KEY_DATA" | base64 -d > /tmp/play-store-key.json
+          echo "PLAY_STORE_JSON_KEY_PATH=/tmp/play-store-key.json" >> "$GITHUB_ENV"
+        env:
+          PLAY_STORE_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY_DATA }}
+
+      - name: Run Fastlane beta lane
+        run: bundle exec fastlane android beta
+        working-directory: apps/mobile
+        env:
+          ANDROID_KEYSTORE_BASE64:    ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD:  ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS:          ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD:       ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_STORE_JSON_KEY_DATA:   ${{ secrets.PLAY_STORE_JSON_KEY_DATA }}
+          BUILD_NUMBER:               ${{ github.run_number }}
+          GITHUB_SHA:                 ${{ github.sha }}
+
+      - name: Upload AAB artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-${{ github.sha }}
+          path: apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f /tmp/play-store-key.json /tmp/corredor.jks

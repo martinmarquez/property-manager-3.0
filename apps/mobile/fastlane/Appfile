@@ -1,0 +1,9 @@
+app_identifier 'ar.corredor.app'
+apple_id ENV['APPLE_ID']
+itc_team_id ENV['APP_STORE_CONNECT_TEAM_ID']
+team_id ENV['DEVELOPER_PORTAL_TEAM_ID']
+
+for_platform :android do
+  package_name 'ar.corredor.app'
+  json_key_file ENV['PLAY_STORE_JSON_KEY_PATH']
+end

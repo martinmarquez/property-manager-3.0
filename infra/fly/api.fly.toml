@@ -1,35 +1,48 @@
 app = "corredor-api-prod"
 primary_region = "gru"
 
+# Phase H: add Santiago (scl) as secondary region for LatAm coverage.
+# Fly.io routes to the nearest region automatically.
+# One-time bootstrap: flyctl regions add scl --app corredor-api-prod
+[env]
+  NODE_ENV = "production"
+  PORT     = "3000"
+
 [build]
   dockerfile = "apps/api/Dockerfile"
 
-[env]
-  NODE_ENV = "production"
-  PORT = "3000"
+# Auto-stop/start: machines spin down after 5 min idle, spin up on first request.
+# Keeps cost low; adds ~1s cold-start latency on wake (acceptable for non-critical paths).
+[http_service]
+  internal_port       = 3000
+  force_https         = true
+  auto_stop_machines  = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes           = ["app"]
 
-[[services]]
-  internal_port = 3000
-  protocol = "tcp"
-
-  [[services.ports]]
-    handlers = ["http"]
-    port = 80
-    force_https = true
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-  [services.concurrency]
-    type = "requests"
+  [http_service.concurrency]
+    type       = "requests"
     hard_limit = 250
     soft_limit = 200
 
-  [[services.tcp_checks]]
-    interval = "10s"
-    timeout = "2s"
+# Liveness + readiness probes
+[[http_service.checks]]
+  grace_period  = "10s"
+  interval      = "15s"
+  method        = "GET"
+  path          = "/api/health"
+  protocol      = "http"
+  timeout       = "5s"
+  tls_skip_verify = false
 
 [[vm]]
-  size = "shared-cpu-2x"
+  size   = "shared-cpu-2x"
   memory = "512mb"
+
+# Santiago secondary: same VM spec as primary.
+# Fly auto-scales both regions up to max_machines_running.
+[[vm]]
+  size    = "shared-cpu-2x"
+  memory  = "512mb"
+  regions = ["scl"]

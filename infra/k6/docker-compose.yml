@@ -1,0 +1,70 @@
+version: '3.8'
+
+# Self-hosted k6 load test cluster with InfluxDB v2 + Grafana.
+#
+# Usage:
+#   docker compose up -d influxdb grafana
+#   docker compose run --rm k6 run /scripts/smoke.js
+#   docker compose run --rm k6 run /scripts/load-10k.js
+#
+# InfluxDB UI:  http://localhost:8086  (admin / corredor-load-test)
+# Grafana:      http://localhost:3001  (admin / admin)
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: corredor-influxdb
+    ports:
+      - '8086:8086'
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: corredor-load-test
+      DOCKER_INFLUXDB_INIT_ORG: corredor
+      DOCKER_INFLUXDB_INIT_BUCKET: k6
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: corredor-influx-token
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    healthcheck:
+      test: ['CMD', 'influx', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: corredor-grafana
+    ports:
+      - '3001:3000'
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  k6:
+    image: grafana/k6:0.54.0
+    container_name: corredor-k6
+    volumes:
+      - ./scenarios:/scripts
+    environment:
+      K6_INFLUXDB_ADDR: http://influxdb:8086
+      K6_INFLUXDB_TOKEN: corredor-influx-token
+      K6_INFLUXDB_ORG: corredor
+      K6_INFLUXDB_BUCKET: k6
+      # Set BASE_URL to the target environment (staging or prod)
+      BASE_URL: ${BASE_URL:-https://corredor-api-prod.fly.dev}
+      API_TOKEN: ${API_TOKEN:-}
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    # k6 exits after test run — not a long-running service
+
+volumes:
+  influxdb-data:
+  grafana-data:

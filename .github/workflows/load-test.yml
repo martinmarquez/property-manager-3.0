@@ -1,0 +1,112 @@
+name: Load Test — k6
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - load-10k
+      target_env:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      seed_data:
+        description: 'Seed test data before running (1M listings + 100k contacts)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Only allow one load test at a time per environment to avoid interference
+concurrency:
+  group: load-test-${{ inputs.target_env }}
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed Test Data
+    if: ${{ inputs.seed_data == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed 1M listings + 100k contacts
+        run: psql "$DATABASE_URL" -f infra/k6/seed/seed.sql
+        env:
+          DATABASE_URL: ${{ inputs.target_env == 'staging' && secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}
+
+  run:
+    name: Run k6 — ${{ inputs.scenario }}
+    runs-on: ubuntu-latest
+    needs: [seed]
+    if: always() && !failure()
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start InfluxDB + Grafana
+        run: docker compose -f infra/k6/docker-compose.yml up -d influxdb grafana
+
+      - name: Wait for InfluxDB
+        run: |
+          for i in $(seq 1 20); do
+            docker compose -f infra/k6/docker-compose.yml exec influxdb influx ping && break
+            echo "Waiting for InfluxDB... ($i/20)"
+            sleep 3
+          done
+
+      - name: Resolve target URL + token
+        run: |
+          if [ "${{ inputs.target_env }}" = "staging" ]; then
+            echo "BASE_URL=${{ secrets.STAGING_API_URL }}" >> "$GITHUB_ENV"
+            echo "API_TOKEN=${{ secrets.STAGING_LOAD_TEST_TOKEN }}" >> "$GITHUB_ENV"
+          else
+            echo "BASE_URL=${{ secrets.VITE_API_URL_PROD }}" >> "$GITHUB_ENV"
+            echo "API_TOKEN=${{ secrets.PROD_LOAD_TEST_TOKEN }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run k6 (${{ inputs.scenario }})
+        run: |
+          docker compose -f infra/k6/docker-compose.yml run --rm \
+            -e BASE_URL="$BASE_URL" \
+            -e API_TOKEN="$API_TOKEN" \
+            -e K6_INFLUXDB_ADDR=http://influxdb:8086 \
+            -e K6_INFLUXDB_TOKEN=corredor-influx-token \
+            -e K6_INFLUXDB_ORG=corredor \
+            -e K6_INFLUXDB_BUCKET=k6 \
+            k6 run --out influxdb=http://influxdb:8086/k6 \
+            /scripts/${{ inputs.scenario }}.js
+
+      - name: Export Grafana dashboard snapshot
+        if: always()
+        run: |
+          mkdir -p build
+          # Give Grafana a moment to ingest final data points
+          sleep 10
+          curl -s "http://localhost:3001/api/snapshots" \
+            -H "Content-Type: application/json" \
+            -d '{"dashboard":{"title":"k6 Load Test — ${{ inputs.scenario }}"}}' \
+            -o build/grafana-snapshot.json || true
+
+      - name: Upload k6 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-report-${{ inputs.scenario }}-${{ github.run_id }}
+          path: |
+            build/k6-*.json
+            build/grafana-snapshot.json
+          retention-days: 90
+
+      - name: Tear down local cluster
+        if: always()
+        run: docker compose -f infra/k6/docker-compose.yml down -v

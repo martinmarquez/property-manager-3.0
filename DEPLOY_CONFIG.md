@@ -6,12 +6,13 @@ Infrastructure topology and runbook for Corredor CRM (Corredor project).
 
 | App / Service              | Provider           | Project / App Name           | Region |
 |----------------------------|--------------------|------------------------------|--------|
-| `apps/api`                 | Fly.io             | `corredor-api-prod`          | `gru` (São Paulo) |
+| `apps/api`                 | Fly.io             | `corredor-api-prod`          | `gru` (São Paulo) + `scl` (Santiago) |
 | `apps/worker`              | Fly.io             | `corredor-worker-prod`       | `gru`  |
 | `apps/web` (SPA)           | Cloudflare Pages   | `corredor-web`               | Global CDN |
 | `apps/admin` (SPA)         | Cloudflare Pages   | `corredor-admin`             | Global CDN |
 | `apps/site` (Next.js)      | Vercel             | `corredor-site`              | Global CDN |
 | `apps/tenant-site` (Next.js ISR) | Cloudflare Pages | `corredor-tenant-sites`  | Global CDN |
+| `apps/mobile` (Capacitor)  | TestFlight + Play Console | `ar.corredor.app`     | iOS 16+ / Android API 26+ |
 | Database                   | Neon (PostgreSQL)  | `corredor-crm`               | `aws-us-east-2` |
 | Media storage              | Cloudflare R2      | `corredor-media-prod`        | — |
 | Document storage           | Cloudflare R2      | `corredor-documents-prod`    | — |
@@ -21,8 +22,10 @@ Infrastructure topology and runbook for Corredor CRM (Corredor project).
 | Event                  | Workflow                          | Effect |
 |------------------------|-----------------------------------|--------|
 | Push to `main`         | `production-deploy.yml`           | Full production deploy (migrate → API → Worker → Web → Admin → Site → Tenant Sites) |
+| Push to `main` (web/mobile paths) | `mobile-ios.yml` + `mobile-android.yml` | Build + upload to TestFlight / Play Console internal track |
 | PR opened / updated    | `preview.yml`                     | Ephemeral preview stack per PR (Neon branch + Fly preview + CF Pages preview + Vercel preview) |
 | PR closed              | `cleanup-preview.yml`             | Tears down Fly preview app + Neon branch |
+| Manual dispatch        | `load-test.yml`                   | k6 load test (smoke or 10k VU) against staging or production |
 
 ## Required GitHub Secrets
 
@@ -86,17 +89,68 @@ Events to listen: `customer.subscription.*`, `invoice.payment_succeeded`, `invoi
 Sandbox credentials: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/credentials
 MP Webhook endpoint (staging): `https://corredor-api-prod.fly.dev/webhooks/mercadopago`
 
+### Phase H — iOS mobile CI/CD (Fastlane + TestFlight)
+
+| Secret | How to obtain |
+|--------|---------------|
+| `APP_STORE_CONNECT_API_KEY_ID` | App Store Connect → Users & Access → Keys → create CI key; copy Key ID |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Same page — copy Issuer ID |
+| `APP_STORE_CONNECT_API_KEY_CONTENT` | Download `.p8` file; base64-encode: `base64 -i AuthKey_<id>.p8` |
+| `IOS_MATCH_GIT_URL` | Private repo URL for Fastlane Match certs, e.g. `git@github.com:corredor-org/ios-certs.git` |
+| `IOS_MATCH_PASSWORD` | Passphrase used when running `fastlane match init` |
+| `APPLE_ID` | Apple ID email for App Store Connect account |
+| `APP_STORE_CONNECT_TEAM_ID` | App Store Connect team numeric ID |
+| `DEVELOPER_PORTAL_TEAM_ID` | Apple Developer Portal team ID (10-char alphanumeric) |
+
+**One-time bootstrap:**
+1. Create App ID `ar.corredor.app` in Apple Developer Portal
+2. Run `bundle exec fastlane match init` from `apps/mobile/` to create the certs repo
+3. Run `bundle exec fastlane match appstore` to generate + store distribution cert + provisioning profile
+4. Add all secrets above to GitHub repository secrets
+
+### Phase H — Android mobile CI/CD (Fastlane + Play Console)
+
+| Secret | How to obtain |
+|--------|---------------|
+| `ANDROID_KEYSTORE_BASE64` | Generate: `keytool -genkey -v -keystore corredor.jks -alias corredor -keyalg RSA -keysize 2048 -validity 10000`; then `base64 -i corredor.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | Password set during keytool generation |
+| `ANDROID_KEY_ALIAS` | Alias set during keytool generation (e.g. `corredor`) |
+| `ANDROID_KEY_PASSWORD` | Key password set during keytool generation |
+| `PLAY_STORE_JSON_KEY_DATA` | Google Play Console → Setup → API Access → create service account → download JSON; base64-encode |
+
+**One-time bootstrap:**
+1. Create app `ar.corredor.app` in Google Play Console
+2. Create service account in Google Cloud Console with `Release Manager` role on the Play app
+3. Grant the service account access in Play Console → Setup → API Access
+4. Store the keystore securely (e.g. 1Password) — it cannot be regenerated if lost
+
+### Phase H — Load testing (k6)
+
+| Secret | How to obtain |
+|--------|---------------|
+| `STAGING_API_URL` | Staging API base URL, e.g. `https://corredor-api-staging.fly.dev` |
+| `STAGING_DATABASE_URL` | Neon staging branch pooled connection string |
+| `STAGING_LOAD_TEST_TOKEN` | JWT for the `k6@corredor.ar` load-test user (create via `/api/auth/login`) |
+| `PROD_LOAD_TEST_TOKEN` | JWT for load-test user on prod (use with caution — rate limits apply) |
+
 ## Infra Config Files
 
 | File | Purpose |
 |------|---------|
-| `infra/fly/api.fly.toml` | Fly.io config for `apps/api` |
+| `infra/fly/api.fly.toml` | Fly.io config for `apps/api` (gru + scl regions, auto-stop) |
 | `infra/fly/worker.fly.toml` | Fly.io config for `apps/worker` (1 GB RAM — Playwright/Chromium) |
 | `infra/cloudflare/wrangler.jsonc` | R2 bucket bindings + Phase G tenant-sites Pages config |
+| `infra/cloudflare/cache-rules.md` | Phase H CDN cache rules + image optimization guide |
 | `apps/site/vercel.json` | Vercel project config for `apps/site` (Next.js marketing site) |
 | `infra/neon/branch.sh` | Creates per-PR Neon branch; outputs `db_url` and `db_url_pooled` |
 | `infra/neon/dev-branch.sh` | Creates a personal dev Neon branch |
 | `infra/afip/README.md` | AFIP WSAA certificate generation and sandbox setup guide |
+| `infra/k6/docker-compose.yml` | Self-hosted k6 cluster (k6 + InfluxDB + Grafana) |
+| `infra/k6/scenarios/smoke.js` | 5 VU smoke test — validates all critical endpoints |
+| `infra/k6/scenarios/load-10k.js` | 10k VU GA load test (GA criterion: p95 < 500ms) |
+| `infra/k6/seed/seed.sql` | Seeds 1M listings + 100k contacts in staging DB |
+| `apps/mobile/capacitor.config.ts` | Capacitor shell configuration (appId, webDir, plugins) |
+| `apps/mobile/fastlane/Fastfile` | Fastlane lanes: ios:beta, android:beta |
 
 ## Vercel Project Bootstrap (one-time, run once per environment)
 
