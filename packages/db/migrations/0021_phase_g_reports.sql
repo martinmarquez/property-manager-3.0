@@ -89,7 +89,7 @@ SELECT
   )                                            AS avg_first_reply_min,
   COUNT(DISTINCT ce.id)                       AS visits_scheduled,
   COUNT(DISTINCT ce.id)
-    FILTER (WHERE ce.status = 'completed')    AS visits_completed,
+    FILTER (WHERE ce.end_at < NOW())          AS visits_completed,
   NOW()                                        AS refreshed_at
 FROM "user" u
 LEFT JOIN lead l
@@ -106,7 +106,7 @@ LEFT JOIN property_listing pl
   ON pl.property_id = p.id
   AND pl.tenant_id = u.tenant_id
 LEFT JOIN conversation conv
-  ON conv.assigned_to_id = u.id
+  ON conv.assigned_agent_id = u.id
   AND conv.tenant_id = u.tenant_id
   AND conv.created_at >= DATE_TRUNC('month', NOW())
 LEFT JOIN LATERAL (
@@ -120,7 +120,7 @@ LEFT JOIN LATERAL (
 LEFT JOIN calendar_event ce
   ON ce.created_by = u.id
   AND ce.tenant_id = u.tenant_id
-  AND ce.starts_at >= DATE_TRUNC('month', NOW())
+  AND ce.start_at >= DATE_TRUNC('month', NOW())
 WHERE u.active = true
 GROUP BY u.tenant_id, u.id;
 
