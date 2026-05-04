@@ -3,7 +3,7 @@ app = "corredor-api-prod"
 primary_region = "scl"
 
 [build]
-dockerfile = "apps/api/Dockerfile"
+dockerfile = "Dockerfile"
 build-context = ".."
 
 [env]
