@@ -44,12 +44,12 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy API to Fly.io
-        run: cd apps/api && flyctl deploy --remote-only
+        run: flyctl deploy -C apps/api --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy Worker to Fly.io
-        run: cd apps/worker && flyctl deploy --remote-only
+        run: flyctl deploy -C apps/worker --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
