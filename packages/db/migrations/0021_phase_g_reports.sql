@@ -17,8 +17,8 @@ SELECT
   l.pipeline_id,
   ps.id                                     AS stage_id,
   ps.name                                   AS stage_name,
-  ps.sort_order,
-  ps.stage_kind,
+  ps.position                               AS sort_order,
+  ps.kind                                   AS stage_kind,
   DATE_TRUNC('month', lsh.entered_at)       AS cohort_month,
   l.owner_user_id                           AS agent_id,
   COUNT(DISTINCT lsh.lead_id)               AS leads_entered,
@@ -47,7 +47,7 @@ JOIN pipeline_stage ps ON ps.id = lsh.stage_id
 WHERE l.deleted_at IS NULL
 GROUP BY
   l.tenant_id, l.pipeline_id, ps.id, ps.name,
-  ps.sort_order, ps.stage_kind,
+  ps.position, ps.kind,
   DATE_TRUNC('month', lsh.entered_at),
   l.owner_user_id;
 
