@@ -21,3 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "Test CI job"
+
+  deploy:
+    name: Deploy to Production
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Test deploy job"
