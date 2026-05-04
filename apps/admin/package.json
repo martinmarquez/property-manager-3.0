@@ -13,8 +13,8 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@tanstack/react-router": "^1.79.0",
-    "@tanstack/react-query": "^5.62.0"
+    "@tanstack/react-router": "^1.169.1",
+    "@tanstack/react-query": "^5.100.9"
   },
   "devDependencies": {
     "@corredor/config": "workspace:*",
