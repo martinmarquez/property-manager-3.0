@@ -64,7 +64,9 @@ COPY --from=builder package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/worker/ ./apps/worker/
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /node_modules.tar /tmp/
-RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar
+RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar && \
+    ls -la node_modules/@corredor/ 2>/dev/null || echo "No @corredor in node_modules" && \
+    ls -la node_modules/.pnpm/ 2>/dev/null | head -20 || echo "No .pnpm directory"
 
 RUN chown -R worker:nodejs /app
 
