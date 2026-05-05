@@ -43,15 +43,20 @@ COPY --chown=hono:nodejs packages/ai/package.json ./packages/ai/
 COPY --chown=hono:nodejs packages/config/package.json ./packages/config/
 COPY --chown=hono:nodejs packages/core/package.json ./packages/core/
 COPY --chown=hono:nodejs packages/db/package.json ./packages/db/
+COPY --chown=hono:nodejs packages/documents/package.json ./packages/documents/
+COPY --chown=hono:nodejs packages/portals/package.json ./packages/portals/
 COPY --chown=hono:nodejs packages/telemetry/package.json ./packages/telemetry/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/ai/dist ./packages/ai/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/portals/dist ./packages/portals/dist
 
 RUN chown -R hono:nodejs /app
 
