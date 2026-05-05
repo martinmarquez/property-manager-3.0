@@ -24,7 +24,8 @@ COPY apps/api/ ./apps/api/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/api build
+    pnpm --filter @corredor/api build && \
+    tar --create --file /node_modules.tar --directory /app node_modules
 
 # ── prod: prune dev deps ───────────────────────────────────────────────────
 FROM base AS prod-deps
@@ -46,7 +47,11 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --from=builder --chown=hono:nodejs /app /app
+COPY --from=builder package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/api/ ./apps/api/
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /node_modules.tar /tmp/
+RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar
 
 RUN chown -R hono:nodejs /app
 

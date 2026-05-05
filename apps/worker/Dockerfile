@@ -24,7 +24,8 @@ COPY apps/worker/ ./apps/worker/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/worker build
+    pnpm --filter @corredor/worker build && \
+    tar --create --file /node_modules.tar --directory /app node_modules
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
@@ -59,7 +60,11 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --from=builder --chown=worker:nodejs /app /app
+COPY --from=builder package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/worker/ ./apps/worker/
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /node_modules.tar /tmp/
+RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar
 
 RUN chown -R worker:nodejs /app
 
