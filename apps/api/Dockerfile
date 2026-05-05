@@ -31,51 +31,19 @@ RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/documents build && \
     pnpm --filter @corredor/api build
 
-# ── prod: prune dev deps ───────────────────────────────────────────────────
-FROM base AS prod-deps
+# ── runner ─────────────────────────────────────────────────────────────────
+FROM base AS runner
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/ai/package.json ./packages/ai/
-COPY packages/config/package.json ./packages/config/
-COPY packages/core/package.json ./packages/core/
-COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
-COPY packages/telemetry/package.json ./packages/telemetry/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
-# ── runtime ────────────────────────────────────────────────────────────────
-FROM node:22-slim AS runtime
-WORKDIR /app
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Copy everything from builder - preserves all symlinks and structure
+COPY --from=builder --chown=root:root /app/node_modules ./node_modules
+COPY --from=builder --chown=root:root /app/packages ./packages
+COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=root:root /app/apps/api/package.json ./apps/api/package.json
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 hono
-
-# Copy workspace config and all package.json files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/ai/package.json ./packages/ai/
-COPY packages/config/package.json ./packages/config/
-COPY packages/core/package.json ./packages/core/
-COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
-COPY packages/telemetry/package.json ./packages/telemetry/
-
-# Copy compiled packages with dist directories
-COPY --from=builder --chown=hono:nodejs /app/packages ./packages
-
-# Install only production node_modules for external dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
-
-# Copy compiled API code
-COPY --from=builder --chown=hono:nodejs /app/apps/api/dist ./apps/api/dist
+    adduser --system --uid 1001 hono && \
+    chown -R hono:nodejs /app
 
 USER hono
 EXPOSE 3000
