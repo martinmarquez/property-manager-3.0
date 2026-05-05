@@ -24,8 +24,20 @@ COPY apps/worker/ ./apps/worker/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/worker build && \
-    tar --create --file /node_modules.tar --directory /app node_modules
+    pnpm --filter @corredor/worker build
+
+# ── prod deps ──────────────────────────────────────────────────────────────
+FROM base AS prod-deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/telemetry/package.json ./packages/telemetry/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
@@ -60,13 +72,22 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --from=builder package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --from=builder /app/apps/worker/ ./apps/worker/
-COPY --from=builder /app/packages/ ./packages/
-COPY --from=builder /node_modules.tar /tmp/
-RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar && \
-    ls -la node_modules/@corredor/ 2>/dev/null || echo "No @corredor in node_modules" && \
-    ls -la node_modules/.pnpm/ 2>/dev/null | head -20 || echo "No .pnpm directory"
+COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
+COPY --chown=worker:nodejs packages/ai/package.json ./packages/ai/
+COPY --chown=worker:nodejs packages/config/package.json ./packages/config/
+COPY --chown=worker:nodejs packages/core/package.json ./packages/core/
+COPY --chown=worker:nodejs packages/db/package.json ./packages/db/
+COPY --chown=worker:nodejs packages/telemetry/package.json ./packages/telemetry/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
+COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/ai/dist ./packages/ai/dist
 
 RUN chown -R worker:nodejs /app
 

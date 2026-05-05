@@ -27,19 +27,6 @@ RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/api build && \
     tar --create --file /node_modules.tar --directory /app node_modules
 
-# ── prod: prune dev deps ───────────────────────────────────────────────────
-FROM base AS prod-deps
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/ai/package.json ./packages/ai/
-COPY packages/config/package.json ./packages/config/
-COPY packages/core/package.json ./packages/core/
-COPY packages/db/package.json ./packages/db/
-COPY packages/telemetry/package.json ./packages/telemetry/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
-
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
 WORKDIR /app
@@ -47,11 +34,21 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --from=builder package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --from=builder /app/apps/api/ ./apps/api/
-COPY --from=builder /app/packages/ ./packages/
-COPY --from=builder /node_modules.tar /tmp/
-RUN tar --extract --file /tmp/node_modules.tar && rm /tmp/node_modules.tar
+COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
+COPY --chown=hono:nodejs packages/ai/package.json ./packages/ai/
+COPY --chown=hono:nodejs packages/config/package.json ./packages/config/
+COPY --chown=hono:nodejs packages/core/package.json ./packages/core/
+COPY --chown=hono:nodejs packages/db/package.json ./packages/db/
+COPY --chown=hono:nodejs packages/telemetry/package.json ./packages/telemetry/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
+COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
 
 RUN chown -R hono:nodejs /app
 
