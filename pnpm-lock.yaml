@@ -444,6 +444,9 @@ importers:
       '@corredor/documents':
         specifier: workspace:*
         version: link:../../packages/documents
+      '@corredor/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       '@react-email/components':
         specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -487,9 +490,6 @@ importers:
       '@corredor/portals':
         specifier: workspace:*
         version: link:../../packages/portals
-      '@corredor/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry
       '@types/bwip-js':
         specifier: ^3.2.3
         version: 3.2.3
