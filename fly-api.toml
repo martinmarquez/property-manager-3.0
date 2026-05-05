@@ -1,6 +1,6 @@
 # Fly.io configuration for Corredor API (Production)
 app = "corredor-api-prod"
-primary_region = "scl"
+primary_region = "gru"
 
 [build]
 dockerfile = "apps/api/Dockerfile"
