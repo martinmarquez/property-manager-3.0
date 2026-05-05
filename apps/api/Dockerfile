@@ -14,7 +14,7 @@ COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -35,7 +35,7 @@ COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
