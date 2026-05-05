@@ -74,8 +74,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 COPY --from=prod-deps --chown=worker:nodejs /app/node_modules ./node_modules
 COPY --from=prod-deps --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
-COPY --from=prod-deps --chown=worker:nodejs /app/packages/ai/node_modules ./packages/ai/node_modules
-COPY --from=prod-deps --chown=worker:nodejs /app/packages/config/node_modules ./packages/config/node_modules
 COPY --from=prod-deps --chown=worker:nodejs /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=prod-deps --chown=worker:nodejs /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=prod-deps --chown=worker:nodejs /app/packages/telemetry/node_modules ./packages/telemetry/node_modules
