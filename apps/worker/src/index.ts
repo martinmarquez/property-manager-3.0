@@ -203,3 +203,14 @@ void billingBnaRateWorker;
 void appraisalNarrativeWorker;
 void appraisalPdfWorker;
 void mvRefreshWorker;
+
+// Health check HTTP server for Fly.io TCP checks
+import http from 'http';
+const healthServer = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'ok' }));
+});
+const port = parseInt(process.env['PORT'] ?? '3000', 10);
+healthServer.listen(port, '0.0.0.0', () => {
+  logger.info(`health check server listening on port ${port}`);
+});
