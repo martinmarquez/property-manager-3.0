@@ -53,8 +53,7 @@ COPY --from=builder --chown=root:root /app/packages ./packages
 COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
 
 # Fresh install with proper symlink resolution for this container context
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono && \
