@@ -46,12 +46,12 @@ COPY packages/documents/package.json ./packages/documents/
 COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 
-# Copy compiled packages and api dist from builder
+# Copy built packages and app dist from builder
 COPY --from=builder --chown=root:root /app/packages ./packages
 COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
 
-# Install only runtime dependencies with proper workspace resolution
-RUN pnpm install --frozen-lockfile --prod
+# Install dependencies with proper workspace package resolution
+RUN pnpm install --frozen-lockfile
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono && \
