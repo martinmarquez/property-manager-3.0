@@ -24,8 +24,7 @@ COPY apps/worker/ ./apps/worker/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/worker build && \
-    tar --create --file /node_modules.tar --directory /app node_modules
+    pnpm --filter @corredor/worker build
 
 # ── prod deps ──────────────────────────────────────────────────────────────
 FROM base AS prod-deps
@@ -76,12 +75,9 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
+COPY --chown=worker:nodejs --from=builder /app/node_modules ./node_modules
 COPY --chown=worker:nodejs --from=builder /app/packages/ ./packages/
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
-COPY --chown=worker:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
-
-COPY --from=builder /node_modules.tar /tmp/
-RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar && chown -R worker:nodejs /app
 
 COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/

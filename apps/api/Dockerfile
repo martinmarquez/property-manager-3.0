@@ -24,8 +24,7 @@ COPY apps/api/ ./apps/api/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/api build && \
-    tar --create --file /node_modules.tar --directory /app node_modules
+    pnpm --filter @corredor/api build
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
@@ -37,13 +36,9 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
+COPY --chown=hono:nodejs --from=builder /app/node_modules ./node_modules
 COPY --chown=hono:nodejs --from=builder /app/packages/ ./packages/
 COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/portals/dist ./packages/portals/dist
-
-COPY --from=builder /node_modules.tar /tmp/
-RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar && chown -R hono:nodejs /app
 
 COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
