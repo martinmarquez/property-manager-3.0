@@ -435,6 +435,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.0.0
         version: 3.1041.0
+      '@corredor/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@corredor/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -481,9 +484,6 @@ importers:
         specifier: ^19.2.5
         version: 19.2.5
     devDependencies:
-      '@corredor/ai':
-        specifier: workspace:*
-        version: link:../../packages/ai
       '@corredor/config':
         specifier: workspace:*
         version: link:../../packages/config
