@@ -46,17 +46,36 @@ COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
-# ── runner ─────────────────────────────────────────────────────────────────
-FROM node:22-slim AS runner
+# ── runtime ────────────────────────────────────────────────────────────────
+FROM node:22-slim AS runtime
 WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --from=builder --chown=hono:nodejs /app/node_modules ./node_modules
+# Copy workspace config and all package.json files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
+COPY packages/telemetry/package.json ./packages/telemetry/
+
+# Copy compiled packages with dist directories
 COPY --from=builder --chown=hono:nodejs /app/packages ./packages
+
+# Install only production node_modules for external dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+
+# Copy compiled API code
 COPY --from=builder --chown=hono:nodejs /app/apps/api/dist ./apps/api/dist
-COPY --from=builder --chown=hono:nodejs /app/apps/api/package.json ./apps/api/package.json
 
 USER hono
 EXPOSE 3000

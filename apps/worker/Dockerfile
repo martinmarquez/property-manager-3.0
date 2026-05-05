@@ -45,9 +45,12 @@ COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
-# ── runner ─────────────────────────────────────────────────────────────────
-FROM node:22-slim AS runner
+# ── runtime ────────────────────────────────────────────────────────────────
+FROM node:22-slim AS runtime
 WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 # System Chromium for Playwright PDF generation (playwright-core uses this directly)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -78,10 +81,26 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+# Copy workspace config and all package.json files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
+COPY packages/telemetry/package.json ./packages/telemetry/
+
+# Copy compiled packages with dist directories
 COPY --from=builder --chown=worker:nodejs /app/packages ./packages
+
+# Install only production node_modules for external dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+
+# Copy compiled Worker code
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
 
 USER worker
 ENV NODE_ENV=production
