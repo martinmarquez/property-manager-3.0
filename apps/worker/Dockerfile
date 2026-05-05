@@ -60,11 +60,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Copy everything from builder - preserves all symlinks and structure
-COPY --from=builder --chown=root:root /app/node_modules ./node_modules
+# Copy workspace config and package.json files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
+COPY packages/telemetry/package.json ./packages/telemetry/
+
+# Copy compiled packages with dist directories from builder
 COPY --from=builder --chown=root:root /app/packages ./packages
+
+# Copy compiled Worker code from builder
 COPY --from=builder --chown=root:root /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder --chown=root:root /app/apps/worker/package.json ./apps/worker/package.json
+
+# Reinstall dependencies in runtime to recreate symlinks correctly
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker && \
