@@ -37,21 +37,16 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --from=builder /node_modules.tar /tmp/
-RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar
-
+COPY --chown=hono:nodejs --from=builder /app/packages/ ./packages/
 COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
-COPY --chown=hono:nodejs --from=builder /app/packages/ai/dist ./packages/ai/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/portals/dist ./packages/portals/dist
 
+COPY --from=builder /node_modules.tar /tmp/
+RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar && chown -R hono:nodejs /app
+
 COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
-
-RUN chown -R hono:nodejs /app
 
 USER hono
 EXPOSE 3000

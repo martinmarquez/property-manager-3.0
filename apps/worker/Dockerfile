@@ -76,20 +76,15 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --from=builder /node_modules.tar /tmp/
-RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar
-
+COPY --chown=worker:nodejs --from=builder /app/packages/ ./packages/
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
-COPY --chown=worker:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
-COPY --chown=worker:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --chown=worker:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
-COPY --chown=worker:nodejs --from=builder /app/packages/ai/dist ./packages/ai/dist
 COPY --chown=worker:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
+
+COPY --from=builder /node_modules.tar /tmp/
+RUN cd /app && tar -xf /tmp/node_modules.tar && rm /tmp/node_modules.tar && chown -R worker:nodejs /app
 
 COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
-
-RUN chown -R worker:nodejs /app
 
 USER worker
 ENV NODE_ENV=production
