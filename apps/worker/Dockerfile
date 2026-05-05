@@ -81,10 +81,11 @@ COPY --chown=worker:nodejs packages/ai/package.json ./packages/ai/
 COPY --chown=worker:nodejs packages/config/package.json ./packages/config/
 COPY --chown=worker:nodejs packages/core/package.json ./packages/core/
 COPY --chown=worker:nodejs packages/db/package.json ./packages/db/
+COPY --chown=worker:nodejs packages/documents/package.json ./packages/documents/
 COPY --chown=worker:nodejs packages/telemetry/package.json ./packages/telemetry/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents
 
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --chown=worker:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
