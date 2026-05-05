@@ -13,11 +13,9 @@ COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -26,34 +24,45 @@ COPY apps/api/ ./apps/api/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/ai build && \
-    pnpm --filter @corredor/portals build && \
-    pnpm --filter @corredor/documents build && \
     pnpm --filter @corredor/api build
 
-# ── runner ─────────────────────────────────────────────────────────────────
-FROM base AS runner
+# ── prod: prune dev deps ───────────────────────────────────────────────────
+FROM base AS prod-deps
 WORKDIR /app
-
-# Copy workspace config and package.json files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
-# Copy built packages, node_modules, and app dist from builder
-COPY --from=builder --chown=root:root /app/node_modules ./node_modules
-COPY --from=builder --chown=root:root /app/packages ./packages
-COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
+# ── runner ─────────────────────────────────────────────────────────────────
+FROM node:22-slim AS runner
+WORKDIR /app
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 hono && \
-    chown -R hono:nodejs /app
+    adduser --system --uid 1001 hono
+
+COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
+COPY --chown=hono:nodejs packages/ai/package.json ./packages/ai/
+COPY --chown=hono:nodejs packages/config/package.json ./packages/config/
+COPY --chown=hono:nodejs packages/core/package.json ./packages/core/
+COPY --chown=hono:nodejs packages/db/package.json ./packages/db/
+COPY --chown=hono:nodejs packages/telemetry/package.json ./packages/telemetry/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
+COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --chown=hono:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
+
+RUN chown -R hono:nodejs /app
 
 USER hono
 EXPOSE 3000

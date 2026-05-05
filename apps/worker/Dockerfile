@@ -13,11 +13,9 @@ COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -26,12 +24,23 @@ COPY apps/worker/ ./apps/worker/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
-    pnpm --filter @corredor/ai build && \
-    pnpm --filter @corredor/documents build && \
     pnpm --filter @corredor/worker build
 
+# ── prod deps ──────────────────────────────────────────────────────────────
+FROM base AS prod-deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/telemetry/package.json ./packages/telemetry/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
 # ── runner ─────────────────────────────────────────────────────────────────
-FROM base AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 
 # System Chromium for Playwright PDF generation (playwright-core uses this directly)
@@ -63,16 +72,27 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
-COPY --from=builder --chown=worker:nodejs /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=builder --chown=worker:nodejs /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/node_modules ./packages/telemetry/node_modules
-COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder --chown=worker:nodejs /app/packages/db/dist ./packages/db/dist
-COPY --from=builder --chown=worker:nodejs /app/packages/core/dist ./packages/core/dist
-COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/dist ./packages/telemetry/dist
-COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
+COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
+COPY --chown=worker:nodejs packages/ai/package.json ./packages/ai/
+COPY --chown=worker:nodejs packages/config/package.json ./packages/config/
+COPY --chown=worker:nodejs packages/core/package.json ./packages/core/
+COPY --chown=worker:nodejs packages/db/package.json ./packages/db/
+COPY --chown=worker:nodejs packages/documents/package.json ./packages/documents/
+COPY --chown=worker:nodejs packages/portals/package.json ./packages/portals/
+COPY --chown=worker:nodejs packages/telemetry/package.json ./packages/telemetry/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+
+COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/ai/dist ./packages/ai/dist
+COPY --chown=worker:nodejs --from=builder /app/packages/documents/dist ./packages/documents/dist
+
+RUN chown -R worker:nodejs /app
 
 USER worker
 ENV NODE_ENV=production
