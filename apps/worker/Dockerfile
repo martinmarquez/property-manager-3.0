@@ -60,25 +60,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Copy workspace config and package.json files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY apps/worker/package.json ./apps/worker/
-COPY packages/ai/package.json ./packages/ai/
-COPY packages/config/package.json ./packages/config/
-COPY packages/core/package.json ./packages/core/
-COPY packages/db/package.json ./packages/db/
-COPY packages/documents/package.json ./packages/documents/
-COPY packages/portals/package.json ./packages/portals/
-COPY packages/telemetry/package.json ./packages/telemetry/
-
-# Copy built packages, node_modules, and app dist from builder
-COPY --from=builder --chown=root:root /app/node_modules ./node_modules
-COPY --from=builder --chown=root:root /app/packages ./packages
-COPY --from=builder --chown=root:root /app/apps/worker/dist ./apps/worker/dist
-
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 worker && \
-    chown -R worker:nodejs /app
+    adduser --system --uid 1001 worker
+
+COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
+COPY --from=builder --chown=worker:nodejs /app/packages/core/node_modules ./packages/core/node_modules
+COPY --from=builder --chown=worker:nodejs /app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/node_modules ./packages/telemetry/node_modules
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/db/dist ./packages/db/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/core/dist ./packages/core/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
 
 USER worker
 ENV NODE_ENV=production
