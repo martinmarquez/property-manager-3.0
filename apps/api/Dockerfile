@@ -52,7 +52,18 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
 COPY --from=builder --chown=hono:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=hono:nodejs /app/packages ./packages
+COPY --from=builder --chown=hono:nodejs /app/packages/db/dist ./packages/db/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/core/dist ./packages/core/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/ai/dist ./packages/ai/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/portals/dist ./packages/portals/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/documents/dist ./packages/documents/dist
+COPY --from=builder --chown=hono:nodejs /app/packages/db/package.json ./packages/db/package.json
+COPY --from=builder --chown=hono:nodejs /app/packages/core/package.json ./packages/core/package.json
+COPY --from=builder --chown=hono:nodejs /app/packages/telemetry/package.json ./packages/telemetry/package.json
+COPY --from=builder --chown=hono:nodejs /app/packages/ai/package.json ./packages/ai/package.json
+COPY --from=builder --chown=hono:nodejs /app/packages/portals/package.json ./packages/portals/package.json
+COPY --from=builder --chown=hono:nodejs /app/packages/documents/package.json ./packages/documents/package.json
 COPY --from=builder --chown=hono:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=hono:nodejs /app/apps/api/package.json ./apps/api/package.json
 

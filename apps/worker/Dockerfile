@@ -79,7 +79,16 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=worker:nodejs /app/packages ./packages
+COPY --from=builder --chown=worker:nodejs /app/packages/db/dist ./packages/db/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/core/dist ./packages/core/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/dist ./packages/telemetry/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/ai/dist ./packages/ai/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/documents/dist ./packages/documents/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/db/package.json ./packages/db/package.json
+COPY --from=builder --chown=worker:nodejs /app/packages/core/package.json ./packages/core/package.json
+COPY --from=builder --chown=worker:nodejs /app/packages/telemetry/package.json ./packages/telemetry/package.json
+COPY --from=builder --chown=worker:nodejs /app/packages/ai/package.json ./packages/ai/package.json
+COPY --from=builder --chown=worker:nodejs /app/packages/documents/package.json ./packages/documents/package.json
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
 
