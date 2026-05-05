@@ -55,6 +55,10 @@ COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
 # Copy node_modules from builder to preserve workspace symlinks for runtime
 COPY --from=builder --chown=root:root /app/node_modules ./node_modules
 
+# Reinstall dependencies to recreate pnpm's .pnpm folder for ESM resolution
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono && \
     chown -R hono:nodejs /app
