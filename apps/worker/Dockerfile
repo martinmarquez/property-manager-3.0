@@ -71,11 +71,12 @@ COPY packages/documents/package.json ./packages/documents/
 COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 
-# Copy everything from builder - packages, dist, and node_modules with proper symlinks
+# Copy compiled packages and worker dist from builder
 COPY --from=builder --chown=root:root /app/packages ./packages
 COPY --from=builder --chown=root:root /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder --chown=root:root /app/node_modules ./node_modules
-COPY --from=builder --chown=root:root /app/.pnpm-lock.yaml ./.pnpm-lock.yaml
+
+# Install only runtime dependencies with proper workspace resolution
+RUN pnpm install --frozen-lockfile --prod
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker && \
