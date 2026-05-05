@@ -25,6 +25,8 @@ COPY apps/api/ ./apps/api/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
+    pnpm --filter @corredor/portals build && \
+    pnpm --filter @corredor/documents build && \
     pnpm --filter @corredor/api build
 
 # ── prod: prune dev deps ───────────────────────────────────────────────────
