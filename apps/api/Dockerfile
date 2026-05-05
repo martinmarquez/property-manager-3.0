@@ -46,18 +46,11 @@ COPY packages/documents/package.json ./packages/documents/
 COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 
-# Copy compiled packages with dist directories from builder
+# Copy everything from builder - packages, dist, and node_modules with proper symlinks
 COPY --from=builder --chown=root:root /app/packages ./packages
-
-# Copy compiled API code from builder
 COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
-
-# Copy node_modules from builder and remove to force fresh install
 COPY --from=builder --chown=root:root /app/node_modules ./node_modules
-RUN rm -rf ./node_modules ./.pnpm-lock.yaml
-
-# Fresh install with proper symlink resolution for this container context
-RUN pnpm install
+COPY --from=builder --chown=root:root /app/.pnpm-lock.yaml ./.pnpm-lock.yaml
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono && \
