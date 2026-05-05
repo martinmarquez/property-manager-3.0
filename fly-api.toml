@@ -31,7 +31,9 @@ force_https = true
 port = 443
 handlers = ["tls", "http"]
 
-[[services.tcp_checks]]
+[[services.http_checks]]
 grace_period = "10s"
 interval = "15s"
 timeout = "5s"
+path = "/system/health"
+method = "GET"
