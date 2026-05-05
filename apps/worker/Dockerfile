@@ -77,12 +77,9 @@ COPY --from=builder --chown=root:root /app/packages ./packages
 # Copy compiled Worker code from builder
 COPY --from=builder --chown=root:root /app/apps/worker/dist ./apps/worker/dist
 
-# Copy node_modules from builder to preserve workspace symlinks for runtime
-COPY --from=builder --chown=root:root /app/node_modules ./node_modules
-
-# Reinstall dependencies to recreate pnpm's .pnpm folder for ESM resolution
+# Fresh install with proper symlink resolution for this container context
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+    pnpm install --frozen-lockfile
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker && \
