@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./i18n/messages/*.json": "./src/i18n/messages/*.json"
   },
   "sideEffects": false,
