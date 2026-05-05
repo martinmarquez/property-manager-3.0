@@ -76,6 +76,8 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
+COPY --from=builder /app/node_modules /app/node_modules
+
 COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
 COPY --chown=worker:nodejs packages/ai/package.json ./packages/ai/
@@ -85,9 +87,6 @@ COPY --chown=worker:nodejs packages/db/package.json ./packages/db/
 COPY --chown=worker:nodejs packages/documents/package.json ./packages/documents/
 COPY --chown=worker:nodejs packages/portals/package.json ./packages/portals/
 COPY --chown=worker:nodejs packages/telemetry/package.json ./packages/telemetry/
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --chown=worker:nodejs --from=builder /app/packages/db/dist ./packages/db/dist

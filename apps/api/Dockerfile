@@ -41,14 +41,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
 WORKDIR /app
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
+
+COPY --from=builder /app/node_modules /app/node_modules
 
 COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
@@ -57,9 +55,6 @@ COPY --chown=hono:nodejs packages/config/package.json ./packages/config/
 COPY --chown=hono:nodejs packages/core/package.json ./packages/core/
 COPY --chown=hono:nodejs packages/db/package.json ./packages/db/
 COPY --chown=hono:nodejs packages/telemetry/package.json ./packages/telemetry/
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
 COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=hono:nodejs --from=builder /app/packages/db/dist ./packages/db/dist
