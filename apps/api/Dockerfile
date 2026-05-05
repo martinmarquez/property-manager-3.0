@@ -54,7 +54,7 @@ COPY --from=builder --chown=root:root /app/apps/api/dist ./apps/api/dist
 
 # Reinstall dependencies in runtime to recreate symlinks correctly
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
+    pnpm install --frozen-lockfile --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono && \
