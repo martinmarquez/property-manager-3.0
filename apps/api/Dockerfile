@@ -48,11 +48,8 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --from=prod-deps --chown=hono:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=hono:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=hono:nodejs /app/apps/api/dist ./apps/api/dist
-COPY --from=builder --chown=hono:nodejs /app/packages/db/dist ./packages/db/dist
-COPY --from=builder --chown=hono:nodejs /app/packages/core/dist ./packages/core/dist
-COPY --from=builder --chown=hono:nodejs /app/packages/telemetry/dist ./packages/telemetry/dist
 COPY --from=builder --chown=hono:nodejs /app/apps/api/package.json ./apps/api/package.json
 
 USER hono
