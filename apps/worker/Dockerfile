@@ -77,6 +77,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/packages ./packages
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
 

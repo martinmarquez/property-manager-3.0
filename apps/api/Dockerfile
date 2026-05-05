@@ -49,6 +49,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
 COPY --from=builder --chown=hono:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=hono:nodejs /app/packages ./packages
 COPY --from=builder --chown=hono:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=hono:nodejs /app/apps/api/package.json ./apps/api/package.json
 
