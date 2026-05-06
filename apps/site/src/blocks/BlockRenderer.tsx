@@ -28,6 +28,10 @@ interface BlockRendererProps {
 export async function BlockRenderer({ block, tenantId, siteId, pageId }: BlockRendererProps): Promise<React.JSX.Element | null> {
   const p = block.props as unknown;
 
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Rendering block: ${block.blockType}`, { props: p });
+  }
+
   switch (block.blockType) {
     case 'Hero':
       return <Hero {...(p as HeroProps)} />;
