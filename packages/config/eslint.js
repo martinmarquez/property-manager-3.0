@@ -3,6 +3,7 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import nextPlugin from '@next/eslint-plugin-next';
 
 /** @type {import('eslint').Linter.Config[]} */
 export const nodeConfig = [
@@ -44,6 +45,20 @@ export const webConfig = [
       'react/prop-types': 'off',
     },
     settings: { react: { version: '19' } },
+  },
+];
+
+/** @type {import('eslint').Linter.Config[]} */
+export const nextjsConfig = [
+  ...webConfig,
+  {
+    plugins: {
+      '@next/next': nextPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
   },
 ];
 

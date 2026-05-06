@@ -1,6 +1,7 @@
 {
   "name": "@corredor/config",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "exports": {
     "./tsconfig/base.json": "./tsconfig/base.json",
@@ -8,6 +9,7 @@
     "./tsconfig/web.json": "./tsconfig/web.json",
     "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
     "./eslint": "./eslint.js",
+    "./eslint/nextjs": "./eslint.js",
     "./prettier": "./prettier.js",
     "./tailwind": "./tailwind.js",
     "./vitest": "./vitest.js"
@@ -24,6 +26,7 @@
     "@typescript-eslint/parser": "^8.19.0",
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^5.0.0",
+    "@next/eslint-plugin-next": "^15.1.6",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",

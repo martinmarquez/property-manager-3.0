@@ -1,6 +1,7 @@
 {
   "name": "corredor",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "description": "Corredor — multi-tenant Argentine real estate CRM SaaS",
   "engines": {
