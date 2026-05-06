@@ -1,6 +1,0 @@
-{
-  "framework": "nextjs",
-  "installCommand": "echo 'deps installed by CI'",
-  "buildCommand": "pnpm --filter @corredor/site... build",
-  "outputDirectory": "apps/site/.next"
-}
