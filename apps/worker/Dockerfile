@@ -86,6 +86,7 @@ COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
 
+COPY --from=builder /app/packages/ ./packages/
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
 
 RUN chown -R worker:nodejs /app
