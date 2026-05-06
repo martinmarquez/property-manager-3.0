@@ -1,6 +1,6 @@
 # Fly.io configuration for Corredor Worker (Production)
 app = "corredor-worker-prod"
-primary_region = "scl"
+primary_region = "gru"
 
 [build]
 dockerfile = "Dockerfile"
