@@ -82,6 +82,9 @@ COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/di
 COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
 
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
 USER worker
 ENV NODE_ENV=production
 

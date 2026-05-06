@@ -43,6 +43,9 @@ COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
 
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
 USER hono
 EXPOSE 3000
 ENV NODE_ENV=production PORT=3000
