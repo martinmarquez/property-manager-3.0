@@ -36,15 +36,20 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 hono
 
-COPY --chown=hono:nodejs --from=builder /app/node_modules ./node_modules
-COPY --chown=hono:nodejs --from=builder /app/packages/ ./packages/
-COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
-
-COPY --chown=hono:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --chown=hono:nodejs apps/api/package.json ./apps/api/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/telemetry/package.json ./packages/telemetry/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @corredor/api --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
+COPY --chown=hono:nodejs --from=builder /app/apps/api/dist ./apps/api/dist
+
+RUN chown -R hono:nodejs /app
 
 USER hono
 EXPOSE 3000

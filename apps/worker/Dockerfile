@@ -75,15 +75,20 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
-COPY --chown=worker:nodejs --from=builder /app/node_modules ./node_modules
-COPY --chown=worker:nodejs --from=builder /app/packages/ ./packages/
-COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
-
-COPY --chown=worker:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --chown=worker:nodejs apps/worker/package.json ./apps/worker/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/telemetry/package.json ./packages/telemetry/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+
+COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
+
+RUN chown -R worker:nodejs /app
 
 USER worker
 ENV NODE_ENV=production
