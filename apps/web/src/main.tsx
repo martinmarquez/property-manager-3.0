@@ -92,9 +92,6 @@ import CustomerAcquisitionView from './pages/reports/views/CustomerAcquisitionVi
 import AppraisalsPage from './pages/appraisals/AppraisalsPage.js';
 import AppraisalWizardPage from './pages/appraisals/AppraisalWizardPage.js';
 
-// ─── Growth / Analytics dashboard ────────────────────────────────────────────
-import { GrowthDashboardPage } from './pages/analytics/GrowthDashboardPage.js';
-
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
   dsn: import.meta.env.VITE_SENTRY_DSN ?? '',
