@@ -37,7 +37,28 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   setRequestLocale(locale);
   const post = getPostBySlug(slug);
   if (!post) notFound();
-  return <BlogPostContent locale={locale as Locale} slug={slug} />;
+  const loc = locale as Locale;
+
+  const blogJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.content[loc].title,
+    description: post.content[loc].excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: post.author.name },
+    publisher: { '@type': 'Organization', name: 'Corredor', url: 'https://corredor.ar' },
+    mainEntityOfPage: `https://corredor.ar/${locale === 'es-AR' ? '' : 'en/'}blog/${slug}`,
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
+      />
+      <BlogPostContent locale={loc} slug={slug} />
+    </>
+  );
 }
 
 const categoryColors: Record<string, string> = {
