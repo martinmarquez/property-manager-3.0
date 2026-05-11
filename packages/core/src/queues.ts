@@ -71,6 +71,9 @@ export const QUEUE_NAMES = {
   ANALYTICS_REFRESH: "analytics-refresh",
   MV_REFRESH: "analytics-mv-refresh",
 
+  // Mobile push — Phase H
+  PUSH_SEND: "push-send",
+
   // Dead-letter — catch-all for exhausted retries
   DEAD_LETTER: "dead-letter",
 } as const;
@@ -176,6 +179,7 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.CLEANUP]:          { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.ANALYTICS_REFRESH]:{ priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.MV_REFRESH]:       { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 3  },
+  [QUEUE_NAMES.PUSH_SEND]:        { priority: QUEUE_PRIORITY.HIGH,   defaultConcurrency: 20 },
   [QUEUE_NAMES.DEAD_LETTER]:      { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
 };
 

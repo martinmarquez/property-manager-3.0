@@ -18,3 +18,6 @@ export * from './billing.js';
 export * from './reports.js';
 export * from './appraisals.js';
 export * from './referrals.js';
+
+// Phase H: Mobile app backend
+export * from './mobile.js';

@@ -114,3 +114,6 @@ export * from "./billing/index.js";
 
 // Email
 export * from "./email/index.js";
+
+// Push notifications — Phase H
+export * from "./push/index.js";
