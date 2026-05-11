@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/lib/i18n/navigation';
+import { appHref } from '@/lib/env';
 
 export function CTABanner() {
   const t = useTranslations('cta');
@@ -21,18 +22,18 @@ export function CTABanner() {
               {t('subtitle')}
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link
-                href="https://app.corredor.ar/register"
+              <a
+                href={appHref('/register')}
                 className="btn btn-lg rounded-xl bg-white px-8 py-4 font-semibold text-brand-700 hover:bg-white/90 active:bg-white/80 shadow-lg"
               >
                 {t('primary')}
-              </Link>
-              <Link
-                href="https://app.corredor.ar/demo"
+              </a>
+              <a
+                href={appHref('/demo')}
                 className="btn btn-lg rounded-xl border border-white/30 px-8 py-4 font-semibold text-white hover:bg-white/10 active:bg-white/20"
               >
                 {t('secondary')}
-              </Link>
+              </a>
             </div>
             <div className="mt-8 flex items-center justify-center gap-3">
               <div className="flex -space-x-2">

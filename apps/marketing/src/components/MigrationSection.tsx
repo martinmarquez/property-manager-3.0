@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/lib/i18n/navigation';
+import { appHref } from '@/lib/env';
 import { Upload, Database, Rocket } from 'lucide-react';
 
 const steps = [
@@ -45,9 +46,9 @@ export function MigrationSection() {
         </div>
 
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Link href="https://app.corredor.ar/register" className="btn-primary">
+          <a href={appHref('/register')} className="btn-primary">
             {t('cta')}
-          </Link>
+          </a>
           <Link href="/blog" className="btn-secondary">
             {t('ctaSecondary')}
           </Link>
