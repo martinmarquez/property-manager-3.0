@@ -47,13 +47,18 @@ description = "Cloudflare R2 / API token"
 id = "cloudflare-token"
 regex = '''[a-zA-Z0-9_-]{37}[a-zA-Z0-9]''' # Matches CF token length/format
 tags = ["cloudflare"]
-# Exclude SQL migration files — long index names false-positive this rule
+# Exclude files where 38-char alphanum strings are benign: SQL index names, TypeScript
+# type identifiers (e.g. PublicKeyCredentialCreationOptionsJSON = 38 chars), documentation
+# URLs and slugs, research notes, and placeholder values in example env files.
 [rules.allowlist]
 paths = [
     '''packages/db/migrations/.*\.sql''',
     '''packages/db/src/schema/.*\.ts''',
     '''apps/web/src/pages/site/.*\.tsx''',
     '''infra/k6/seed/.*\.sql''',
+    '''docs/.*''',
+    '''research/.*''',
+    '''\.env\.example''',
   ]
 
 # ── Allowlist ──────────────────────────────────────────────────────────────

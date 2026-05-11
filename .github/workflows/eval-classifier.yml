@@ -23,14 +23,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check Anthropic API key
+        id: api-key-check
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANTHROPIC_API_KEY secret is not set — skipping classifier eval. Add the secret to enable."
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
       - name: Run intent classifier eval
+        if: steps.api-key-check.outputs.has_key == 'true'
         run: pnpm --filter @corredor/ai eval:classifier
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_OUTPUT_FILE: eval-baseline.json
 
       - name: Upload baseline artifact
-        if: always()
+        if: always() && steps.api-key-check.outputs.has_key == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: classifier-eval-baseline-${{ github.run_id }}

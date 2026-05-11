@@ -23,10 +23,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check production secrets
+        id: prod-secrets
+        run: |
+          if [ -n "$BASE_URL" ] && [ -n "$E2E_USER_EMAIL" ] && [ -n "$E2E_USER_PASSWORD" ]; then
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Production secrets not configured — skipping nightly E2E regression. Set PRODUCTION_WEB_URL, E2E_USER_EMAIL, and E2E_USER_PASSWORD repository secrets to enable."
+          fi
+        env:
+          BASE_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+
       - name: Install Playwright browsers
+        if: steps.prod-secrets.outputs.has_secrets == 'true'
         run: pnpm --filter @corredor/web exec playwright install chromium --with-deps
 
       - name: Run full Playwright suite
+        if: steps.prod-secrets.outputs.has_secrets == 'true'
         run: pnpm --filter @corredor/web test:e2e
         env:
           BASE_URL: ${{ secrets.PRODUCTION_WEB_URL }}
@@ -34,7 +50,7 @@ jobs:
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
 
       - name: Upload Playwright report
-        if: always()
+        if: always() && steps.prod-secrets.outputs.has_secrets == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: nightly-playwright-report-${{ github.run_id }}
