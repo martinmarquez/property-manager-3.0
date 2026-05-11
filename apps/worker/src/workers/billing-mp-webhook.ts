@@ -117,10 +117,9 @@ export class BillingMPWebhookWorker extends BaseWorker<MercadoPagoWebhookJobData
         .limit(1);
 
       if (planRow?.priceUsd) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const bnaRows: BnaRateRow[] = (await this.db.execute(sql`
+        const bnaRows = (await this.db.execute(sql`
           SELECT date, sell_rate, fetched_at FROM bna_rate ORDER BY date DESC LIMIT 1
-        `)) as any;
+        `)) as unknown as BnaRateRow[];
         const bnaRate = interpretBnaRate(bnaRows);
 
         if (!bnaRate.isStale) {
