@@ -62,6 +62,7 @@ let leadAId: string;
 
 beforeAll(async () => {
   await resetTenantCtx();
+  await sql`SET pg_trgm.word_similarity_threshold = 0.3`;
 
   // Create two tenants
   const [tenA] = await db
@@ -278,9 +279,9 @@ describe('trgm search tenant isolation', () => {
   it('tenant A search for Palermo returns only tenant A properties', async () => {
     await withTenant(tenantAId, async (tx) => {
       const rows = await tx.execute(sqlTag`
-        SELECT id::text, search_text, similarity(search_text, 'Palermo') AS sim
+        SELECT id::text, search_text, word_similarity('Palermo', search_text) AS sim
         FROM property
-        WHERE search_text % 'Palermo'
+        WHERE 'Palermo' <% search_text
         ORDER BY sim DESC
       `);
       const results = (rows as any).rows ?? rows;
@@ -292,9 +293,9 @@ describe('trgm search tenant isolation', () => {
   it('tenant B search for Palermo returns 0 results (tenant A data invisible)', async () => {
     await withTenant(tenantBId, async (tx) => {
       const rows = await tx.execute(sqlTag`
-        SELECT id::text, search_text, similarity(search_text, 'Palermo') AS sim
+        SELECT id::text, search_text, word_similarity('Palermo', search_text) AS sim
         FROM property
-        WHERE search_text % 'Palermo'
+        WHERE 'Palermo' <% search_text
         ORDER BY sim DESC
       `);
       const results = (rows as any).rows ?? rows;
@@ -305,9 +306,9 @@ describe('trgm search tenant isolation', () => {
   it('tenant B search for Nordelta returns only tenant B properties', async () => {
     await withTenant(tenantBId, async (tx) => {
       const rows = await tx.execute(sqlTag`
-        SELECT id::text, search_text, similarity(search_text, 'Nordelta') AS sim
+        SELECT id::text, search_text, word_similarity('Nordelta', search_text) AS sim
         FROM property
-        WHERE search_text % 'Nordelta'
+        WHERE 'Nordelta' <% search_text
         ORDER BY sim DESC
       `);
       const results = (rows as any).rows ?? rows;
@@ -319,9 +320,9 @@ describe('trgm search tenant isolation', () => {
   it('tenant A search for Nordelta returns 0 results (tenant B data invisible)', async () => {
     await withTenant(tenantAId, async (tx) => {
       const rows = await tx.execute(sqlTag`
-        SELECT id::text, search_text, similarity(search_text, 'Nordelta') AS sim
+        SELECT id::text, search_text, word_similarity('Nordelta', search_text) AS sim
         FROM property
-        WHERE search_text % 'Nordelta'
+        WHERE 'Nordelta' <% search_text
         ORDER BY sim DESC
       `);
       const results = (rows as any).rows ?? rows;
@@ -339,7 +340,7 @@ describe('contact search isolation', () => {
       const rows = await tx.execute(sqlTag`
         SELECT id::text, search_text
         FROM contact
-        WHERE search_text % 'María González'
+        WHERE 'María González' <% search_text
       `);
       const results = (rows as any).rows ?? rows;
       expect(results.length).toBeGreaterThan(0);
@@ -352,7 +353,7 @@ describe('contact search isolation', () => {
       const rows = await tx.execute(sqlTag`
         SELECT id::text, search_text
         FROM contact
-        WHERE search_text % 'Carlos Rodríguez'
+        WHERE 'Carlos Rodríguez' <% search_text
       `);
       const results = (rows as any).rows ?? rows;
       expect(results.length).toBeGreaterThan(0);
@@ -369,10 +370,10 @@ describe('reference code exact match', () => {
     await withTenant(tenantAId, async (tx) => {
       const rows = await tx.execute(sqlTag`
         SELECT id::text, reference_code,
-               similarity(search_text, 'SRCH-001') AS sim,
+               word_similarity('SRCH-001', search_text) AS sim,
                CASE WHEN lower(reference_code) = lower('SRCH-001') THEN 1 ELSE 0 END AS exact_match
         FROM property
-        WHERE search_text % 'SRCH-001'
+        WHERE 'SRCH-001' <% search_text
         ORDER BY exact_match DESC, sim DESC
       `);
       const results = (rows as any).rows ?? rows;
@@ -392,7 +393,7 @@ describe('lead search isolation', () => {
       const rows = await tx.execute(sqlTag`
         SELECT id::text, search_text
         FROM lead
-        WHERE search_text % 'María Palermo'
+        WHERE 'María Palermo' <% search_text
       `);
       const results = (rows as any).rows ?? rows;
       expect(results.length).toBeGreaterThan(0);
@@ -404,7 +405,7 @@ describe('lead search isolation', () => {
     await withTenant(tenantBId, async (tx) => {
       const rows = await tx.execute(sqlTag`
         SELECT id::text FROM lead
-        WHERE search_text % 'María Palermo'
+        WHERE 'María Palermo' <% search_text
       `);
       const results = (rows as any).rows ?? rows;
       expect(results.length).toBe(0);

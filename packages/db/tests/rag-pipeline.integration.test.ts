@@ -15,7 +15,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { and, eq, sql as sqlTag } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as schema from '../src/schema/index.js';
 
 // ---------------------------------------------------------------------------
@@ -35,14 +35,12 @@ const db = drizzle(sql, { schema });
 
 const createdTenantIds: string[] = [];
 
-// A deterministic 512-dim zero vector — same dimensionality as our embeddings
-const ZERO_VECTOR_SQL = sqlTag`array_fill(0.0::float4, ARRAY[512])::vector`;
+const ZERO_VECTOR_SQL = sql.unsafe(`array_fill(0.0::float4, ARRAY[512])::vector`);
 
-// A 512-dim vector biased toward 1.0 in dim 0 — represents "property" embedding
-const PROPERTY_VECTOR_SQL = sqlTag`(
+const PROPERTY_VECTOR_SQL = sql.unsafe(`(
   SELECT array_agg(CASE WHEN i = 1 THEN 1.0::float4 ELSE 0.0::float4 END)::vector
   FROM generate_series(1, 512) AS i
-)`;
+)`);
 
 async function withTenant(tenantId: string, fn: () => Promise<void>) {
   await sql`SELECT set_config('app.tenant_id', ${tenantId}, false)`;
@@ -103,7 +101,7 @@ async function insertEmbedding(opts: {
   entityId: string;
   chunkIndex?: number;
   content: string;
-  vector?: ReturnType<typeof sqlTag>;
+  vector?: postgres.Fragment;
 }): Promise<string> {
   const vector = opts.vector ?? ZERO_VECTOR_SQL;
   const entityType = opts.entityType ?? 'property';
@@ -332,11 +330,11 @@ describe('RAG pipeline — hybrid retrieval', () => {
   it('keyword (trgm) query returns matching content for same tenant', async () => {
     const rows = await sql`
       SELECT id, entity_id, content,
-             similarity(content, 'PAL-99999') AS sim
+             word_similarity('PAL-99999', content) AS sim
       FROM ai_embedding
       WHERE tenant_id = ${tenantAId}::uuid
-        AND content % 'PAL-99999'
-      ORDER BY similarity(content, 'PAL-99999') DESC
+        AND 'PAL-99999' <% content
+      ORDER BY word_similarity('PAL-99999', content) DESC
       LIMIT 5
     `;
     expect((rows as unknown[]).length).toBeGreaterThan(0);
@@ -347,11 +345,11 @@ describe('RAG pipeline — hybrid retrieval', () => {
   it('reference code exact match appears first in keyword query', async () => {
     const rows = await sql`
       SELECT entity_id, content,
-             similarity(content, 'PAL-99999') AS sim
+             word_similarity('PAL-99999', content) AS sim
       FROM ai_embedding
       WHERE tenant_id = ${tenantAId}::uuid
-        AND content % 'PAL-99999'
-      ORDER BY similarity(content, 'PAL-99999') DESC
+        AND 'PAL-99999' <% content
+      ORDER BY word_similarity('PAL-99999', content) DESC
       LIMIT 1
     `;
     expect(rows[0]?.entity_id).toBe(keywordEntityId);

@@ -59,8 +59,7 @@ let userAId: string;
 let embeddingAId: string;
 let sessionAId: string;
 
-// A real 512-dim zero vector — same dimensionality as text-embedding-3-small at d=512
-const ZERO_VECTOR_SQL = sqlTag`array_fill(0.0::float4, ARRAY[512])::vector`;
+const ZERO_VECTOR_SQL = sql.unsafe(`array_fill(0.0::float4, ARRAY[512])::vector`);
 
 beforeAll(async () => {
   await resetTenantCtx();
