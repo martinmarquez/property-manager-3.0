@@ -33,6 +33,14 @@ jobs:
       - name: Lint
         run: pnpm turbo lint
 
+      - name: Run migrations (CI database)
+        if: ${{ env.CI_DATABASE_URL != '' }}
+        run: pnpm --filter @corredor/db migrate
+        env:
+          CI_DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+
       - name: Test
         run: pnpm turbo test
         env:
