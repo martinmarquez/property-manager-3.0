@@ -64,6 +64,6 @@ export class ProgressDisplay {
 
   log(message: string): void {
     if (this.isTTY) process.stdout.write('\n');
-    console.log(message);
+    console.info(message);
   }
 }
