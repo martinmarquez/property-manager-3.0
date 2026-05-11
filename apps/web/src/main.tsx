@@ -1,5 +1,5 @@
 import { initSentryBrowser, initPostHog } from '@corredor/telemetry/browser';
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect, notFound, useRouterState } from '@tanstack/react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -18,79 +18,104 @@ import {
   PasswordResetNew,
   TOTPSetup,
   AppShell,
+  OrganizationSettings,
 } from '@corredor/ui';
-import type { AppShellUser } from '@corredor/ui';
-import { DashboardPage } from './pages/DashboardPage.js';
-import {
-  LeadsPage,
-  SettingsPage,
-} from './pages/StubPage.js';
-import { ContactListPage } from './pages/contacts/ContactListPage.js';
-import { ContactFormPage } from './pages/contacts/ContactFormPage.js';
-import { ContactDetailPage } from './pages/contacts/ContactDetailPage.js';
-import { DuplicatesPage } from './pages/contacts/DuplicatesPage.js';
-import { SegmentBuilderPage } from './pages/contacts/SegmentBuilderPage.js';
-import { PropertyListPage } from './pages/properties/PropertyListPage.js';
-import { PropertyFormPage } from './pages/properties/PropertyFormPage.js';
-import { OrganizationSettings } from '@corredor/ui';
-import type { OrganizationData } from '@corredor/ui';
-import { LocaleSwitcher } from './pages/settings/LocaleSwitcher.js';
-import { PipelineKanbanPage } from './pages/pipelines/PipelineKanbanPage.js';
-import { PipelineConfigPage } from './pages/pipelines/PipelineConfigPage.js';
-import { PipelineFunnelPage } from './pages/pipelines/PipelineFunnelPage.js';
-import { CalendarPage } from './pages/calendar/CalendarPage.js';
-import { InquiryListPage } from './pages/inquiries/InquiryListPage.js';
-import { InquiryDetailPage } from './pages/inquiries/InquiryDetailPage.js';
-import SearchPage from './pages/search/SearchPage.js';
-import CommandPalette from './components/search/CommandPalette.js';
-import CopilotPage from './pages/copilot/CopilotPage.js';
-import { TemplateEditorPage } from './pages/documents/TemplateEditorPage.js';
-import { DocumentViewerPage } from './pages/documents/DocumentViewerPage.js';
-import { ReservationListPage } from './pages/reservations/ReservationListPage.js';
-import { ReservationDetailPage } from './pages/reservations/ReservationDetailPage.js';
-import CopilotFloat from './components/copilot/CopilotFloat.js';
+import type { AppShellUser, OrganizationData } from '@corredor/ui';
+
+// ─── Lazy-loaded page components ─────────────────────────────────────────────
+// Helper: wrap a named export as a lazy default so React.lazy can consume it.
+function lazyNamed<K extends string>(
+  loader: () => Promise<Record<K, React.ComponentType<any>>>,
+  key: K
+): React.LazyExoticComponent<React.ComponentType<any>> {
+  return React.lazy(() => loader().then(m => ({ default: m[key] })));
+}
+
+// Core pages
+const DashboardPage       = lazyNamed(() => import('./pages/DashboardPage.js'), 'DashboardPage');
+const LeadsPage           = lazyNamed(() => import('./pages/StubPage.js'), 'LeadsPage');
+const SettingsPage        = lazyNamed(() => import('./pages/StubPage.js'), 'SettingsPage');
+const LocaleSwitcher      = lazyNamed(() => import('./pages/settings/LocaleSwitcher.js'), 'LocaleSwitcher');
+const BillingPage         = React.lazy(() => import('./pages/settings/billing/BillingPage.js'));
+
+// Contacts
+const ContactListPage     = lazyNamed(() => import('./pages/contacts/ContactListPage.js'), 'ContactListPage');
+const ContactFormPage     = lazyNamed(() => import('./pages/contacts/ContactFormPage.js'), 'ContactFormPage');
+const ContactDetailPage   = lazyNamed(() => import('./pages/contacts/ContactDetailPage.js'), 'ContactDetailPage');
+const DuplicatesPage      = lazyNamed(() => import('./pages/contacts/DuplicatesPage.js'), 'DuplicatesPage');
+const SegmentBuilderPage  = lazyNamed(() => import('./pages/contacts/SegmentBuilderPage.js'), 'SegmentBuilderPage');
+
+// Properties
+const PropertyListPage    = lazyNamed(() => import('./pages/properties/PropertyListPage.js'), 'PropertyListPage');
+const PropertyFormPage    = lazyNamed(() => import('./pages/properties/PropertyFormPage.js'), 'PropertyFormPage');
+
+// Pipelines
+const PipelineKanbanPage  = lazyNamed(() => import('./pages/pipelines/PipelineKanbanPage.js'), 'PipelineKanbanPage');
+const PipelineConfigPage  = lazyNamed(() => import('./pages/pipelines/PipelineConfigPage.js'), 'PipelineConfigPage');
+const PipelineFunnelPage  = lazyNamed(() => import('./pages/pipelines/PipelineFunnelPage.js'), 'PipelineFunnelPage');
+
+// Calendar
+const CalendarPage        = lazyNamed(() => import('./pages/calendar/CalendarPage.js'), 'CalendarPage');
+
+// Inquiries
+const InquiryListPage     = lazyNamed(() => import('./pages/inquiries/InquiryListPage.js'), 'InquiryListPage');
+const InquiryDetailPage   = lazyNamed(() => import('./pages/inquiries/InquiryDetailPage.js'), 'InquiryDetailPage');
+
+// Search & copilot
+const SearchPage          = React.lazy(() => import('./pages/search/SearchPage.js'));
+const CommandPalette      = React.lazy(() => import('./components/search/CommandPalette.js'));
+const CopilotPage         = React.lazy(() => import('./pages/copilot/CopilotPage.js'));
+const CopilotFloat        = React.lazy(() => import('./components/copilot/CopilotFloat.js'));
+
+// Documents
+const TemplateEditorPage  = lazyNamed(() => import('./pages/documents/TemplateEditorPage.js'), 'TemplateEditorPage');
+const DocumentViewerPage  = lazyNamed(() => import('./pages/documents/DocumentViewerPage.js'), 'DocumentViewerPage');
+
+// Reservations
+const ReservationListPage   = lazyNamed(() => import('./pages/reservations/ReservationListPage.js'), 'ReservationListPage');
+const ReservationDetailPage = lazyNamed(() => import('./pages/reservations/ReservationDetailPage.js'), 'ReservationDetailPage');
+
+// Site module
+const SiteOverviewPage    = React.lazy(() => import('./pages/site/SiteOverviewPage.js'));
+const SitePagesPage       = React.lazy(() => import('./pages/site/SitePagesPage.js'));
+const SiteEditorPage      = React.lazy(() => import('./pages/site/SiteEditorPage.js'));
+const SiteThemesPage      = React.lazy(() => import('./pages/site/SiteThemesPage.js'));
+const SiteDomainsPage     = React.lazy(() => import('./pages/site/SiteDomainsPage.js'));
+const SiteBlogPage        = React.lazy(() => import('./pages/site/SiteBlogPage.js'));
+const SiteRedirectsPage   = React.lazy(() => import('./pages/site/SiteRedirectsPage.js'));
+const SiteFormsPage       = React.lazy(() => import('./pages/site/SiteFormsPage.js'));
+const SiteCreationWizard  = React.lazy(() => import('./pages/site/SiteCreationWizard.js'));
+
+// Reports module — each view loaded on demand
+const ReportsIndexPage          = React.lazy(() => import('./pages/reports/ReportsIndexPage.js'));
+const FunnelConversionView      = React.lazy(() => import('./pages/reports/views/FunnelConversionView.js'));
+const AgentProductivityView     = React.lazy(() => import('./pages/reports/views/AgentProductivityView.js'));
+const ListingPerformanceView    = React.lazy(() => import('./pages/reports/views/ListingPerformanceView.js'));
+const PortalROIView             = React.lazy(() => import('./pages/reports/views/PortalROIView.js'));
+const PipelineVelocityView      = React.lazy(() => import('./pages/reports/views/PipelineVelocityView.js'));
+const RevenueForecastView       = React.lazy(() => import('./pages/reports/views/RevenueForecastView.js'));
+const RetentionCohortView       = React.lazy(() => import('./pages/reports/views/RetentionCohortView.js'));
+const ZoneAnalysisView          = React.lazy(() => import('./pages/reports/views/ZoneAnalysisView.js'));
+const AIUsageView               = React.lazy(() => import('./pages/reports/views/AIUsageView.js'));
+const LeadCohortsView           = React.lazy(() => import('./pages/reports/views/LeadCohortsView.js'));
+const SLAAdherenceView          = React.lazy(() => import('./pages/reports/views/SLAAdherenceView.js'));
+const CommissionOwedView        = React.lazy(() => import('./pages/reports/views/CommissionOwedView.js'));
+const InboxActivityView         = React.lazy(() => import('./pages/reports/views/InboxActivityView.js'));
+const ClosingCalendarView       = React.lazy(() => import('./pages/reports/views/ClosingCalendarView.js'));
+const PipelineByBranchView      = React.lazy(() => import('./pages/reports/views/PipelineByBranchView.js'));
+const ReservationRatesView      = React.lazy(() => import('./pages/reports/views/ReservationRatesView.js'));
+const DocumentExpiryView        = React.lazy(() => import('./pages/reports/views/DocumentExpiryView.js'));
+const CapturedListingsView      = React.lazy(() => import('./pages/reports/views/CapturedListingsView.js'));
+const InventoryBalanceView      = React.lazy(() => import('./pages/reports/views/InventoryBalanceView.js'));
+const RevenueTrendView          = React.lazy(() => import('./pages/reports/views/RevenueTrendView.js'));
+const PriceEvolutionView        = React.lazy(() => import('./pages/reports/views/PriceEvolutionView.js'));
+const CustomerAcquisitionView   = React.lazy(() => import('./pages/reports/views/CustomerAcquisitionView.js'));
+
+// Appraisals
+const AppraisalsPage      = React.lazy(() => import('./pages/appraisals/AppraisalsPage.js'));
+const AppraisalWizardPage = React.lazy(() => import('./pages/appraisals/AppraisalWizardPage.js'));
+
 import { useCopilotEnabled } from './hooks/useCopilotEnabled.js';
-
-// ─── Phase G: Site module ───────────────────────────────────────────────────
-import SiteOverviewPage from './pages/site/SiteOverviewPage.js';
-import SitePagesPage from './pages/site/SitePagesPage.js';
-import SiteEditorPage from './pages/site/SiteEditorPage.js';
-import SiteThemesPage from './pages/site/SiteThemesPage.js';
-import SiteDomainsPage from './pages/site/SiteDomainsPage.js';
-import SiteBlogPage from './pages/site/SiteBlogPage.js';
-import SiteRedirectsPage from './pages/site/SiteRedirectsPage.js';
-import SiteFormsPage from './pages/site/SiteFormsPage.js';
-import SiteCreationWizard from './pages/site/SiteCreationWizard.js';
-import BillingPage from './pages/settings/billing/BillingPage.js';
-
-// ─── Phase G: Reports module ────────────────────────────────────────────────
-import ReportsIndexPage from './pages/reports/ReportsIndexPage.js';
-import FunnelConversionView from './pages/reports/views/FunnelConversionView.js';
-import AgentProductivityView from './pages/reports/views/AgentProductivityView.js';
-import ListingPerformanceView from './pages/reports/views/ListingPerformanceView.js';
-import PortalROIView from './pages/reports/views/PortalROIView.js';
-import PipelineVelocityView from './pages/reports/views/PipelineVelocityView.js';
-import RevenueForecastView from './pages/reports/views/RevenueForecastView.js';
-import RetentionCohortView from './pages/reports/views/RetentionCohortView.js';
-import ZoneAnalysisView from './pages/reports/views/ZoneAnalysisView.js';
-import AIUsageView from './pages/reports/views/AIUsageView.js';
-import LeadCohortsView from './pages/reports/views/LeadCohortsView.js';
-import SLAAdherenceView from './pages/reports/views/SLAAdherenceView.js';
-import CommissionOwedView from './pages/reports/views/CommissionOwedView.js';
-import InboxActivityView from './pages/reports/views/InboxActivityView.js';
-import ClosingCalendarView from './pages/reports/views/ClosingCalendarView.js';
-import PipelineByBranchView from './pages/reports/views/PipelineByBranchView.js';
-import ReservationRatesView from './pages/reports/views/ReservationRatesView.js';
-import DocumentExpiryView from './pages/reports/views/DocumentExpiryView.js';
-import CapturedListingsView from './pages/reports/views/CapturedListingsView.js';
-import InventoryBalanceView from './pages/reports/views/InventoryBalanceView.js';
-import RevenueTrendView from './pages/reports/views/RevenueTrendView.js';
-import PriceEvolutionView from './pages/reports/views/PriceEvolutionView.js';
-import CustomerAcquisitionView from './pages/reports/views/CustomerAcquisitionView.js';
-
-// ─── Phase G: Appraisals module ─────────────────────────────────────────────
-import AppraisalsPage from './pages/appraisals/AppraisalsPage.js';
-import AppraisalWizardPage from './pages/appraisals/AppraisalWizardPage.js';
 
 // Initialize telemetry before rendering. Empty DSN/key in dev is safe — SDKs no-op.
 initSentryBrowser({
@@ -100,10 +125,18 @@ initSentryBrowser({
   tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0,
 });
 
-initPostHog({
-  apiKey: import.meta.env.VITE_POSTHOG_KEY ?? '',
-  host: import.meta.env.VITE_POSTHOG_HOST,
-});
+// Defer analytics init to after first paint to avoid blocking LCP
+if (typeof window !== 'undefined') {
+  const initAnalytics = () => initPostHog({
+    apiKey: import.meta.env.VITE_POSTHOG_KEY ?? '',
+    host: import.meta.env.VITE_POSTHOG_HOST,
+  });
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(initAnalytics);
+  } else {
+    setTimeout(initAnalytics, 1000);
+  }
+}
 
 // ─── Mock session (replace with real auth store in Phase B) ──────────────────
 const MOCK_USER: AppShellUser = {
@@ -125,7 +158,19 @@ const MOCK_ORG: OrganizationData = {
   foundingYear: '',
 };
 
-// ─── Root layout (wraps all authenticated routes) ─��──────────────────────────
+// ─── Suspense fallback ─────────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div style={{
+      minHeight: '60vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }} />
+  );
+}
+
+// ─── Root layout (wraps all authenticated routes) ─────────────────────────────
 const MODULE_PATHS: Record<string, string> = {
   dashboard:    '/dashboard',
   properties:   '/properties',
@@ -184,20 +229,24 @@ function AuthenticatedLayout() {
         if (path) router.navigate({ to: path });
       }}
     >
-      <Outlet />
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onNavigate={href => {
-          setPaletteOpen(false);
-          router.navigate({ to: href });
-        }}
-        onOpenSearchPage={(q, entityType) => {
-          setPaletteOpen(false);
-          router.navigate({ to: '/search', search: { q, type: entityType } });
-        }}
-      />
-      <CopilotFloat />
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onNavigate={href => {
+            setPaletteOpen(false);
+            router.navigate({ to: href });
+          }}
+          onOpenSearchPage={(q, entityType) => {
+            setPaletteOpen(false);
+            router.navigate({ to: '/search', search: { q, type: entityType } });
+          }}
+        />
+        <CopilotFloat />
+      </Suspense>
     </AppShell>
   );
 }
@@ -694,7 +743,7 @@ const siteNewRoute = createRoute({
 });
 
 // ─── Phase G: Reports routes ────────────────────────────────────────────────
-const REPORT_VIEW_MAP: Record<string, React.ComponentType> = {
+const REPORT_VIEW_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   'funnel-conversion':    FunnelConversionView,
   'agent-productivity':   AgentProductivityView,
   'listing-performance':  ListingPerformanceView,
@@ -764,7 +813,7 @@ const appraisalEditRoute = createRoute({
   },
 });
 
-// ─── Router tree ────────────────────────────────���────────────────────────────
+// ─── Router tree ────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,

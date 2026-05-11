@@ -63,16 +63,28 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('react-dom') || id.match(/\/react\//)) return 'react';
+          // Critical path: React runtime — must be in its own chunk for long-term caching
+          if (id.includes('react-dom') || /node_modules\/react\//.test(id)) return 'react';
+          // Routing + data fetching — loaded immediately after react
           if (id.includes('@tanstack/react-router')) return 'router';
           if (id.includes('@tanstack/react-query') || id.includes('@trpc/')) return 'query';
+          // Heavy async chunks — only loaded on relevant pages
           if (id.includes('maplibre-gl')) return 'map';
           if (id.includes('pdfjs-dist') || id.includes('react-pdf')) return 'pdf';
           if (id.includes('@tiptap/')) return 'editor';
           if (id.includes('@dnd-kit/')) return 'dnd';
+          // Telemetry deferred to idle — keep out of critical path
           if (id.includes('@sentry/') || id.includes('posthog')) return 'telemetry';
+          // i18n runtime
           if (id.includes('react-intl') || id.includes('@formatjs/')) return 'intl';
+          // Icon library is large and rarely changes
           if (id.includes('lucide-react')) return 'icons';
+          // Radix UI primitive components — shared across pages
+          if (id.includes('@radix-ui/')) return 'radix';
+          // Date/calendar utilities
+          if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
+          // Charting
+          if (id.includes('recharts') || id.includes('d3-')) return 'charts';
         },
       },
     },
