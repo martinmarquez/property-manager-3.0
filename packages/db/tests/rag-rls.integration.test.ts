@@ -59,7 +59,8 @@ let userAId: string;
 let embeddingAId: string;
 let sessionAId: string;
 
-const ZERO_VECTOR_SQL = sql.unsafe(`array_fill(0.0::float4, ARRAY[512])::vector`);
+const ZERO_VECTOR_PG = sql.unsafe(`array_fill(0.0::float4, ARRAY[512])::vector`);
+const ZERO_VECTOR_DRIZZLE = sqlTag`array_fill(0.0::float4, ARRAY[512])::vector`;
 
 beforeAll(async () => {
   await resetTenantCtx();
@@ -100,7 +101,7 @@ beforeAll(async () => {
       0,
       'description',
       'Departamento en Palermo con 3 ambientes y balcón corrido.',
-      ${ZERO_VECTOR_SQL},
+      ${ZERO_VECTOR_PG},
       12,
       '{}'::jsonb
     )
@@ -170,10 +171,10 @@ describe('ai_embedding RLS isolation', () => {
     await withTenant(tenantBId, async (tx) => {
       const rows = await tx.execute(sqlTag`
         SELECT id, entity_type, entity_id, chunk_index, content,
-               1 - (embedding <=> ${ZERO_VECTOR_SQL}) AS similarity
+               1 - (embedding <=> ${ZERO_VECTOR_DRIZZLE}) AS similarity
         FROM ai_embedding
         WHERE tenant_id = ${tenantBId}::uuid
-        ORDER BY embedding <=> ${ZERO_VECTOR_SQL}
+        ORDER BY embedding <=> ${ZERO_VECTOR_DRIZZLE}
         LIMIT 10
       `);
       expect((rows as unknown[]).length).toBe(0);
@@ -211,7 +212,7 @@ describe('ai_embedding RLS isolation', () => {
             gen_random_uuid(),
             0,
             'Cross-tenant injection attempt',
-            ${ZERO_VECTOR_SQL},
+            ${ZERO_VECTOR_DRIZZLE},
             1,
             '{}'::jsonb
           )
