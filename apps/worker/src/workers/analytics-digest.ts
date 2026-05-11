@@ -118,7 +118,6 @@ export class AnalyticsDigestWorker extends BaseWorker<DigestJobData, DigestResul
 
         let rows: Record<string, unknown>[] = [];
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const queryResult = await this.db.execute(sql.raw(
             `SELECT * FROM ${mv} WHERE tenant_id = '${sub.tenantId}' LIMIT 50`,
           ));
