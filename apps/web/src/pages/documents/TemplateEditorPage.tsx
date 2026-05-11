@@ -962,7 +962,7 @@ export function TemplateEditorPage({ templateId: _templateId }: TemplateEditorPa
         <ClausePickerModal
           onClose={() => setShowClausePicker(false)}
           onInsert={clause => {
-            console.log('insert clause:', clause.id);
+            console.info('insert clause:', clause.id);
             setShowClausePicker(false);
           }}
         />

@@ -42,9 +42,9 @@ const config: Config = {
         border: { DEFAULT: '#E2E8F0', subtle: '#EDF2F7' },
       },
       fontFamily: {
-        display: ['Syne', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['DM Mono', 'monospace'],
+        display: ['var(--font-syne)', 'Syne', 'system-ui', 'sans-serif'],
+        body: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-dm-mono)', 'DM Mono', 'monospace'],
       },
       fontSize: {
         'display-2xl': ['72px', { lineHeight: '80px', fontWeight: '800' }],

@@ -50,7 +50,7 @@ async function runEval() {
     results.set(intent, { correct: 0, total: 0, failures: [] });
   }
 
-  console.log(`Running classifier eval: ${evalDataset.length} samples\n`);
+  console.info(`Running classifier eval: ${evalDataset.length} samples\n`);
 
   let totalCorrect = 0;
 
@@ -70,35 +70,35 @@ async function runEval() {
 
     const mark = isCorrect ? '✓' : '✗';
     const extra = isCorrect ? '' : ` (got: ${result.type})`;
-    console.log(
+    console.info(
       `  [${String(i + 1).padStart(2)}/${evalDataset.length}] ${mark} ${sample.expectedIntent.padEnd(16)} | ${sample.query.slice(0, 60)}${extra}`,
     );
   }
 
   const overallAccuracy = totalCorrect / evalDataset.length;
 
-  console.log('\n' + '═'.repeat(72));
-  console.log('RESULTS');
-  console.log('═'.repeat(72));
-  console.log(
+  console.info('\n' + '═'.repeat(72));
+  console.info('RESULTS');
+  console.info('═'.repeat(72));
+  console.info(
     `\n${'Intent'.padEnd(18)} ${'Correct'.padStart(7)} / ${'Total'.padStart(5)}   ${'Accuracy'.padStart(8)}`,
   );
-  console.log('─'.repeat(48));
+  console.info('─'.repeat(48));
 
   for (const intent of intents) {
     const r = results.get(intent)!;
     if (r.total === 0) continue;
     const acc = ((r.correct / r.total) * 100).toFixed(1);
-    console.log(
+    console.info(
       `${intent.padEnd(18)} ${String(r.correct).padStart(7)} / ${String(r.total).padStart(5)}   ${acc.padStart(7)}%`,
     );
   }
 
-  console.log('─'.repeat(48));
-  console.log(
+  console.info('─'.repeat(48));
+  console.info(
     `${'OVERALL'.padEnd(18)} ${String(totalCorrect).padStart(7)} / ${String(evalDataset.length).padStart(5)}   ${(overallAccuracy * 100).toFixed(1).padStart(7)}%`,
   );
-  console.log();
+  console.info();
 
   const misclassifications: BaselineRecord['misclassifications'] = [];
   for (const intent of intents) {
@@ -109,11 +109,11 @@ async function runEval() {
   }
 
   if (misclassifications.length > 0) {
-    console.log('MISCLASSIFICATIONS:');
+    console.info('MISCLASSIFICATIONS:');
     for (const m of misclassifications) {
-      console.log(`  expected=${m.expected}  predicted=${m.predicted}  query="${m.query}"`);
+      console.info(`  expected=${m.expected}  predicted=${m.predicted}  query="${m.query}"`);
     }
-    console.log();
+    console.info();
   }
 
   const outputFile = process.env['EVAL_OUTPUT_FILE'];
@@ -143,17 +143,17 @@ async function runEval() {
     };
 
     fs.writeFileSync(outputFile, JSON.stringify(baseline, null, 2));
-    console.log(`Baseline written to: ${outputFile}`);
+    console.info(`Baseline written to: ${outputFile}`);
   }
 
   if (overallAccuracy < ACCURACY_THRESHOLD) {
-    console.log(
+    console.info(
       `FAIL: Overall accuracy ${(overallAccuracy * 100).toFixed(1)}% is below ${ACCURACY_THRESHOLD * 100}% threshold`,
     );
     process.exit(1);
   }
 
-  console.log(
+  console.info(
     `PASS: Overall accuracy ${(overallAccuracy * 100).toFixed(1)}% meets ${ACCURACY_THRESHOLD * 100}% threshold`,
   );
 }

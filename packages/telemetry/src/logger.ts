@@ -38,8 +38,12 @@ function write(level: LogLevel, message: string, fields: LogFields = {}): void {
     } else {
       process.stdout.write(line + '\n');
     }
+  } else if (level === 'error') {
+    console.error(line);
+  } else if (level === 'warn') {
+    console.warn(line);
   } else {
-    console[level](line);
+    console.info(line);
   }
 }
 

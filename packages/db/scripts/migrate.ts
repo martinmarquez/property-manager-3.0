@@ -45,11 +45,11 @@ try {
 
   for (const file of files) {
     if (appliedSet.has(file)) {
-      console.log(`  skip  ${file}`);
+      console.info(`  skip  ${file}`);
       continue;
     }
     const sql = await readFile(resolve(migrationsFolder, file), 'utf8');
-    console.log(`  apply ${file}`);
+    console.info(`  apply ${file}`);
     await pool.query('BEGIN');
     try {
       await pool.query(sql);
@@ -61,7 +61,7 @@ try {
     }
   }
 
-  console.log('Migrations complete.');
+  console.info('Migrations complete.');
 } finally {
   await pool.end();
 }
