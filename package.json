@@ -17,7 +17,10 @@
     "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "seed:demo": "pnpm --filter @corredor/seeder seed:demo",
+    "demo:reset": "pnpm --filter @corredor/seeder demo:reset",
+    "demo:save-snapshot": "pnpm --filter @corredor/seeder demo:save-snapshot"
   },
   "devDependencies": {
     "@corredor/config": "workspace:*",
@@ -32,7 +35,11 @@
       "tar": "^7.5.11",
       "serialize-javascript": "^7.0.3",
       "@types/react": "^19.0.0",
-      "@types/react-dom": "^19.0.0"
+      "@types/react-dom": "^19.0.0",
+      "handlebars": "^4.7.9",
+      "fast-xml-parser": "^5.7.3",
+      "fast-uri": "^3.1.2",
+      "@babel/plugin-transform-modules-systemjs": "^7.29.4"
     }
   },
   "dependencies": {
