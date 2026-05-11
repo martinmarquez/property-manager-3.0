@@ -39,6 +39,7 @@ import { createEsignWebhookRoutes } from './routes/webhooks-esign.js';
 import { createStripeWebhookRoutes } from './routes/webhooks-stripe.js';
 import { createMercadoPagoWebhookRoutes } from './routes/webhooks-mercadopago.js';
 import { createCopilotStreamRoutes } from './routes/copilot-stream.js';
+import { createV1Routes } from './routes/v1.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
 const db = createDb(env.DATABASE_URL);
@@ -125,6 +126,19 @@ app.route('/webhooks/stripe', createStripeWebhookRoutes(redis, {
 app.route('/webhooks/mercadopago', createMercadoPagoWebhookRoutes(redis, {
   MP_WEBHOOK_SECRET: env.MP_WEBHOOK_SECRET,
 }));
+
+// ── Public REST API v1 (API-key auth, no CSRF) ─────────────────────────
+app.use(
+  '/v1/*',
+  cors({
+    origin: '*',
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Tenant-Slug'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    maxAge: 600,
+  }),
+);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.route('/v1', createV1Routes({ db: db as any, redis }));
 
 // ── Copilot SSE streaming (outside tRPC — needs raw SSE response) ────────
 app.use(

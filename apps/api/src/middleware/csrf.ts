@@ -61,7 +61,7 @@ export function csrfMiddleware(isSecure = false): MiddlewareHandler {
       // Skip CSRF for tRPC subscriptions (SSE) — they use GET
       // Skip for internal health checks and webhook ingestion
       const path = c.req.path;
-      if (path.startsWith('/webhooks/') || path === '/health') {
+      if (path.startsWith('/webhooks/') || path.startsWith('/v1/') || path === '/health') {
         return next();
       }
 
