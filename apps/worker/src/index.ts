@@ -40,6 +40,7 @@ import { BillingDunningWorker } from './workers/billing-dunning.js';
 import { BillingBnaRateWorker, type BnaRateJobData } from './workers/billing-bna-rate.js';
 import { createAppraisalNarrativeWorker } from './workers/appraisal-narrative.js';
 import { createAppraisalPdfWorker } from './workers/appraisal-pdf.js';
+import { PushSendWorker } from './workers/push-send.js';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import type { MvRefreshJobData } from '@corredor/core';
 
@@ -139,10 +140,30 @@ if (!appraisalPdfWorker) {
   logger.warn('appraisal-pdf worker disabled — CLOUDFLARE_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY not set');
 }
 
+// Phase H: Push notification delivery worker — APNs + FCM
+const pushConfig: ConstructorParameters<typeof PushSendWorker>[2] = {};
+if (process.env['APNS_KEY_ID']) {
+  pushConfig.apns = {
+    keyId: process.env['APNS_KEY_ID'],
+    teamId: process.env['APNS_TEAM_ID'] ?? '',
+    privateKey: process.env['APNS_PRIVATE_KEY'] ?? '',
+    bundleId: process.env['APNS_BUNDLE_ID'] ?? 'ar.corredor.app',
+    production: process.env['APNS_PRODUCTION'] === 'true',
+  };
+}
+if (process.env['FCM_PROJECT_ID']) {
+  pushConfig.fcm = {
+    projectId: process.env['FCM_PROJECT_ID'],
+    clientEmail: process.env['FCM_CLIENT_EMAIL'] ?? '',
+    privateKey: process.env['FCM_PRIVATE_KEY'] ?? '',
+  };
+}
+const pushSendWorker = new PushSendWorker(redis, databaseUrl, pushConfig);
+
 // Phase G: Analytics MV refresh worker — event-driven + scheduled CONCURRENT refresh
 const mvRefreshWorker = new MvRefreshWorker(redis, databaseUrl);
 
-const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'billing-bna-rate-fetch', 'analytics-mv-refresh'];
+const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'billing-bna-rate-fetch', 'analytics-mv-refresh', 'push-send'];
 if (docGenerateWorker) activeQueues.push('doc-generate');
 if (ragIngestWorker) activeQueues.push('rag-ingest');
 if (appraisalNarrativeWorker) activeQueues.push('appraisal-ai-narrative');
@@ -203,6 +224,7 @@ void billingBnaRateWorker;
 void appraisalNarrativeWorker;
 void appraisalPdfWorker;
 void mvRefreshWorker;
+void pushSendWorker;
 
 // Health check HTTP server for Fly.io TCP checks
 import http from 'http';

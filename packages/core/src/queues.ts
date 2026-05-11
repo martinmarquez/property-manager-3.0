@@ -71,6 +71,13 @@ export const QUEUE_NAMES = {
   ANALYTICS_REFRESH: "analytics-refresh",
   MV_REFRESH: "analytics-mv-refresh",
 
+  // Push notifications — critical priority (Phase H)
+  PUSH_SEND: "push-send",
+  PUSH_BADGE_SYNC: "push-badge-sync",
+
+  // Demo tenant reset (Phase H)
+  DEMO_RESET: "demo-reset",
+
   // Dead-letter — catch-all for exhausted retries
   DEAD_LETTER: "dead-letter",
 } as const;
@@ -176,6 +183,9 @@ export const QUEUE_META: Record<QueueName, QueueMeta> = {
   [QUEUE_NAMES.CLEANUP]:          { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.ANALYTICS_REFRESH]:{ priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
   [QUEUE_NAMES.MV_REFRESH]:       { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 3  },
+  [QUEUE_NAMES.PUSH_SEND]:        { priority: QUEUE_PRIORITY.CRITICAL, defaultConcurrency: 10 },
+  [QUEUE_NAMES.PUSH_BADGE_SYNC]:  { priority: QUEUE_PRIORITY.MEDIUM,   defaultConcurrency: 3  },
+  [QUEUE_NAMES.DEMO_RESET]:       { priority: QUEUE_PRIORITY.LOW,      defaultConcurrency: 1  },
   [QUEUE_NAMES.DEAD_LETTER]:      { priority: QUEUE_PRIORITY.LOW,    defaultConcurrency: 1  },
 };
 
