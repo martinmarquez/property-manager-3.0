@@ -11,11 +11,9 @@ import {
 import { createQueue, QUEUE_NAMES, interpretBnaRate, calculateArsPrice } from '@corredor/core';
 import type { BnaRateRow } from '@corredor/core';
 import { router, protectedProcedure } from '../trpc.js';
+import type { AuthenticatedContext } from '../trpc.js';
+import { requirePermission } from '../lib/auth/rbac.js';
 import { env } from '../env.js';
-
-// ---------------------------------------------------------------------------
-// Stripe helpers (lazy-loaded to avoid import cost when not configured)
-// ---------------------------------------------------------------------------
 
 async function getStripe() {
   if (!env.STRIPE_SECRET_KEY) {
@@ -25,12 +23,7 @@ async function getStripe() {
   return new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2025-02-24.acacia' });
 }
 
-// ---------------------------------------------------------------------------
-// Billing Router
-// ---------------------------------------------------------------------------
-
 export const billingRouter = router({
-  // ─── Plans ───────────────────────────────────────────────────────────────
   plans: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db
       .select()
@@ -39,7 +32,6 @@ export const billingRouter = router({
       .orderBy(plan.sortOrder);
   }),
 
-  // ─── Current subscription ────────────────────────────────────────────────
   currentSubscription: protectedProcedure.query(async ({ ctx }) => {
     const [sub] = await ctx.db
       .select()
@@ -49,10 +41,10 @@ export const billingRouter = router({
     return sub ?? null;
   }),
 
-  // ─── Invoice history ─────────────────────────────────────────────────────
   invoices: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:read');
       return ctx.db
         .select()
         .from(invoice)
@@ -61,10 +53,10 @@ export const billingRouter = router({
         .limit(input.limit);
     }),
 
-  // ─── Payment history ─────────────────────────────────────────────────────
   payments: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:read');
       return ctx.db
         .select()
         .from(payment)
@@ -73,7 +65,6 @@ export const billingRouter = router({
         .limit(input.limit);
     }),
 
-  // ─── Stripe: Create checkout session ─────────────────────────────────────
   createCheckoutSession: protectedProcedure
     .input(
       z.object({
@@ -83,6 +74,7 @@ export const billingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
       const stripe = await getStripe();
 
       const priceMap: Record<string, string | undefined> = {
@@ -114,8 +106,8 @@ export const billingRouter = router({
       return { sessionId: session.id, url: session.url };
     }),
 
-  // ─── Stripe: Cancel subscription ────────────────────────────────────────
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+    requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
     const [sub] = await ctx.db
       .select()
       .from(subscription)
@@ -139,8 +131,8 @@ export const billingRouter = router({
     return { cancelAtPeriodEnd: true };
   }),
 
-  // ─── Stripe: Reactivate subscription ────────────────────────────────────
   reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+    requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
     const [sub] = await ctx.db
       .select()
       .from(subscription)
@@ -164,7 +156,6 @@ export const billingRouter = router({
     return { reactivated: true };
   }),
 
-  // ─── Stripe: Upgrade/downgrade plan ──────────────────────────────────────
   changePlan: protectedProcedure
     .input(
       z.object({
@@ -172,6 +163,7 @@ export const billingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
       const [sub] = await ctx.db
         .select()
         .from(subscription)
@@ -198,31 +190,20 @@ export const billingRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: `No price for plan: ${input.newPlanCode}` });
       }
 
-      // Determine upgrade vs downgrade by sort_order
       const plans = await ctx.db.select().from(plan).where(eq(plan.isActive, true));
       const currentPlan = plans.find((p) => p.code === sub.planCode);
       const newPlan = plans.find((p) => p.code === input.newPlanCode);
       const isUpgrade = (newPlan?.sortOrder ?? 0) > (currentPlan?.sortOrder ?? 0);
 
-      // Proration on upgrade (immediate); downgrade at period end
       await stripe.subscriptions.update(sub.stripeSubscriptionId, {
         items: [{ id: currentItemId, price: newPriceId }],
         proration_behavior: isUpgrade ? 'always_invoice' : 'none',
       });
 
-      await ctx.db
-        .update(subscription)
-        .set({
-          planCode: input.newPlanCode,
-          priceAmount: newPlan?.priceUsd ?? null,
-          updatedAt: new Date(),
-        })
-        .where(eq(subscription.id, sub.id));
-
+      // planCode update handled by Stripe webhook (customer.subscription.updated)
       return { newPlanCode: input.newPlanCode, isUpgrade };
     }),
 
-  // ─── Mercado Pago: Create checkout ───────────────────────────────────────
   createMPCheckout: protectedProcedure
     .input(
       z.object({
@@ -234,6 +215,7 @@ export const billingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
       if (!env.MP_ACCESS_TOKEN) {
         throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Mercado Pago not configured' });
       }
@@ -252,12 +234,11 @@ export const billingRouter = router({
       `);
       const { sellRate: bnaRate, isStale } = interpretBnaRate(bnaResult.rows as unknown as BnaRateRow[]);
       if (isStale) {
-        console.warn('BNA rate is stale (>48h) — billing may use outdated exchange rate');
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'BNA exchange rate is stale (>48h). Try again later.' });
       }
       const usdPrice = Number(selectedPlan.priceUsd ?? 0);
       const arsPrice = calculateArsPrice(usdPrice, bnaRate);
 
-      // For recurring monthly: use Preapproval API
       if (input.interval === 'monthly') {
         const response = await fetch('https://api.mercadopago.com/preapproval', {
           method: 'POST',
@@ -282,8 +263,7 @@ export const billingRouter = router({
         return { preferenceId: data.id, url: data.init_point };
       }
 
-      // For annual: one-time Checkout Pro
-      const annualArs = arsPrice * 10; // 10 months (2 free)
+      const annualArs = arsPrice * 10;
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
         headers: {
@@ -313,10 +293,10 @@ export const billingRouter = router({
       return { preferenceId: data.id, url: data.init_point };
     }),
 
-  // ─── AFIP: Manual retry invoice ──────────────────────────────────────────
   retryAfipInvoice: protectedProcedure
     .input(z.object({ afipInvoiceId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'billing:manage');
       const [inv] = await ctx.db
         .select()
         .from(afipInvoice)
@@ -352,7 +332,6 @@ export const billingRouter = router({
       return { queued: true };
     }),
 
-  // ─── AFIP invoices list ──────────────────────────────────────────────────
   afipInvoices: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {

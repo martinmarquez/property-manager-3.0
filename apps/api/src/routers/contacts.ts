@@ -1201,6 +1201,7 @@ export const contactsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      requirePermission(ctx as unknown as AuthenticatedContext, 'contacts:delete');
       const { db, tenantId, userId } = ctx;
       await db
         .update(contact)

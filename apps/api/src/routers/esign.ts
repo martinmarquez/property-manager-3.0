@@ -76,6 +76,7 @@ export const esignRouter = router({
         .where(
           and(
             eq(docDocument.id, input.documentId),
+            eq(docDocument.tenantId, authCtx.tenantId),
             isNull(docDocument.deletedAt),
           ),
         )
@@ -158,7 +159,10 @@ export const esignRouter = router({
       const [sigReq] = await authCtx.db
         .select()
         .from(docSignatureRequest)
-        .where(eq(docSignatureRequest.id, input.signatureRequestId))
+        .where(and(
+          eq(docSignatureRequest.id, input.signatureRequestId),
+          eq(docSignatureRequest.tenantId, authCtx.tenantId),
+        ))
         .limit(1);
 
       if (!sigReq) throw new TRPCError({ code: 'NOT_FOUND', message: 'Signature request not found' });
@@ -194,7 +198,10 @@ export const esignRouter = router({
       const [sigReq] = await authCtx.db
         .select()
         .from(docSignatureRequest)
-        .where(eq(docSignatureRequest.id, input.signatureRequestId))
+        .where(and(
+          eq(docSignatureRequest.id, input.signatureRequestId),
+          eq(docSignatureRequest.tenantId, authCtx.tenantId),
+        ))
         .limit(1);
 
       if (!sigReq) throw new TRPCError({ code: 'NOT_FOUND', message: 'Signature request not found' });
@@ -227,7 +234,10 @@ export const esignRouter = router({
       const [sigReq] = await authCtx.db
         .select()
         .from(docSignatureRequest)
-        .where(eq(docSignatureRequest.id, input.signatureRequestId))
+        .where(and(
+          eq(docSignatureRequest.id, input.signatureRequestId),
+          eq(docSignatureRequest.tenantId, authCtx.tenantId),
+        ))
         .limit(1);
 
       if (!sigReq) throw new TRPCError({ code: 'NOT_FOUND', message: 'Signature request not found' });
@@ -265,7 +275,10 @@ export const esignRouter = router({
       const [sigReq] = await authCtx.db
         .select()
         .from(docSignatureRequest)
-        .where(eq(docSignatureRequest.id, input.signatureRequestId))
+        .where(and(
+          eq(docSignatureRequest.id, input.signatureRequestId),
+          eq(docSignatureRequest.tenantId, authCtx.tenantId),
+        ))
         .limit(1);
 
       if (!sigReq) throw new TRPCError({ code: 'NOT_FOUND', message: 'Signature request not found' });
@@ -290,7 +303,10 @@ export const esignRouter = router({
       const rows = await authCtx.db
         .select()
         .from(docAuditTrail)
-        .where(eq(docAuditTrail.docDocumentId, input.documentId))
+        .where(and(
+          eq(docAuditTrail.docDocumentId, input.documentId),
+          eq(docAuditTrail.tenantId, authCtx.tenantId),
+        ))
         .orderBy(desc(docAuditTrail.occurredAt))
         .limit(input.limit)
         .offset(input.offset);

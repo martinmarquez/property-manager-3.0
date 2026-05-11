@@ -60,6 +60,34 @@ interface AppraisalPdfData {
   appraisalRow: typeof appraisal.$inferSelect;
   reportRow: typeof appraisalReport.$inferSelect;
   comps: Array<typeof appraisalComp.$inferSelect>;
+  signatureDataUri: string | null;
+}
+
+const SIGNATURE_ALLOWED_HOSTS = new Set([
+  'corredor.ar',
+  'app.corredor.ar',
+  'storage.corredor.ar',
+]);
+
+async function fetchSignatureAsDataUri(url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const isAllowed =
+      SIGNATURE_ALLOWED_HOSTS.has(host) ||
+      [...SIGNATURE_ALLOWED_HOSTS].some((allowed) => host.endsWith(`.${allowed}`));
+    if (!isAllowed) return null;
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') ?? 'image/png';
+    const buffer = await res.arrayBuffer();
+    const b64 = Buffer.from(buffer).toString('base64');
+    return `data:${contentType};base64,${b64}`;
+  } catch {
+    return null;
+  }
 }
 
 function escapeHtml(str: string | null | undefined): string {
@@ -79,7 +107,7 @@ function formatCurrency(amount: string | null, currency: string): string {
 }
 
 function buildHtml(data: AppraisalPdfData): string {
-  const { appraisalRow: a, reportRow: r, comps } = data;
+  const { appraisalRow: a, reportRow: r, comps, signatureDataUri } = data;
 
   const address = `${a.addressStreet} ${a.addressNumber ?? ''}`.trim();
   const location = [a.locality, a.province].filter(Boolean).join(', ');
@@ -99,8 +127,8 @@ function buildHtml(data: AppraisalPdfData): string {
     )
     .join('');
 
-  const signatureBlock = a.appraiserSignatureUrl
-    ? `<img src="${escapeHtml(a.appraiserSignatureUrl)}" alt="Firma" style="max-height:80px;" />`
+  const signatureBlock = signatureDataUri
+    ? `<img src="${signatureDataUri}" alt="Firma" style="max-height:80px;" />`
     : '';
 
   return `<!DOCTYPE html>
@@ -279,7 +307,8 @@ export class AppraisalPdfWorker extends BaseWorker<AppraisalPdfJobData, Appraisa
       )
       .orderBy(appraisalComp.distanceM);
 
-    const htmlContent = buildHtml({ appraisalRow, reportRow, comps });
+    const signatureDataUri = await fetchSignatureAsDataUri(appraisalRow.appraiserSignatureUrl);
+    const htmlContent = buildHtml({ appraisalRow, reportRow, comps, signatureDataUri });
     const pdfBuffer = await this.renderPdf(htmlContent);
 
     await this.r2.send(

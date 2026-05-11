@@ -493,13 +493,7 @@ export const appraisalsRouter = router({
         throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AI not configured' });
       }
 
-      // Fetch appraisal outside transaction (protectedProcedureNoTx)
-      const { createDb, setTenantContext } = await import('@corredor/db');
-      const db = createDb(env.DATABASE_URL);
-      await db.transaction(async (tx) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await setTenantContext(tx as any, ctx.tenantId, ctx.userId);
-      });
+      const db = ctx.db;
 
       const [target] = await db
         .select()
@@ -626,7 +620,7 @@ export const appraisalsRouter = router({
           updatedAt: new Date(),
           updatedBy: ctx.userId,
         })
-        .where(eq(appraisal.id, input.appraisalId));
+        .where(and(eq(appraisal.id, input.appraisalId), eq(appraisal.tenantId, ctx.tenantId)));
 
       return report!;
     }),

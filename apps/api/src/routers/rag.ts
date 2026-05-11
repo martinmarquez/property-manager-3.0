@@ -5,6 +5,7 @@ import { property } from '@corredor/db';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
+import { requireAnyRole } from '../lib/auth/rbac.js';
 
 export const ragRouter = router({
   reindexProperty: protectedProcedure
@@ -51,14 +52,9 @@ export const ragRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, roles, redis } = ctx as AuthenticatedContext;
-
-      if (!roles.includes('admin') && !roles.includes('owner')) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can trigger tenant-wide re-index',
-        });
-      }
+      const authCtx = ctx as AuthenticatedContext;
+      const { tenantId, redis } = authCtx;
+      requireAnyRole(authCtx, ['admin', 'owner']);
 
       const allProperties = await (ctx as AuthenticatedContext).db
         .select({ id: property.id })

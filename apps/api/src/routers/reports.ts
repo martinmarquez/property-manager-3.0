@@ -19,6 +19,7 @@ import {
 } from '../trpc.js';
 import type { AuthenticatedContext, AnyDb } from '../trpc.js';
 import { requirePermission } from '../lib/auth/rbac.js';
+import { env } from '../env.js';
 
 const reportProcedure = protectedProcedure.use(withFeatureGate('reports_export'));
 const reportProcedureNoTx = protectedProcedureNoTx.use(withFeatureGate('reports_export'));
@@ -399,12 +400,12 @@ const shareLinkRouter = router({
       expiresAt: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { db, tenantId, userId, c } = ctx as unknown as AuthenticatedContext;
+      const { db, tenantId, userId } = ctx as unknown as AuthenticatedContext;
       requirePermission(ctx as unknown as AuthenticatedContext, 'reports:export');
 
       const expiresAt = new Date(Date.now() + input.ttlDays * 86_400_000);
       const expiresEpoch = Math.floor(expiresAt.getTime() / 1000);
-      const secret = process.env['AUTH_ENCRYPTION_KEY'] ?? 'dev-secret-not-for-production';
+      const secret = env.AUTH_ENCRYPTION_KEY;
       const token = signShareToken(tenantId, input.slug, expiresEpoch, secret);
 
       const [row] = await db
@@ -419,9 +420,7 @@ const shareLinkRouter = router({
         })
         .returning({ id: reportShareLink.id });
 
-      const host = c.req.header('Host') ?? 'app.corredor.ar';
-      const proto = c.req.header('X-Forwarded-Proto') ?? 'https';
-      const url = `${proto}://${host}/api/reports/shared/${token}`;
+      const url = `${env.APP_URL}/api/reports/shared/${token}`;
 
       return {
         id: row!.id,
@@ -441,7 +440,7 @@ const shareLinkRouter = router({
       expiresAt: z.string(),
     }))
     .query(async ({ ctx, input }) => {
-      const secret = process.env['AUTH_ENCRYPTION_KEY'] ?? 'dev-secret-not-for-production';
+      const secret = env.AUTH_ENCRYPTION_KEY;
       const decoded = verifyShareToken(input.token, secret);
 
       if (!decoded) {

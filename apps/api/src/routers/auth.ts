@@ -36,7 +36,7 @@ import {
   userRole,
   role,
 } from '@corredor/db';
-import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+import { router, publicProcedure, publicRateLimitedProcedure, protectedProcedure } from '../trpc.js';
 import {
   createSession,
   destroySession,
@@ -218,7 +218,7 @@ export const authRouter = router({
   // -------------------------------------------------------------------------
   // auth.register
   // -------------------------------------------------------------------------
-  register: publicProcedure.input(RegisterInput).mutation(async ({ ctx, input }) => {
+  register: publicRateLimitedProcedure.input(RegisterInput).mutation(async ({ ctx, input }) => {
     const { db, c } = ctx;
     const ip = getIp(c);
     const ua = getUserAgent(c);
@@ -313,7 +313,7 @@ export const authRouter = router({
   // -------------------------------------------------------------------------
   // auth.login
   // -------------------------------------------------------------------------
-  login: publicProcedure.input(LoginInput).mutation(async ({ ctx, input }) => {
+  login: publicRateLimitedProcedure.input(LoginInput).mutation(async ({ ctx, input }) => {
     const { db, redis, c } = ctx;
     const ip = getIp(c);
     const ua = getUserAgent(c);
@@ -442,7 +442,7 @@ export const authRouter = router({
   // auth.passwordReset
   // -------------------------------------------------------------------------
   passwordReset: router({
-    request: publicProcedure.input(PasswordResetRequestInput).mutation(async ({ ctx, input }) => {
+    request: publicRateLimitedProcedure.input(PasswordResetRequestInput).mutation(async ({ ctx, input }) => {
       const { db, c } = ctx;
       const ip = getIp(c);
       const ua = getUserAgent(c);

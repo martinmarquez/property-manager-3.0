@@ -1,5 +1,5 @@
 import type { Job } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import {
   createNodeDb,
   subscription,
@@ -7,6 +7,7 @@ import {
   payment,
   afipInvoice,
   tenant,
+  plan,
 } from '@corredor/db';
 import {
   BaseWorker,
@@ -14,7 +15,10 @@ import {
   createQueue,
   determineInvoiceType,
   AFIP_PUNTO_VENTA,
+  interpretBnaRate,
+  calculateArsPrice,
 } from '@corredor/core';
+import type { BnaRateRow } from '@corredor/core';
 import type Redis from 'ioredis';
 
 interface MercadoPagoWebhookJobData {
@@ -103,6 +107,39 @@ export class BillingMPWebhookWorker extends BaseWorker<MercadoPagoWebhookJobData
     // external_reference format: tenantId:planCode:interval
     const [tenantId, planCode] = externalRef.split(':');
     if (!tenantId || !planCode) return;
+
+    // Validate payment amount against canonical plan price × BNA rate (±5% tolerance)
+    if (mpPayment.status === 'approved') {
+      const [planRow] = await this.db
+        .select({ priceUsd: plan.priceUsd })
+        .from(plan)
+        .where(eq(plan.code, planCode))
+        .limit(1);
+
+      if (planRow?.priceUsd) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bnaRows: BnaRateRow[] = (await this.db.execute(sql`
+          SELECT date, sell_rate, fetched_at FROM bna_rate ORDER BY date DESC LIMIT 1
+        `)) as any;
+        const bnaRate = interpretBnaRate(bnaRows);
+
+        if (!bnaRate.isStale) {
+          const expectedArs = calculateArsPrice(Number(planRow.priceUsd), bnaRate.sellRate);
+          const paidAmount = mpPayment.transaction_amount;
+          const tolerance = expectedArs * 0.05;
+
+          if (Math.abs(paidAmount - expectedArs) > tolerance) {
+            this.logger.warn('MP payment amount mismatch — possible tampering', {
+              paymentId,
+              paidAmount,
+              expectedArs,
+              planCode,
+            });
+            return;
+          }
+        }
+      }
+    }
 
     // Find or verify subscription exists
     const [sub] = await this.db

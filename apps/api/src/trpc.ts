@@ -83,7 +83,7 @@ const t = initTRPC.context<TRPCContext>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+        zodError: process.env['NODE_ENV'] !== 'production' && error.cause instanceof ZodError ? error.cause.flatten() : null,
         upsell: error.cause instanceof FeatureGateError
           ? { requiredPlan: error.cause.requiredPlan, featureName: error.cause.featureName }
           : null,
@@ -284,6 +284,30 @@ export const protectedProcedureNoTx = t.procedure
   .use(rbacMiddleware)
   .use(rateLimitMiddleware)
   .use(auditLogMiddleware);
+
+const publicRateLimitMiddleware = middleware(async ({ ctx, next }) => {
+  const { redis, c } = ctx;
+  const ip =
+    c.req.header('CF-Connecting-IP') ??
+    c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ??
+    'unknown';
+
+  const key = `ratelimit:${RateLimitPresets.AUTH_REGISTER.scope}:ip:${ip}`;
+  const result = await checkRateLimit(redis, key, RateLimitPresets.AUTH_REGISTER);
+
+  if (!result.allowed) {
+    c.header('Retry-After', String(result.retryAfterSeconds));
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: `Rate limit exceeded. Retry in ${result.retryAfterSeconds}s`,
+    });
+  }
+
+  return next({ ctx });
+});
+
+/** Public procedure with IP-based rate limiting. Use for auth endpoints to prevent brute-force. */
+export const publicRateLimitedProcedure = t.procedure.use(publicRateLimitMiddleware);
 
 /**
  * Middleware factory that gates a procedure on a plan_feature key.

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { eq, and, desc, isNull, sql } from 'drizzle-orm';
+import sanitizeHtml from 'sanitize-html';
 import {
   docTemplate,
   docTemplateRevision,
@@ -9,6 +10,13 @@ import {
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
 import type { AuthenticatedContext } from '../trpc.js';
+
+const SAFE_HTML_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'u', 'span']),
+  allowedAttributes: { '*': ['style', 'class'], a: ['href', 'name', 'target'] },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  disallowedTagsMode: 'discard',
+};
 
 export const documentsRouter = router({
   // ---------------------------------------------------------------------------
@@ -26,6 +34,7 @@ export const documentsRouter = router({
     .query(async ({ ctx, input }) => {
       const authCtx = ctx as unknown as AuthenticatedContext;
       const conditions = [
+        eq(docTemplate.tenantId, authCtx.tenantId),
         isNull(docTemplate.deletedAt),
         eq(docTemplate.isActive, true),
       ];
@@ -51,7 +60,11 @@ export const documentsRouter = router({
       const [tmpl] = await authCtx.db
         .select()
         .from(docTemplate)
-        .where(and(eq(docTemplate.id, input.id), isNull(docTemplate.deletedAt)))
+        .where(and(
+          eq(docTemplate.id, input.id),
+          eq(docTemplate.tenantId, authCtx.tenantId),
+          isNull(docTemplate.deletedAt),
+        ))
         .limit(1);
 
       if (!tmpl) throw new TRPCError({ code: 'NOT_FOUND', message: 'Template not found' });
@@ -76,6 +89,7 @@ export const documentsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const authCtx = ctx as unknown as AuthenticatedContext;
+      const safeBodyHtml = sanitizeHtml(input.bodyHtml, SAFE_HTML_OPTIONS);
 
       const [created] = await authCtx.db
         .insert(docTemplate)
@@ -84,7 +98,7 @@ export const documentsRouter = router({
           slug: input.slug,
           name: input.name,
           kind: input.kind,
-          bodyHtml: input.bodyHtml,
+          bodyHtml: safeBodyHtml,
           requiredBindings: input.requiredBindings,
           minSignatureLevel: input.minSignatureLevel,
           jurisdiction: input.jurisdiction ?? null,
@@ -97,7 +111,7 @@ export const documentsRouter = router({
         tenantId: authCtx.tenantId,
         templateId: created!.id,
         revisionNumber: 1,
-        bodyHtml: input.bodyHtml,
+        bodyHtml: safeBodyHtml,
         requiredBindings: input.requiredBindings,
         changedBy: authCtx.userId,
       });
@@ -124,28 +138,40 @@ export const documentsRouter = router({
       const [existing] = await authCtx.db
         .select()
         .from(docTemplate)
-        .where(and(eq(docTemplate.id, id), isNull(docTemplate.deletedAt)))
+        .where(and(
+          eq(docTemplate.id, id),
+          eq(docTemplate.tenantId, authCtx.tenantId),
+          isNull(docTemplate.deletedAt),
+        ))
         .limit(1);
 
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Template not found' });
+
+      const safeBodyHtml = updates.bodyHtml !== undefined
+        ? sanitizeHtml(updates.bodyHtml, SAFE_HTML_OPTIONS)
+        : undefined;
 
       const newVersion = existing.version + 1;
       const [updated] = await authCtx.db
         .update(docTemplate)
         .set({
           ...updates,
+          ...(safeBodyHtml !== undefined ? { bodyHtml: safeBodyHtml } : {}),
           version: newVersion,
           updatedBy: authCtx.userId,
         })
-        .where(eq(docTemplate.id, id))
+        .where(and(
+          eq(docTemplate.id, id),
+          eq(docTemplate.tenantId, authCtx.tenantId),
+        ))
         .returning();
 
-      if (updates.bodyHtml !== undefined) {
+      if (safeBodyHtml !== undefined) {
         await authCtx.db.insert(docTemplateRevision).values({
           tenantId: authCtx.tenantId,
           templateId: id,
           revisionNumber: newVersion,
-          bodyHtml: updates.bodyHtml,
+          bodyHtml: safeBodyHtml,
           requiredBindings: updates.requiredBindings ?? existing.requiredBindings as string[],
           changedBy: authCtx.userId,
         });
@@ -161,7 +187,11 @@ export const documentsRouter = router({
       await authCtx.db
         .update(docTemplate)
         .set({ deletedAt: new Date(), updatedBy: authCtx.userId })
-        .where(and(eq(docTemplate.id, input.id), isNull(docTemplate.deletedAt)));
+        .where(and(
+          eq(docTemplate.id, input.id),
+          eq(docTemplate.tenantId, authCtx.tenantId),
+          isNull(docTemplate.deletedAt),
+        ));
       return { ok: true };
     }),
 
@@ -180,7 +210,10 @@ export const documentsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const authCtx = ctx as unknown as AuthenticatedContext;
-      const conditions = [isNull(docDocument.deletedAt)];
+      const conditions = [
+        eq(docDocument.tenantId, authCtx.tenantId),
+        isNull(docDocument.deletedAt),
+      ];
       if (input.templateId) conditions.push(eq(docDocument.templateId, input.templateId));
       if (input.status) conditions.push(eq(docDocument.status, input.status));
 
@@ -200,7 +233,11 @@ export const documentsRouter = router({
       const [doc] = await authCtx.db
         .select()
         .from(docDocument)
-        .where(and(eq(docDocument.id, input.id), isNull(docDocument.deletedAt)))
+        .where(and(
+          eq(docDocument.id, input.id),
+          eq(docDocument.tenantId, authCtx.tenantId),
+          isNull(docDocument.deletedAt),
+        ))
         .limit(1);
       if (!doc) throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
       return doc;
@@ -223,7 +260,11 @@ export const documentsRouter = router({
       const [tmpl] = await authCtx.db
         .select()
         .from(docTemplate)
-        .where(and(eq(docTemplate.id, input.templateId), isNull(docTemplate.deletedAt)))
+        .where(and(
+          eq(docTemplate.id, input.templateId),
+          eq(docTemplate.tenantId, authCtx.tenantId),
+          isNull(docTemplate.deletedAt),
+        ))
         .limit(1);
 
       if (!tmpl) throw new TRPCError({ code: 'NOT_FOUND', message: 'Template not found' });
@@ -261,7 +302,10 @@ export const documentsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const authCtx = ctx as unknown as AuthenticatedContext;
-      const conditions = [isNull(docClause.deletedAt)];
+      const conditions = [
+        eq(docClause.tenantId, authCtx.tenantId),
+        isNull(docClause.deletedAt),
+      ];
       if (input.jurisdiction) conditions.push(eq(docClause.jurisdiction, input.jurisdiction));
 
       return authCtx.db

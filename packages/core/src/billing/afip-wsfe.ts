@@ -259,15 +259,36 @@ export class AfipWsfeClient {
   }
 
   private async signCms(tra: string): Promise<string> {
-    // In production, use the PKCS#7/CMS signing with the AFIP certificate
-    // For now, return a base64 representation that would be replaced with
-    // proper crypto signing using node:crypto
-    const { createSign } = await import('node:crypto');
-    const privateKey = Buffer.from(this.config.privateKey, 'base64').toString('utf-8');
-    const signer = createSign('RSA-SHA256');
-    signer.update(tra);
-    const signature = signer.sign(privateKey, 'base64');
-    return signature;
+    const forge = await import('node-forge');
+    const privateKeyPem = Buffer.from(this.config.privateKey, 'base64').toString('utf-8');
+    const certPem = Buffer.from(this.config.certificate, 'base64').toString('utf-8');
+
+    const privateKeyObj = forge.pki.privateKeyFromPem(privateKeyPem);
+    const certObj = forge.pki.certificateFromPem(certPem);
+
+    // Use well-known OID strings directly to avoid type narrowing issues
+    const OID_SHA256 = '2.16.840.1.101.3.4.2.1';
+    const OID_CONTENT_TYPE = '1.2.840.113549.1.9.3';
+    const OID_MESSAGE_DIGEST = '1.2.840.113549.1.9.4';
+    const OID_SIGNING_TIME = '1.2.840.113549.1.9.5';
+    const OID_DATA = '1.2.840.113549.1.7.1';
+
+    const p7 = forge.pkcs7.createSignedData();
+    p7.content = forge.util.createBuffer(tra, 'utf8');
+    p7.addCertificate(certObj);
+    p7.addSigner({
+      key: privateKeyObj,
+      certificate: certObj,
+      digestAlgorithm: OID_SHA256,
+      authenticatedAttributes: [
+        { type: OID_CONTENT_TYPE, value: OID_DATA },
+        { type: OID_MESSAGE_DIGEST },
+        { type: OID_SIGNING_TIME, value: new Date().toUTCString() },
+      ],
+    });
+    p7.sign();
+    const der = forge.asn1.toDer(p7.toAsn1());
+    return forge.util.encode64(der.getBytes());
   }
 
   private buildSoapEnvelope(method: string, body: string): string {

@@ -8,6 +8,7 @@ import {
   calendarEventType,
   message as messageTable,
   conversation,
+  subscription,
 } from '@corredor/db';
 import {
   createAnthropicClient,
@@ -186,8 +187,12 @@ export const copilotRouter = router({
         throw e;
       }
 
-      // Quota check (default plan: 'free' — TODO: read from tenant.plan)
-      const quota = await checkQuota(redis, tenantId, userId, 'free');
+      const [sub] = await db
+        .select({ planCode: subscription.planCode })
+        .from(subscription)
+        .where(eq(subscription.tenantId, tenantId))
+        .limit(1);
+      const quota = await checkQuota(redis, tenantId, userId, sub?.planCode ?? 'free');
       if (!quota.allowed) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',

@@ -7,6 +7,7 @@ import { neon } from '@neondatabase/serverless';
 import {
   copilotSession,
   copilotTurn,
+  subscription,
 } from '@corredor/db';
 import {
   createAnthropicClient,
@@ -111,7 +112,13 @@ export function createCopilotStreamRoutes(deps: StreamDeps) {
     }
 
     // Quota check
-    const quota = await checkQuota(deps.redis, tenantId, userId, 'free');
+    const [sub] = await deps.db
+      .select({ planCode: subscription.planCode })
+      .from(subscription)
+      .where(eq(subscription.tenantId, tenantId))
+      .limit(1);
+    const planTier = sub?.planCode ?? 'free';
+    const quota = await checkQuota(deps.redis, tenantId, userId, planTier);
     if (!quota.allowed) {
       return c.json({
         error: 'Monthly copilot limit reached',
