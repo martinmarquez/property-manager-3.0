@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://corredor.ar/</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/precios</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/precios" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/precios" />
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/tour</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/tour" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/tour" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/nosotros</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/nosotros" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/nosotros" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/blog</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/blog" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/blog/lanzamiento-corredor</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/blog/lanzamiento-corredor" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/blog/lanzamiento-corredor" />
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/blog/crm-inmobiliario-argentina-guia</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/blog/crm-inmobiliario-argentina-guia" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/blog/crm-inmobiliario-argentina-guia" />
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://corredor.ar/blog/migrar-tokko-a-corredor</loc>
+    <xhtml:link rel="alternate" hreflang="es-AR" href="https://corredor.ar/blog/migrar-tokko-a-corredor" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://corredor.ar/en/blog/migrar-tokko-a-corredor" />
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>
