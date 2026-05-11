@@ -23,6 +23,9 @@ export type { TOTPSetupProps } from './components/auth/TOTPSetup.js';
 export { AppShell } from './components/layout/AppShell.js';
 export type { AppShellProps, AppShellUser, NavModule, SubscriptionStatus } from './components/layout/AppShell.js';
 
+export { MobileTabBar } from './components/layout/MobileTabBar.js';
+export type { MobileTab } from './components/layout/MobileTabBar.js';
+
 export { EmptyState, OnboardingChecklist } from './components/layout/EmptyState.js';
 export type { EmptyStateProps, OnboardingChecklistProps, ChecklistItem } from './components/layout/EmptyState.js';
 
@@ -31,6 +34,9 @@ export { OrganizationSettings } from './components/settings/OrganizationSettings
 export type { OrganizationSettingsProps, OrganizationData } from './components/settings/OrganizationSettings.js';
 
 // ── Common ───────────────────────────────────────────────
+export { OptimizedImage } from './components/common/OptimizedImage.js';
+export type { OptimizedImageProps } from './components/common/OptimizedImage.js';
+
 export {
   Skeleton,
   SkeletonText,

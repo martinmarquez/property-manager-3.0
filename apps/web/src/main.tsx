@@ -19,8 +19,14 @@ import {
   TOTPSetup,
   AppShell,
   OrganizationSettings,
+  MobileTabBar,
 } from '@corredor/ui';
-import type { AppShellUser, OrganizationData } from '@corredor/ui';
+import type { AppShellUser, OrganizationData, MobileTab } from '@corredor/ui';
+
+import { isNative } from './lib/capacitor.js';
+import { initCapacitor } from './lib/capacitor-init.js';
+import { usePushNotifications } from './hooks/usePushNotifications.js';
+import { useAppLifecycle } from './hooks/useAppLifecycle.js';
 
 // ─── Lazy-loaded page components ─────────────────────────────────────────────
 // Helper: wrap a named export as a lazy default so React.lazy can consume it.
@@ -199,10 +205,45 @@ function pathToModule(pathname: string): string {
   return 'dashboard';
 }
 
+const MOBILE_TAB_PATHS: Record<MobileTab, string> = {
+  dashboard: '/dashboard',
+  properties: '/properties',
+  contacts: '/contacts',
+  leads: '/pipelines',
+  more: '/settings',
+};
+
+function pathToMobileTab(pathname: string): MobileTab {
+  if (pathname.startsWith('/properties')) return 'properties';
+  if (pathname.startsWith('/contacts')) return 'contacts';
+  if (pathname.startsWith('/pipelines') || pathname.startsWith('/leads')) return 'leads';
+  if (pathname.startsWith('/settings') || pathname.startsWith('/reports') || pathname.startsWith('/site')) return 'more';
+  return 'dashboard';
+}
+
 function AuthenticatedLayout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const pathname = useRouterState({ select: s => s.location.pathname });
   const activeModule = pathToModule(pathname) as import('@corredor/ui').NavModule;
+  const native = isNative();
+
+  usePushNotifications({
+    onRegistered: (token) => {
+      // TODO: call trpc.mobile.devices.register with token and platform
+      console.debug('[push] registered:', token.slice(0, 8) + '...');
+    },
+    onNotificationTap: (deepLink) => {
+      if (deepLink) router.navigate({ to: deepLink });
+    },
+  });
+
+  useAppLifecycle({
+    onResume: () => {
+      // Refetch stale queries on app resume
+      queryClient.invalidateQueries();
+    },
+  });
 
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -227,11 +268,14 @@ function AuthenticatedLayout() {
       onNavigate={module => {
         const path = MODULE_PATHS[module];
         if (path) router.navigate({ to: path });
+        setMobileDrawerOpen(false);
       }}
     >
-      <Suspense fallback={<PageLoader />}>
-        <Outlet />
-      </Suspense>
+      <div style={native ? { paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' } : undefined}>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </div>
       <Suspense fallback={null}>
         <CommandPalette
           open={paletteOpen}
@@ -247,6 +291,19 @@ function AuthenticatedLayout() {
         />
         <CopilotFloat />
       </Suspense>
+      {native && (
+        <MobileTabBar
+          activeTab={pathToMobileTab(pathname)}
+          onTabChange={tab => {
+            if (tab === 'more') {
+              setMobileDrawerOpen(prev => !prev);
+            } else {
+              const path = MOBILE_TAB_PATHS[tab];
+              if (path) router.navigate({ to: path });
+            }
+          }}
+        />
+      )}
     </AppShell>
   );
 }
@@ -871,6 +928,8 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 const router = createRouter({ routeTree });
+
+initCapacitor(router);
 
 declare module '@tanstack/react-router' {
   interface Register {
