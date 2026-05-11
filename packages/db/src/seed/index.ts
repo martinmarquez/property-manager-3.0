@@ -114,7 +114,7 @@ async function seedTenant(opts: {
   adminEmail: string;
   adminName: string;
 }) {
-  console.log(`\n→ Seeding tenant: ${opts.name} (${opts.slug})`);
+  console.info(`\n→ Seeding tenant: ${opts.name} (${opts.slug})`);
 
   // 1. Tenant
   const [ten] = await db
@@ -135,11 +135,11 @@ async function seedTenant(opts: {
       .where(eq(schema.tenant.slug, opts.slug))
       .limit(1);
     if (!existing[0]) throw new Error(`Tenant ${opts.slug} not found after conflict`);
-    console.log(`  ✓ tenant already exists (id: ${existing[0].id})`);
+    console.info(`  ✓ tenant already exists (id: ${existing[0].id})`);
     return existing[0].id;
   }
 
-  console.log(`  ✓ tenant created (id: ${ten.id})`);
+  console.info(`  ✓ tenant created (id: ${ten.id})`);
 
   // 2. Admin user (password placeholder — real hash generated at auth time)
   const [adminUser] = await db
@@ -158,7 +158,7 @@ async function seedTenant(opts: {
     .returning();
 
   if (adminUser) {
-    console.log(`  ✓ admin user created (id: ${adminUser.id})`);
+    console.info(`  ✓ admin user created (id: ${adminUser.id})`);
   }
 
   const userId = adminUser?.id ?? (
@@ -185,7 +185,7 @@ async function seedTenant(opts: {
     .returning();
 
   if (defaultBranch) {
-    console.log(`  ✓ default branch created (id: ${defaultBranch.id})`);
+    console.info(`  ✓ default branch created (id: ${defaultBranch.id})`);
   }
 
   // 4. System roles
@@ -218,10 +218,10 @@ async function seedTenant(opts: {
           updatedBy: userId,
         })
         .onConflictDoNothing();
-      console.log(`  ✓ owner role assigned to admin`);
+      console.info(`  ✓ owner role assigned to admin`);
     }
   }
-  console.log(`  ✓ system roles seeded`);
+  console.info(`  ✓ system roles seeded`);
 
   // 5. Sample feature flags
   await db
@@ -253,7 +253,7 @@ async function seedTenant(opts: {
       },
     ])
     .onConflictDoNothing();
-  console.log(`  ✓ feature flags seeded`);
+  console.info(`  ✓ feature flags seeded`);
 
   return ten.id;
 }
@@ -262,7 +262,7 @@ async function seedTenant(opts: {
 // Main
 // ---------------------------------------------------------------------------
 async function seed() {
-  console.log('🌱  Starting Corredor seed (Phase A — Tenancy + Auth)\n');
+  console.info('🌱  Starting Corredor seed (Phase A — Tenancy + Auth)\n');
 
   // Tenant A — simulates a mid-size Buenos Aires agency
   await seedTenant({
@@ -280,7 +280,7 @@ async function seed() {
     adminName: 'Admin Solo',
   });
 
-  console.log('\n✅  Seed complete\n');
+  console.info('\n✅  Seed complete\n');
   await client.end();
 }
 
