@@ -6,7 +6,7 @@ const C = {
   bgRaised: '#0D1526',
   border: '#1F2D48',
   textSecondary: '#8DA0C0',
-  brandLight: '#4669ff',
+  brandLight: '#5577FF',
   brandFaint: 'rgba(22,84,217,0.12)',
 };
 

@@ -21,7 +21,7 @@ const C = {
   borderStrong: '#253350',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   textDisabled:  '#3A4E6A',
   error:    '#E83B3B',
   errorBg:  '#260C0C',

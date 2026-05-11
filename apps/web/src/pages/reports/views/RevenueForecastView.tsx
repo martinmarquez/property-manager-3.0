@@ -43,7 +43,7 @@ const PLAN_SEGMENTS = [
 const REVENUE_BY_AGENT = [
   { label: 'García, J.',    value: 68400,  suffix: '', color: C.brand },
   { label: 'López, M.',     value: 54200,  suffix: '', color: '#2880FF' },
-  { label: 'Martínez, C.',  value: 47800,  suffix: '', color: '#4669ff' },
+  { label: 'Martínez, C.',  value: 47800,  suffix: '', color: '#5577FF' },
   { label: 'Rodríguez, A.', value: 41500,  suffix: '', color: C.success },
   { label: 'Fernández, L.', value: 38900,  suffix: '', color: C.warning },
   { label: 'Pérez, D.',     value: 36200,  suffix: '', color: '#7E3AF2' },
@@ -210,7 +210,7 @@ export default function RevenueForecastView() {
         { label: 'MRR',           value: '$287K',   delta: '+22%',     positive: true,  sparkline: SPARK_MRR,   color: C.brand },
         { label: 'ARR',           value: '$3,4M',   delta: '+18%',     positive: true,  sparkline: SPARK_ARR,   color: C.success },
         { label: 'Tasa de churn', value: '2,1%',    delta: '-0,7pp',   positive: true,  sparkline: SPARK_CHURN, color: C.warning },
-        { label: 'LTV promedio',  value: '$12,4K',  delta: '+8,3%',    positive: true,  sparkline: SPARK_LTV,   color: '#4669ff' },
+        { label: 'LTV promedio',  value: '$12,4K',  delta: '+8,3%',    positive: true,  sparkline: SPARK_LTV,   color: '#5577FF' },
       ]} />
 
       {/* ── MRR trend + Plan distribution ─────────────────────── */}

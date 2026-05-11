@@ -45,7 +45,7 @@ function LineChartMock({ title }: { title: string }) {
 function BarChartMock() {
   const bars = [
     { label: 'ZonaProp',    value: 78, color: C.brand },
-    { label: 'Argenprop',   value: 54, color: '#4669ff' },
+    { label: 'Argenprop',   value: 54, color: '#5577FF' },
     { label: 'MercadoLibre',value: 43, color: C.warning },
     { label: 'Portal Inmob',value: 31, color: C.ai },
     { label: 'Directo',     value: 41, color: C.success },
@@ -81,7 +81,7 @@ function BarChartMock() {
 function FunnelChartMock() {
   const stages = [
     { label: 'Leads',       value: 247, color: C.brand },
-    { label: 'Calificados', value: 141, color: '#4669ff' },
+    { label: 'Calificados', value: 141, color: '#5577FF' },
     { label: 'Propuesta',   value: 68,  color: C.ai },
     { label: 'Negociación', value: 24,  color: C.warning },
     { label: 'Cierre',      value: 15,  color: C.success },

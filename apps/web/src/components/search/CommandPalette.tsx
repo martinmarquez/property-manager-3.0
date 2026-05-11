@@ -20,10 +20,10 @@ const C = {
   border:        '#1F2D48',
   borderHover:   '#2A3D5C',
   brand:         '#1654d9',
-  brandLight:    '#4669ff',
+  brandLight:    '#5577FF',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
 };
 
 const F = {

@@ -27,7 +27,7 @@ const C = {
   error:         '#E83B3B',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   border:        '#1F2D48',
 } as const;
 

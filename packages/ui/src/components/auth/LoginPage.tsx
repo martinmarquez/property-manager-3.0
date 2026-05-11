@@ -30,7 +30,7 @@ const C = {
   borderStrong: '#253350',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   error:    '#E83B3B',
   errorBg:  '#260C0C',
   errorBorder: '#4A1A1A',
@@ -375,6 +375,7 @@ export function LoginPage({
             {/* Error banner */}
             {displayError && (
               <div
+                id="login-error"
                 role="alert"
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -426,6 +427,8 @@ export function LoginPage({
                   onBlur={() => setEmailFocused(false)}
                   disabled={isLoading}
                   required
+                  aria-invalid={!!displayError}
+                  aria-describedby={displayError ? 'login-error' : undefined}
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -486,6 +489,8 @@ export function LoginPage({
                     onBlur={() => setPasswordFocused(false)}
                     disabled={isLoading}
                     required
+                    aria-invalid={!!displayError}
+                    aria-describedby={displayError ? 'login-error' : undefined}
                     style={{
                       width: '100%',
                       padding: '10px 44px 10px 14px',

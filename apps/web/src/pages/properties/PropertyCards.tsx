@@ -10,12 +10,12 @@ const C = {
   border:    '#1F2D48',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
 };
 
 const STATUS_COLORS: Record<PropertyStatus, string> = {
   active: '#18A659', reserved: '#F59E0B',
-  sold: '#6B7FD7', paused: '#506180', archived: '#3A4E6A',
+  sold: '#6B7FD7', paused: '#6B809E', archived: '#3A4E6A',
 };
 
 const CARD_HEIGHT = 310;
@@ -142,7 +142,7 @@ export function PropertyCards({ rows, isLoading, onCardClick }: PropertyCardsPro
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#506180" strokeWidth="1.2" aria-hidden="true">
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6B809E" strokeWidth="1.2" aria-hidden="true">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
                             <circle cx="8.5" cy="8.5" r="1.5"/>
                             <polyline points="21 15 16 10 5 21"/>

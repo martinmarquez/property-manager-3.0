@@ -18,7 +18,7 @@
   --color-brand-200: #c3d4ff;
   --color-brand-300: #9ab5ff;
   --color-brand-400: #6b8fff;
-  --color-brand-500: #4669ff;
+  --color-brand-500: #5577FF;
   --color-brand-600: #1654d9;   /* primary */
   --color-brand-700: #1244b8;
   --color-brand-800: #0e3490;
@@ -33,7 +33,7 @@
   --color-neutral-600: #253350;  /* border-strong */
   --color-neutral-500: #1F2D48;  /* border */
   --color-neutral-400: #162035;  /* border-subtle */
-  --color-neutral-300: #506180;  /* text-tertiary */
+  --color-neutral-300: #6B809E;  /* text-tertiary — 4.5:1 on bg-base */
   --color-neutral-200: #8DA0C0;  /* text-secondary */
   --color-neutral-100: #C8D6EE;  /* text-muted */
   --color-neutral-50:  #EFF4FF;  /* text-primary */
@@ -228,7 +228,8 @@ body {
 
 /* Focus-visible ring */
 :focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
   box-shadow: var(--shadow-focus);
 }
 

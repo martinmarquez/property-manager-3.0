@@ -12,13 +12,13 @@ const C = {
   bgOverlay: '#121D33',
   bgSubtle:  '#162035',
   brand:     '#1654d9',
-  brandLight:'#4669ff',
+  brandLight:'#5577FF',
   brandFaint:'rgba(22,84,217,0.12)',
   border:    '#1F2D48',
   borderStrong: '#253350',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   textDisabled:  '#3A4E6A',
   success:   '#18A659',
 };
@@ -455,6 +455,23 @@ export function AppShell({
           from { opacity: 0; }
           to   { opacity: 1; }
         }
+        .corredor-skip-link {
+          position: absolute;
+          top: -40px;
+          left: 0;
+          background: ${C.brand};
+          color: #fff;
+          padding: 8px 16px;
+          z-index: 1000;
+          font-size: 0.875rem;
+          font-family: ${F.body};
+          border-radius: 0 0 8px 0;
+          text-decoration: none;
+          transition: top 150ms ease;
+        }
+        .corredor-skip-link:focus {
+          top: 0;
+        }
         .corredor-shell-desktop-sidebar {
           display: flex !important;
         }
@@ -473,6 +490,10 @@ export function AppShell({
           }
         }
       `}</style>
+
+      <a href="#main-content" className="corredor-skip-link">
+        Ir al contenido principal
+      </a>
 
       <div style={{
         display: 'flex',
@@ -863,15 +884,21 @@ export function AppShell({
             {children}
             {/* ── Expired overlay ── */}
             {subscriptionStatus === 'expired' && (
-              <div style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(7,13,26,0.92)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 300,
-              }}>
+              <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="expired-title"
+                aria-describedby="expired-desc"
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(7,13,26,0.92)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 300,
+                }}
+              >
                 <div style={{
                   background: C.bgRaised,
                   border: `1px solid ${C.border}`,
@@ -882,8 +909,8 @@ export function AppShell({
                   textAlign: 'center',
                   fontFamily: F.body,
                 }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>{'🔒'}</div>
-                  <h2 style={{
+                  <div aria-hidden="true" style={{ fontSize: 48, marginBottom: 16 }}>{'🔒'}</div>
+                  <h2 id="expired-title" style={{
                     fontFamily: F.display,
                     fontSize: '1.375rem',
                     fontWeight: 800,
@@ -892,7 +919,7 @@ export function AppShell({
                   }}>
                     Tu suscripción venció
                   </h2>
-                  <p style={{
+                  <p id="expired-desc" style={{
                     fontSize: '0.875rem',
                     color: C.textSecondary,
                     marginBottom: 24,
@@ -920,6 +947,13 @@ export function AppShell({
                 </div>
               </div>
             )}
+
+            {/* Screen reader announcer */}
+            <div aria-live="polite" aria-atomic="true" style={{
+              position: 'absolute', width: 1, height: 1,
+              padding: 0, margin: -1, overflow: 'hidden',
+              clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0,
+            }} />
           </main>
         </div>
       </div>

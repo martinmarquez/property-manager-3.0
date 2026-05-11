@@ -60,7 +60,7 @@ const RETENTION_CURVE_SERIES = [
 const RETENTION_BY_TYPE = [
   { label: 'Departamento',  value: 88, suffix: '%', color: C.brand },
   { label: 'Casa',          value: 82, suffix: '%', color: '#2880FF' },
-  { label: 'PH',            value: 85, suffix: '%', color: '#4669ff' },
+  { label: 'PH',            value: 85, suffix: '%', color: '#5577FF' },
   { label: 'Local',         value: 76, suffix: '%', color: C.warning },
   { label: 'Oficina',       value: 91, suffix: '%', color: C.success },
   { label: 'Terreno',       value: 68, suffix: '%', color: C.error },
@@ -140,7 +140,7 @@ export default function RetentionCohortView() {
       <KpiRow cards={[
         { label: 'Tasa retención',  value: '84%',    delta: '+2,1pp',    positive: true,  sparkline: SPARK_RETENTION, color: C.success },
         { label: 'Vida promedio',   value: '18 meses', delta: '+3 meses', positive: true,  sparkline: SPARK_LIFETIME,  color: C.brand },
-        { label: 'NPS',             value: '72',     delta: '+4',        positive: true,  sparkline: SPARK_NPS,       color: '#4669ff' },
+        { label: 'NPS',             value: '72',     delta: '+4',        positive: true,  sparkline: SPARK_NPS,       color: '#5577FF' },
         { label: 'Churn revenue',   value: '$4,2K/m', delta: '-12%',     positive: true,  sparkline: SPARK_CHURN_REV, color: C.warning },
       ]} />
 

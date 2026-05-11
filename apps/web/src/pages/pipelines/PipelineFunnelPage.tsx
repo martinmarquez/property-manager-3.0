@@ -8,10 +8,10 @@ const C = {
   bgOverlay:     '#121D33',
   border:        '#1F2D48',
   brand:         '#1654d9',
-  brandLight:    '#4669ff',
+  brandLight:    '#5577FF',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   success:       '#18A659',
   warning:       '#E88A14',
   error:         '#E83B3B',
@@ -51,7 +51,7 @@ interface FunnelStage {
 }
 
 const MOCK_FUNNEL: FunnelStage[] = [
-  { id: 's1', name: 'Nuevo Contacto',  color: '#4669ff', count: 48, conversionPct: null,  avgDays: 1.2,  totalValueUSD: 8_420_000 },
+  { id: 's1', name: 'Nuevo Contacto',  color: '#5577FF', count: 48, conversionPct: null,  avgDays: 1.2,  totalValueUSD: 8_420_000 },
   { id: 's2', name: 'Calificado',      color: '#18A659', count: 31, conversionPct: 64.6,  avgDays: 2.8,  totalValueUSD: 6_975_000 },
   { id: 's3', name: 'Visita Agendada', color: '#E88A14', count: 22, conversionPct: 71.0,  avgDays: 4.1,  totalValueUSD: 5_340_000 },
   { id: 's4', name: 'Oferta',          color: '#9B59B6', count: 14, conversionPct: 63.6,  avgDays: 3.5,  totalValueUSD: 4_150_000 },

@@ -26,7 +26,7 @@ const C = {
   errorFaint:    'rgba(232,59,59,0.12)',
   textPrimary:   '#EFF4FF',
   textSecondary: '#8DA0C0',
-  textTertiary:  '#506180',
+  textTertiary:  '#6B809E',
   border:        '#1F2D48',
 } as const;
 

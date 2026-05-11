@@ -612,7 +612,7 @@ const notFoundRoute = createRoute({
           {intl.formatMessage(notFoundMessages.title)}
         </span>
         <p style={{ color: '#8DA0C0', margin: 0 }}>{intl.formatMessage(notFoundMessages.message)}</p>
-        <a href="/" style={{ color: '#4669ff', textDecoration: 'none', fontSize: '0.875rem' }}>
+        <a href="/" style={{ color: '#5577FF', textDecoration: 'none', fontSize: '0.875rem' }}>
           {intl.formatMessage(notFoundMessages.back)}
         </a>
       </div>
