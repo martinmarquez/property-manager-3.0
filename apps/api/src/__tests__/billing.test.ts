@@ -159,7 +159,7 @@ vi.mock('../middleware/session.js', () => ({
   getSession: vi.fn().mockResolvedValue({
     tenantId: 'tenant-1',
     userId: 'user-1',
-    roles: ['agent'],
+    roles: ['owner'],
     createdAt: new Date().toISOString(),
     lastSeenAt: new Date().toISOString(),
   }),

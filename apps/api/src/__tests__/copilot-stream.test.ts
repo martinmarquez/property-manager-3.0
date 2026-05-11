@@ -21,6 +21,7 @@ vi.mock('@corredor/db', () => ({
     id: 'id', sessionId: 'session_id', role: 'role', content: 'content', createdAt: 'created_at',
   },
   featureFlag: { tenantId: 'tenant_id', key: 'key', enabled: 'enabled', rolloutPct: 'rollout_pct' },
+  subscription: { tenantId: 'tenant_id', planCode: 'plan_code' },
 }));
 
 vi.mock('@corredor/core', () => ({
