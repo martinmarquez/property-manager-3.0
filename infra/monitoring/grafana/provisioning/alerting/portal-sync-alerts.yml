@@ -1,0 +1,166 @@
+apiVersion: 1
+
+# Portal Sync Alert Rules — Criterion 3
+# Target: < 1% sync-error rate (measured over 1-hour rolling window)
+#
+# Metrics source: corredor_portal_sync_total{status="failed"|"success"} counters
+# emitted by the BullMQ worker (apps/worker/src/workers/portal.ts).
+# See packages/core/src/queues.ts for queue names.
+
+groups:
+  - orgId: 1
+    name: Portal Sync Error Rate
+    folder: Portal Sync
+    interval: 1m
+    rules:
+      - uid: portal-sync-error-rate-warning
+        title: "Portal Sync: Error rate > 0.5% (warning)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                sum(rate(corredor_portal_sync_total{status="failed"}[1h]))
+                /
+                sum(rate(corredor_portal_sync_total[1h]))
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.005
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            Portal sync error rate is {{ $values.A.Value | printf "%.2f%%" }} over the last hour.
+            Warning threshold: 0.5% | SLA threshold: 1.0%
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Portal sync error rate approaching 1% SLA threshold"
+        labels:
+          feature: portal_sync
+          severity: warning
+          team: platform
+
+      - uid: portal-sync-error-rate-breach
+        title: "Portal Sync: Error rate ≥ 1% — SLA BREACH"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                sum(rate(corredor_portal_sync_total{status="failed"}[1h]))
+                /
+                sum(rate(corredor_portal_sync_total[1h]))
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.01
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: |
+            Portal sync error rate has exceeded the 1% SLA target.
+            Current: {{ $values.A.Value | printf "%.2f%%" }} over the last hour (target: < 1.0%)
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Portal sync error rate SLA breach (≥ 1%)"
+        labels:
+          feature: portal_sync
+          severity: critical
+          team: platform
+
+      - uid: portal-sync-dead-letter-spike
+        title: "Portal Sync: Dead-letter queue spike (> 10 jobs)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                bullmq_queue_failed_count{queue_name="dead-letter"}
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            More than 10 portal sync jobs in the dead-letter queue.
+            Count: {{ $values.A.Value }}
+            These are jobs that exhausted all retry attempts (5x with exponential backoff).
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Portal sync dead-letter queue has {{ $values.A.Value }} failed jobs"
+        labels:
+          feature: portal_sync
+          severity: warning
+          team: platform

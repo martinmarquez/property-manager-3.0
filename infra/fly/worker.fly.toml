@@ -6,9 +6,19 @@ primary_region = "gru"
 
 [env]
   NODE_ENV = "production"
+  METRICS_PORT = "9464"
 
 # Worker does not serve HTTP traffic — no http_service block.
 # Auto-stop keeps it dormant when the BullMQ queue is empty.
+
+# Prometheus metrics endpoint — scraped by the monitoring VPS.
+[[services]]
+  protocol = "tcp"
+  internal_port = 9464
+
+  [[services.ports]]
+    port = 9464
+    handlers = []
 [machine]
   auto_stop   = true
   auto_start  = true

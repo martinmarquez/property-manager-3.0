@@ -1,0 +1,29 @@
+name: Deploy Docs (docs.corredor.ar)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/public-docs/**"
+      - "docs/api/openapi.yaml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Mintlify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy OpenAPI spec into docs
+        run: cp docs/api/openapi.yaml docs/public-docs/openapi.yaml
+
+      - name: Deploy to Mintlify
+        uses: mintlify/action@v1
+        with:
+          version: 3
+        env:
+          MINTLIFY_API_KEY: ${{ secrets.MINTLIFY_API_KEY }}
+          MINTLIFY_DEPLOYMENT_ID: ${{ secrets.MINTLIFY_DEPLOYMENT_ID }}
+          WORKING_DIRECTORY: docs/public-docs

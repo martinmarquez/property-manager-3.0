@@ -11,6 +11,7 @@ on:
         options:
           - smoke
           - load-10k
+          - reports-timing
       target_env:
         description: 'Target environment'
         required: true

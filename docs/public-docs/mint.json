@@ -1,0 +1,147 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Corredor CRM",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0F6CBD",
+    "light": "#3B9DDD",
+    "dark": "#0A4F9B",
+    "anchors": {
+      "from": "#0F6CBD",
+      "to": "#3B9DDD"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Soporte",
+      "url": "mailto:soporte@corredor.ar"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Ingresar",
+    "url": "https://app.corredor.ar"
+  },
+  "tabs": [
+    {
+      "name": "Referencia API",
+      "url": "api-reference"
+    },
+    {
+      "name": "SDK",
+      "url": "sdk"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/martinmarquez/property-manager-3.0"
+    },
+    {
+      "name": "Estado del servicio",
+      "icon": "chart-bar",
+      "url": "https://monitoring.corredor.ar"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Introducción",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "authentication"
+      ]
+    },
+    {
+      "group": "Guías",
+      "pages": [
+        "guides/properties",
+        "guides/contacts",
+        "guides/portal-sync",
+        "guides/webhooks",
+        "guides/pagination"
+      ]
+    },
+    {
+      "group": "Referencia API",
+      "pages": [
+        "api-reference/introduction",
+        {
+          "group": "Propiedades",
+          "pages": [
+            "api-reference/properties/list",
+            "api-reference/properties/get",
+            "api-reference/properties/create",
+            "api-reference/properties/update",
+            "api-reference/properties/delete"
+          ]
+        },
+        {
+          "group": "Contactos",
+          "pages": [
+            "api-reference/contacts/list",
+            "api-reference/contacts/get",
+            "api-reference/contacts/create"
+          ]
+        },
+        {
+          "group": "Leads",
+          "pages": [
+            "api-reference/leads/list",
+            "api-reference/leads/get",
+            "api-reference/leads/create"
+          ]
+        },
+        {
+          "group": "Webhooks",
+          "pages": [
+            "api-reference/webhooks/list",
+            "api-reference/webhooks/create",
+            "api-reference/webhooks/delete"
+          ]
+        },
+        {
+          "group": "Portales",
+          "pages": [
+            "api-reference/portals/list",
+            "api-reference/portals/sync"
+          ]
+        },
+        "api-reference/health"
+      ]
+    },
+    {
+      "group": "SDK JavaScript",
+      "pages": [
+        "sdk/overview",
+        "sdk/installation",
+        "sdk/quickstart",
+        "sdk/reference"
+      ]
+    }
+  ],
+  "openapi": ["/openapi.yaml"],
+  "footerSocials": {
+    "linkedin": "https://linkedin.com/company/corredor-ar"
+  },
+  "api": {
+    "baseUrl": "https://api.corredor.ar/v1",
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_corredor_docs"
+    }
+  }
+}
