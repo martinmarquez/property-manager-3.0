@@ -233,13 +233,14 @@ function PropertyTypeIcon({ type }: { type: ReservaRow['propertyType'] }) {
 }
 
 function KpiCard({
-  label, value, subtext, color, trend,
+  label, value, subtext, color, trend, badge,
 }: {
   label: string
   value: string
   subtext?: string
   color?: string
   trend?: { dir: 'up' | 'down'; text: string; positive?: boolean }
+  badge?: boolean
 }) {
   return (
     <div style={{
@@ -254,10 +255,22 @@ function KpiCard({
       minWidth: 0,
     }}>
       <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: F.body, fontWeight: 500 }}>{label}</span>
-      <span style={{
-        fontSize: 26, fontFamily: F.display, fontWeight: 700,
-        color: color ?? C.textPrimary, letterSpacing: '-0.02em', lineHeight: 1.1,
-      }}>{value}</span>
+      {badge ? (
+        <span style={{
+          minWidth: 34, height: 34, borderRadius: '50%',
+          background: '#DC2626', color: '#fff',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: F.display, fontSize: 17, fontWeight: 700,
+          padding: '0 6px', alignSelf: 'flex-start',
+        }}>
+          {value}
+        </span>
+      ) : (
+        <span style={{
+          fontSize: 26, fontFamily: F.display, fontWeight: 700,
+          color: color ?? C.textPrimary, letterSpacing: '-0.02em', lineHeight: 1.1,
+        }}>{value}</span>
+      )}
       {(subtext || trend) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
           {subtext && (
@@ -384,6 +397,7 @@ export function ReservationListPage() {
             value={String(KPI_DATA.overdueMilestones)}
             subtext="requieren atención"
             color={KPI_DATA.overdueMilestones > 0 ? C.warning : C.success}
+            badge={KPI_DATA.overdueMilestones > 0}
             trend={KPI_DATA.overdueMilestones > 0
               ? { dir: 'up', text: `${KPI_DATA.overdueMilestones} pendientes`, positive: false }
               : undefined}
