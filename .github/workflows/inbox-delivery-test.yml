@@ -1,0 +1,65 @@
+name: Inbox Delivery Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      messages_per_channel:
+        description: 'Messages to send per channel'
+        required: false
+        default: '1000'
+        type: string
+      channels:
+        description: 'Comma-separated channel list (blank = all 8)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  delivery:
+    name: 8-channel delivery test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check staging secrets
+        id: secrets-check
+        run: |
+          if [ -n "$BASE_URL" ] && [ -n "$API_TOKEN" ]; then
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Staging secrets not configured — skipping inbox delivery test. Set STAGING_API_URL and STAGING_LOAD_TEST_TOKEN repository secrets to enable."
+          fi
+        env:
+          BASE_URL: ${{ secrets.STAGING_API_URL }}
+          API_TOKEN: ${{ secrets.STAGING_LOAD_TEST_TOKEN }}
+
+      - name: Run inbox delivery test
+        if: steps.secrets-check.outputs.has_secrets == 'true'
+        run: npx tsx scripts/inbox-delivery-test.ts
+        env:
+          BASE_URL: ${{ secrets.STAGING_API_URL }}
+          API_TOKEN: ${{ secrets.STAGING_LOAD_TEST_TOKEN }}
+          MESSAGES_PER_CHANNEL: ${{ inputs.messages_per_channel }}
+          CHANNELS: ${{ inputs.channels }}
+          DELIVERY_OUTPUT_FILE: build/inbox-delivery-summary.json
+
+      - name: Upload delivery report
+        if: always() && steps.secrets-check.outputs.has_secrets == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: inbox-delivery-report-${{ github.run_id }}
+          path: build/inbox-delivery-summary.json
+          retention-days: 90
