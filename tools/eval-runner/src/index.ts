@@ -2,18 +2,28 @@
 /**
  * AI Eval Runner — orchestrates evaluation of all AI features.
  *
- * For features with real eval implementations (currently only `copilot`),
- * delegates to the actual eval script via child_process. For features
- * without eval cases yet, reports them as "pending_cases".
- *
  * Usage:  pnpm --filter @corredor/eval-runner eval
- * Env:    ANTHROPIC_API_KEY  — required for real evals
+ * Env:    ANTHROPIC_API_KEY  — required for evals
  *         EVAL_OUTPUT_FILE   — optional path to write the JSON summary
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+
+import { type EvalBaseline, type FeatureEvalConfig, runFeatureEval } from './harness.js';
+import {
+  propertySearchEval,
+  leadMatchExplainEval,
+  propertyDescriptionEval,
+  inboxDraftEval,
+  meetingSummarizeEval,
+  documentQaEval,
+  appraisalAssistEval,
+  pipelineInsightsEval,
+  portalOptimizerEval,
+  duplicateDetectEval,
+} from './evals/index.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,7 +48,6 @@ interface EvalSummary {
   overallPassed: boolean;
 }
 
-/** Shape written by the classifier eval when EVAL_OUTPUT_FILE is set. */
 interface ClassifierBaseline {
   timestamp: string;
   modelId: string;
@@ -59,8 +68,8 @@ interface FeatureSpec {
   id: string;
   title: string;
   threshold: number;
-  /** If set, the eval can actually be executed. */
   evalCommand?: string;
+  evalConfig?: () => FeatureEvalConfig;
 }
 
 const FEATURES: FeatureSpec[] = [
@@ -68,61 +77,61 @@ const FEATURES: FeatureSpec[] = [
     id: 'property.search',
     title: 'Semantic property search',
     threshold: 0.8,
-    // TODO: implement eval cases for property.search
+    evalConfig: propertySearchEval,
   },
   {
     id: 'lead.match_explain',
     title: 'Lead-property match explain',
     threshold: 0.8,
-    // TODO: implement eval cases for lead.match_explain
+    evalConfig: leadMatchExplainEval,
   },
   {
     id: 'property.description',
     title: 'Description generator',
     threshold: 0.8,
-    // TODO: implement eval cases for property.description
+    evalConfig: propertyDescriptionEval,
   },
   {
     id: 'inbox.draft',
     title: 'Email/WhatsApp drafter',
     threshold: 0.8,
-    // TODO: implement eval cases for inbox.draft
+    evalConfig: inboxDraftEval,
   },
   {
     id: 'meeting.summarize',
     title: 'Call/meeting note summarizer',
     threshold: 0.8,
-    // TODO: implement eval cases for meeting.summarize
+    evalConfig: meetingSummarizeEval,
   },
   {
     id: 'document.qa',
     title: 'Document Q&A',
     threshold: 0.8,
-    // TODO: implement eval cases for document.qa
+    evalConfig: documentQaEval,
   },
   {
     id: 'appraisal.assist',
     title: 'Appraisal assistant',
     threshold: 0.8,
-    // TODO: implement eval cases for appraisal.assist
+    evalConfig: appraisalAssistEval,
   },
   {
     id: 'pipeline.insights',
     title: 'Pipeline insights',
     threshold: 0.8,
-    // TODO: implement eval cases for pipeline.insights
+    evalConfig: pipelineInsightsEval,
   },
   {
     id: 'portal.optimizer',
     title: 'Portal listing optimizer',
     threshold: 0.8,
-    // TODO: implement eval cases for portal.optimizer
+    evalConfig: portalOptimizerEval,
   },
   {
     id: 'duplicate.detect',
     title: 'Duplicate detector',
     threshold: 0.8,
-    // TODO: implement eval cases for duplicate.detect
+    evalConfig: duplicateDetectEval,
   },
   {
     id: 'copilot',
@@ -137,27 +146,19 @@ const FEATURES: FeatureSpec[] = [
 // ---------------------------------------------------------------------------
 
 function isRunnable(f: FeatureSpec): boolean {
-  return f.evalCommand != null;
+  return f.evalCommand != null || f.evalConfig != null;
 }
 
-/**
- * Spawn the classifier eval, capture its JSON output via a temp file,
- * and return the parsed baseline record.
- */
 function runClassifierEval(feature: FeatureSpec): FeatureEvalResult {
   const tmpFile = path.join(os.tmpdir(), `eval-classifier-${Date.now()}.json`);
 
   try {
-    // Inherit stdio so the real eval's per-sample output streams to the terminal.
-    // The JSON baseline is captured via EVAL_OUTPUT_FILE.
     execSync(feature.evalCommand!, {
       stdio: 'inherit',
       env: { ...process.env, EVAL_OUTPUT_FILE: tmpFile },
-      // Allow up to 5 minutes — the classifier eval hits a remote API.
       timeout: 5 * 60 * 1000,
     });
 
-    // Parse the JSON baseline the classifier eval wrote.
     const raw = fs.readFileSync(tmpFile, 'utf-8');
     const baseline: ClassifierBaseline = JSON.parse(raw);
 
@@ -170,8 +171,6 @@ function runClassifierEval(feature: FeatureSpec): FeatureEvalResult {
       passed: baseline.overallAccuracy >= feature.threshold,
     };
   } catch (err) {
-    // The eval itself may exit(1) on threshold failure. In that case the
-    // temp file may still have been written before the process exited.
     if (fs.existsSync(tmpFile)) {
       try {
         const raw = fs.readFileSync(tmpFile, 'utf-8');
@@ -185,7 +184,7 @@ function runClassifierEval(feature: FeatureSpec): FeatureEvalResult {
           passed: baseline.overallAccuracy >= feature.threshold,
         };
       } catch {
-        // Fall through to generic error handling.
+        // Fall through
       }
     }
 
@@ -198,12 +197,36 @@ function runClassifierEval(feature: FeatureSpec): FeatureEvalResult {
       error: message,
     };
   } finally {
-    // Clean up temp file.
     try {
       if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
     } catch {
       // best-effort cleanup
     }
+  }
+}
+
+async function runInProcessEval(feature: FeatureSpec): Promise<FeatureEvalResult> {
+  try {
+    const config = feature.evalConfig!();
+    const baseline: EvalBaseline = await runFeatureEval(config);
+
+    return {
+      id: feature.id,
+      title: feature.title,
+      status: 'evaluated',
+      accuracy: baseline.overallAccuracy,
+      threshold: feature.threshold,
+      passed: baseline.overallAccuracy >= feature.threshold,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      id: feature.id,
+      title: feature.title,
+      status: 'error',
+      threshold: feature.threshold,
+      error: message,
+    };
   }
 }
 
@@ -266,12 +289,22 @@ function printTable(results: FeatureEvalResult[]): void {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  if (!process.env['ANTHROPIC_API_KEY']) {
+    console.error('[eval-runner] ERROR: ANTHROPIC_API_KEY is required');
+    process.exit(1);
+  }
+
   console.info('[eval-runner] Starting AI feature evaluation...\n');
 
   const results: FeatureEvalResult[] = [];
 
   for (const feature of FEATURES) {
-    if (isRunnable(feature)) {
+    if (feature.evalConfig) {
+      console.info(`\n>>> Running eval for: ${feature.id} (${feature.title})`);
+      console.info('-'.repeat(60));
+      const result = await runInProcessEval(feature);
+      results.push(result);
+    } else if (feature.evalCommand) {
       console.info(`\n>>> Running eval for: ${feature.id} (${feature.title})`);
       console.info('-'.repeat(60));
       const result = runClassifierEval(feature);
@@ -281,7 +314,6 @@ async function main(): Promise<void> {
     }
   }
 
-  // Compute aggregates.
   const runnableResults = results.filter(
     (r) => r.status === 'evaluated' || r.status === 'error',
   );
@@ -290,7 +322,6 @@ async function main(): Promise<void> {
   const pendingCount = results.filter((r) => r.status === 'pending_cases').length;
   const errorCount = results.filter((r) => r.status === 'error').length;
 
-  // Overall passes when every evaluated feature meets threshold and none errored.
   const overallPassed =
     runnableCount > 0 &&
     errorCount === 0 &&
@@ -305,7 +336,6 @@ async function main(): Promise<void> {
     overallPassed,
   };
 
-  // Print human-readable table.
   printTable(results);
 
   console.info(
@@ -313,19 +343,16 @@ async function main(): Promise<void> {
   );
   console.info(`Overall: ${overallPassed ? 'PASS' : 'FAIL'}\n`);
 
-  // Write JSON to stdout.
   const jsonOutput = JSON.stringify(summary, null, 2);
   console.info('--- JSON Summary ---');
   console.info(jsonOutput);
 
-  // Optionally write JSON to file.
   const outputFile = process.env['EVAL_OUTPUT_FILE'];
   if (outputFile) {
     fs.writeFileSync(outputFile, jsonOutput);
     console.info(`\nSummary written to: ${outputFile}`);
   }
 
-  // Exit with failure if any runnable feature is below threshold or errored.
   if (!overallPassed) {
     process.exit(1);
   }
