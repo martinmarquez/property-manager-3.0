@@ -48,7 +48,7 @@ jobs:
 
       - name: Run inbox delivery test
         if: steps.secrets-check.outputs.has_secrets == 'true'
-        run: pnpm exec tsx scripts/inbox-delivery-test.ts
+        run: mkdir -p build && pnpm exec tsx scripts/inbox-delivery-test.ts
         env:
           BASE_URL: ${{ secrets.STAGING_API_URL }}
           API_TOKEN: ${{ secrets.STAGING_LOAD_TEST_TOKEN }}
