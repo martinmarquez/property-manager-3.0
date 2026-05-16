@@ -36,7 +36,7 @@ jobs:
 
       - name: Run AI eval runner
         if: steps.api-key-check.outputs.has_key == 'true'
-        run: pnpm --filter @corredor/eval-runner eval
+        run: mkdir -p build && pnpm --filter @corredor/eval-runner eval
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_OUTPUT_FILE: build/ai-eval-summary.json
