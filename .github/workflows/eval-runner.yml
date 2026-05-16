@@ -1,0 +1,50 @@
+name: AI Eval Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  eval:
+    name: AI feature evals (11 features, >=80%)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Anthropic API key
+        id: api-key-check
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANTHROPIC_API_KEY secret is not set — skipping AI eval runner. Add the secret to enable."
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Run AI eval runner
+        if: steps.api-key-check.outputs.has_key == 'true'
+        run: pnpm --filter @corredor/eval-runner eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVAL_OUTPUT_FILE: build/ai-eval-summary.json
+
+      - name: Upload eval report
+        if: always() && steps.api-key-check.outputs.has_key == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-report-${{ github.run_id }}
+          path: build/ai-eval-summary.json
+          retention-days: 90
