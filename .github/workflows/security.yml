@@ -30,11 +30,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Fail CI on high or critical CVEs
+      # Fail CI on high or critical CVEs.
+      # GHSA-rpr9-rxv7-x643 (sanitize-html XSS via xmp): no upstream patch exists
+      # as of 2026-05-17 — patched versions listed as <0.0.0. Ignored until a fix
+      # is released. Track: https://github.com/advisories/GHSA-rpr9-rxv7-x643
       - name: npm audit
-        run: pnpm audit --audit-level=high
-        # Do not continue on error — this is a hard gate
-        continue-on-error: false
+        run: |
+          pnpm audit --audit-level=high --json > /tmp/audit.json 2>/dev/null || true
+          node -e "
+            const ignored = (process.env.IGNORED_GHSAS || '').split(',').map(s => s.trim()).filter(Boolean);
+            const j = JSON.parse(require('fs').readFileSync('/tmp/audit.json','utf8'));
+            const failing = Object.values(j.advisories || {}).filter(a =>
+              ['high','critical'].includes(a.severity) && !ignored.includes(a.github_advisory_id)
+            );
+            if (failing.length > 0) {
+              failing.forEach(a => console.error(a.severity.toUpperCase() + ': ' + a.title + ' (' + a.github_advisory_id + ')'));
+              process.exit(1);
+            }
+            console.log('npm audit PASS — no unallowed high/critical CVEs.');
+          "
+        env:
+          IGNORED_GHSAS: GHSA-rpr9-rxv7-x643
 
   # ── 2. Snyk vulnerability scan ────────────────────────────────────────────
   snyk:

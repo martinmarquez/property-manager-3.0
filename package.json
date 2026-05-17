@@ -40,6 +40,11 @@
         }
       }
     },
+    "auditConfig": {
+      "ignoreCves": [
+        "GHSA-rpr9-rxv7-x643"
+      ]
+    },
     "overrides": {
       "tar": "^7.5.11",
       "serialize-javascript": "^7.0.3",
@@ -48,7 +53,11 @@
       "handlebars": "^4.7.9",
       "fast-xml-parser": "^5.7.3",
       "fast-uri": "^3.1.2",
-      "@babel/plugin-transform-modules-systemjs": "^7.29.4"
+      "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+      "next": ">=15.5.18",
+      "protobufjs": ">=7.5.6",
+      "@opentelemetry/auto-instrumentations-node": ">=0.75.0",
+      "@opentelemetry/sdk-node": ">=0.217.0"
     }
   },
   "dependencies": {
