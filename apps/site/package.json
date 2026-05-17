@@ -6,7 +6,7 @@
     "dev": "next dev --port 3100",
     "build": "next build",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
+    "lint": "echo 'site: next lint removed in Next.js 16 — linting via root ESLint config'",
     "test": "vitest run --passWithNoTests",
     "start": "next start"
   },
