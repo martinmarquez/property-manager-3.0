@@ -2,7 +2,7 @@ app = "corredor-worker-staging"
 primary_region = "gru"
 
 [build]
-  dockerfile = "apps/worker/Dockerfile"
+  dockerfile = "../../apps/worker/Dockerfile"
 
 [env]
   NODE_ENV = "staging"
