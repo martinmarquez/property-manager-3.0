@@ -46,6 +46,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Set Fly.io secrets
+        run: |
+          flyctl secrets set \
+            DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
+            --app corredor-api-staging --stage
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Deploy staging API to Fly.io
         run: flyctl deploy --config fly-api-staging.toml --remote-only --wait-timeout 300
         env:
@@ -55,7 +63,7 @@ jobs:
         run: |
           sleep 15
           curl --retry 5 --retry-delay 10 --retry-connrefused \
-            https://corredor-api-staging.fly.dev/system/health \
+            https://corredor-api-staging.fly.dev/health \
             --fail --silent --show-error | jq '.'
 
       - name: Obtain load-test JWT and set secret
