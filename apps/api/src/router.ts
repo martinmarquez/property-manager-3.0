@@ -17,6 +17,7 @@ import { reportsRouter } from './routers/reports.js';
 import { siteRouter } from './routers/site.js';
 import { appraisalsRouter } from './routers/appraisals.js';
 import { mobileRouter } from './routers/mobile.js';
+import { inboxRouter } from './routers/inbox.js';
 
 /**
  * Root tRPC router.
@@ -34,7 +35,7 @@ import { mobileRouter } from './routers/mobile.js';
  *   copilot.*               — AI Copilot: sessions, turns, streaming, actions (Phase F)
  *
  * Phase B+ routers added here as modules are implemented:
- *   leads.*  pipelines.*  inbox.*
+ *   leads.*  pipelines.*  inbox.*  (all mounted)
  *   portals.*   calendar.*  billing.*
  *   analytics.*             — Phase G: billing dashboard, appraisal usage, report adoption, site metrics
  *   reports.*               — Phase G: report data endpoints, CSV/XLSX export, share links, digest subscriptions
@@ -59,6 +60,7 @@ export const appRouter = router({
   site:                siteRouter,
   appraisals:          appraisalsRouter,
   mobile:              mobileRouter,
+  inbox:               inboxRouter,
 });
 
 export type AppRouter = typeof appRouter;
