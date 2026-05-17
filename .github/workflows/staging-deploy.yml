@@ -12,9 +12,6 @@ jobs:
   deploy-staging:
     name: Deploy API to Staging
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      secrets: write
 
     steps:
       - name: Checkout
@@ -105,8 +102,9 @@ jobs:
         run: |
           # 1. Seed tenant, user, and 1M properties (idempotent ON CONFLICT DO NOTHING)
           psql "$STAGING_DATABASE_URL" -f infra/k6/seed/seed.sql
-          # 2. Generate a raw API key and insert into staging DB for the load-test user
-          RAW_KEY=$(openssl rand -hex 32)
+          # 2. Derive deterministic token: HMAC-SHA256("k6-load-test", STAGING_DATABASE_URL)
+          #    load-test.yml derives the same token — no GitHub secret update needed.
+          RAW_KEY=$(echo -n "k6-load-test" | openssl dgst -sha256 -hmac "$STAGING_DATABASE_URL" | awk '{print $2}')
           KEY_HASH=$(echo -n "$RAW_KEY" | sha256sum | awk '{print $1}')
           psql "$STAGING_DATABASE_URL" <<SQL
             INSERT INTO api_key (id, tenant_id, created_by, key_hash, prefix, name, scopes, created_at)
@@ -122,9 +120,6 @@ jobs:
             )
             ON CONFLICT (id) DO UPDATE SET key_hash = '$KEY_HASH', updated_at = NOW();
           SQL
-          gh secret set STAGING_LOAD_TEST_TOKEN --body "$RAW_KEY"
-          gh secret set STAGING_API_URL --body "https://corredor-api-staging.fly.dev"
-          echo "Load-test API key provisioned"
+          echo "Load-test API key provisioned (deterministic — no GitHub secret write needed)"
         env:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

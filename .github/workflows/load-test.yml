@@ -68,8 +68,12 @@ jobs:
       - name: Resolve target URL + token
         run: |
           if [ "${{ inputs.target_env }}" = "staging" ]; then
-            echo "BASE_URL=${{ secrets.STAGING_API_URL }}" >> "$GITHUB_ENV"
-            echo "API_TOKEN=${{ secrets.STAGING_LOAD_TEST_TOKEN }}" >> "$GITHUB_ENV"
+            echo "BASE_URL=https://corredor-api-staging.fly.dev" >> "$GITHUB_ENV"
+            # Derive deterministic token: HMAC-SHA256 of "k6-load-test" keyed by STAGING_DATABASE_URL
+            # This matches what staging-deploy writes to the api_key table.
+            TOKEN=$(echo -n "k6-load-test" | openssl dgst -sha256 -hmac "${{ secrets.STAGING_DATABASE_URL }}" | awk '{print $2}')
+            echo "::add-mask::$TOKEN"
+            echo "API_TOKEN=$TOKEN" >> "$GITHUB_ENV"
           else
             echo "BASE_URL=${{ secrets.VITE_API_URL_PROD }}" >> "$GITHUB_ENV"
             echo "API_TOKEN=${{ secrets.PROD_LOAD_TEST_TOKEN }}" >> "$GITHUB_ENV"
