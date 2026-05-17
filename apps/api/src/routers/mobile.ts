@@ -10,8 +10,7 @@
  */
 
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { eq, and, gt, or, isNull } from 'drizzle-orm';
+import { eq, and, gt, isNull } from 'drizzle-orm';
 import {
   pushDevice,
   notificationPreference,
@@ -22,8 +21,7 @@ import {
   lead,
 } from '@corredor/db';
 import { router, protectedProcedure } from '../trpc.js';
-import { QUEUE_NAMES } from '@corredor/core';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
 // devices

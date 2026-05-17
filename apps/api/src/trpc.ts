@@ -3,7 +3,7 @@ import type { Context as HonoContext } from 'hono';
 import type { Redis } from 'ioredis';
 import type { Queue } from 'bullmq';
 import { ZodError } from 'zod';
-import { createDb, createNodeDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
+import { createDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
 import { checkRateLimit, RateLimitPresets } from '@corredor/core';
 import { logger } from '@corredor/telemetry';
 import { getSession, refreshSession, destroySession, getSessionId, IDLE_TIMEOUT_SECONDS } from './middleware/session.js';
