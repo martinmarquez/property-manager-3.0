@@ -51,7 +51,7 @@ jobs:
         run: |
           if ! flyctl redis list --org corredor 2>/dev/null | grep -q "corredor-redis-staging"; then
             echo "Creating Fly Redis for staging..."
-            FLY_NO_PROMPT=1 flyctl redis create \
+            printf '\n' | flyctl redis create \
               --name corredor-redis-staging \
               --org corredor \
               --region gru \
