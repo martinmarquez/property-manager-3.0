@@ -349,6 +349,7 @@ async function main(): Promise<void> {
 
   const outputFile = process.env['EVAL_OUTPUT_FILE'];
   if (outputFile) {
+    fs.mkdirSync(require('path').dirname(outputFile), { recursive: true });
     fs.writeFileSync(outputFile, jsonOutput);
     console.info(`\nSummary written to: ${outputFile}`);
   }

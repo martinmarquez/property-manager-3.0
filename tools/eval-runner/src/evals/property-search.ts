@@ -18,8 +18,10 @@ Output schema:
 }
 
 Rules:
-- "ambientes" in Argentine real estate refers to total rooms (living + bedrooms). A "3 ambientes" typically means 2 bedrooms. Map ambientes to bedrooms accordingly: bedrooms = ambientes - 1.
-- If the query says "2 dormitorios" or "2 habitaciones", use that directly as bedrooms count.
+- "ambientes" in Argentine real estate refers to total rooms (living + bedrooms). Map to bedrooms: bedrooms = ambientes - 1. Example: "3 ambientes" → minBedrooms: 2, maxBedrooms: 2. "2 ambientes" → minBedrooms: 1, maxBedrooms: 1.
+- "monoambiente" = 1 ambiente = 0 bedrooms. Set propertyType to "departamento", minBedrooms: 0, maxBedrooms: 0.
+- If the query says "2 dormitorios" or "2 habitaciones", use that directly as bedrooms count (no subtraction).
+- "alquiler temporal" or "alquiler temporario" or "temporada" → operationType: "alquiler_temporal".
 - Prices in USD are typical for sales; ARS for rentals. Infer currency from context if not explicit.
 - Return null for any field that cannot be determined from the query.
 - Always return valid JSON, nothing else.`;
