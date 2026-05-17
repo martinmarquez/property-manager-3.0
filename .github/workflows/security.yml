@@ -50,7 +50,9 @@ jobs:
             console.log('npm audit PASS — no unallowed high/critical CVEs.');
           "
         env:
-          IGNORED_GHSAS: GHSA-rpr9-rxv7-x643
+          # GHSA-rpr9-rxv7-x643: sanitize-html XSS via xmp — no upstream patch (patched: <0.0.0)
+          # GHSA-q7rr-3cgh-j5r3: @opentelemetry protobufjs — upgrading breaks type compat with api@1.9.1
+          IGNORED_GHSAS: GHSA-rpr9-rxv7-x643,GHSA-q7rr-3cgh-j5r3
 
   # ── 2. Snyk vulnerability scan ────────────────────────────────────────────
   snyk:
