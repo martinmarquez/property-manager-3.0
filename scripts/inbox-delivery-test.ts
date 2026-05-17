@@ -159,11 +159,11 @@ async function trpcMutation<T = unknown>(
   procedure: string,
   input: unknown,
 ): Promise<T> {
-  const url = `${BASE_URL}/api/trpc/${procedure}`;
+  const url = `${BASE_URL}/trpc/${procedure}`;
   const res = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify({ json: input }),
+    body: JSON.stringify(input),
   });
 
   if (!res.ok) {
@@ -181,8 +181,8 @@ async function trpcQuery<T = unknown>(
   procedure: string,
   input: unknown,
 ): Promise<T> {
-  const encoded = encodeURIComponent(JSON.stringify({ json: input }));
-  const url = `${BASE_URL}/api/trpc/${procedure}?input=${encoded}`;
+  const encoded = encodeURIComponent(JSON.stringify(input));
+  const url = `${BASE_URL}/trpc/${procedure}?input=${encoded}`;
   const res = await fetch(url, {
     method: "GET",
     headers,

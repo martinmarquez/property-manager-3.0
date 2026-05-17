@@ -219,13 +219,13 @@ export default function () {
 
 export function handleSummary(data) {
   return {
-    'stdout': textSummary(data, { indent: ' ', enableColors: true }),
-    'build/k6-reports-timing-summary.json': JSON.stringify(data, null, 2),
+    'stdout': textSummary(data),
+    '/scripts/build/k6-reports-timing-summary.json': JSON.stringify(data, null, 2),
   };
 }
 
 // Inline text summary helper (avoids external imports in air-gapped envs)
-function textSummary(data, opts) {
+function textSummary(data) {
   const metrics = data.metrics || {};
   const errorRateVal = metrics['errors']?.values?.rate;
   const overallP95 = metrics['http_req_duration']?.values?.['p(95)'];
@@ -264,6 +264,24 @@ function textSummary(data, opts) {
     const status = p95 === undefined ? '? (no data)' : passed ? 'PASS' : 'FAIL';
     const value = p95 !== undefined ? `${p95.toFixed(1)} ms` : 'n/a';
     lines.push(`    ${view.label.padEnd(40)} ${value.padStart(10)}  ${status}`);
+  }
+
+  // Show check failures — reveals which views return non-200 status
+  const failedChecks = [];
+  const groups = data.root_group?.groups ?? {};
+  for (const group of Object.values(groups)) {
+    for (const chk of Object.values(group.checks ?? {})) {
+      if (chk.fails > 0) {
+        failedChecks.push(`    ✗ ${chk.name}  (${chk.fails} fails / ${chk.passes + chk.fails} total)`);
+      }
+    }
+  }
+
+  if (failedChecks.length > 0) {
+    lines.push('');
+    lines.push('  ── Failed Checks (non-200 responses) ──');
+    lines.push('');
+    lines.push(...failedChecks);
   }
 
   const overallStatus = allPassed && (errorRateVal ?? 1) < 0.01 ? 'PASS' : 'FAIL';
