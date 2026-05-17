@@ -21,6 +21,10 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
+# CACHE_BUST is injected by the CI workflow (git SHA) to force Depot to
+# invalidate its remote layer cache after source-only commits.
+ARG CACHE_BUST=dev
+RUN echo "cache-bust: $CACHE_BUST"
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 RUN pnpm --filter @corredor/db build && \
