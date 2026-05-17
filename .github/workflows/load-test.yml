@@ -79,6 +79,24 @@ jobs:
             echo "API_TOKEN=${{ secrets.PROD_LOAD_TEST_TOKEN }}" >> "$GITHUB_ENV"
           fi
 
+      - name: Warm up Neon DB (wake from auto-suspend)
+        run: |
+          echo "Warming up Neon DB via health endpoint..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s --max-time 10 "$BASE_URL/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('db','unknown'))" 2>/dev/null || echo "error")
+            echo "  attempt $i: db=$STATUS"
+            if [ "$STATUS" = "connected" ]; then
+              echo "DB is warm."
+              break
+            fi
+            sleep 5
+          done
+          # Send 5 lightweight requests to pre-heat the pg Pool connections
+          for i in $(seq 1 5); do
+            curl -s --max-time 15 "$BASE_URL/health" > /dev/null || true
+          done
+          sleep 2
+
       - name: Run k6 (${{ inputs.scenario }})
         run: |
           mkdir -p build
