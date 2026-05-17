@@ -65,6 +65,13 @@ export function csrfMiddleware(isSecure = false): MiddlewareHandler {
         return next();
       }
 
+      // Skip CSRF for API key authentication — Bearer tokens are CSRF-safe
+      // because the attacker cannot read the token from a cross-origin context.
+      const authHeader = c.req.header('authorization') ?? '';
+      if (authHeader.toLowerCase().startsWith('bearer ')) {
+        return next();
+      }
+
       const tokensMatch =
         cookieToken &&
         headerToken &&
