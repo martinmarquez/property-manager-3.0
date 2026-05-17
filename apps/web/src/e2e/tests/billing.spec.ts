@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { BillingPageObject } from '../pages/BillingPageObject.js';
 
 // ─── Billing E2E — Phase G ─────────────────────────────────────────────────
+// Skip against production until Billing ships (part of Phase G)
+test.skip(process.env.PLAYWRIGHT_PRODUCTION === 'true', 'Billing not yet deployed to production');
 
 test.describe('Página de facturación — tabs', () => {
   test('carga la página de facturación con los 5 tabs', async ({ page }) => {

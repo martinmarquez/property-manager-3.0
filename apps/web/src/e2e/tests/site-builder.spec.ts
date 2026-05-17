@@ -10,6 +10,8 @@ import {
 } from '../pages/SitePage.js';
 
 // ─── Website Builder E2E — Phase G ─────────────────────────────────────────
+// Skip against production until Website Builder ships (part of Phase G)
+test.skip(process.env.PLAYWRIGHT_PRODUCTION === 'true', 'Website Builder not yet deployed to production');
 
 test.describe('Sitio web — overview', () => {
   test('muestra el estado del sitio y estadísticas de visitas', async ({ page }) => {
