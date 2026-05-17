@@ -51,12 +51,13 @@ jobs:
         run: |
           if ! flyctl redis list --org corredor 2>/dev/null | grep -q "corredor-redis-staging"; then
             echo "Creating Fly Redis for staging..."
-            printf '\n' | flyctl redis create \
+            # Use script to provide a pseudo-TTY so flyctl redis create doesn't bail on non-interactive check
+            script -q /dev/null -c "printf '\n' | flyctl redis create \
               --name corredor-redis-staging \
               --org corredor \
               --region gru \
               --no-replicas \
-              --enable-eviction || true
+              --enable-eviction" || true
           fi
           REDIS_URL=$(flyctl redis status corredor-redis-staging 2>/dev/null \
             | grep -oE 'redis(s)?://[^ ]+' | head -1)
