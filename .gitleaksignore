@@ -20,3 +20,14 @@ c5d0736746e3b81729f2b771b72cf9faf10c7876:packages/db/src/schema/billing.ts:cloud
 # the cloudflare-token pattern. Not a secret; it's a WebAuthn spec type name.
 70b61f90ac37904f75e728798fec30ed48d9c44a:apps/api/src/lib/auth/webauthn.ts:cloudflare-token:21
 70b61f90ac37904f75e728798fec30ed48d9c44a:apps/api/src/lib/auth/webauthn.ts:cloudflare-token:87
+
+# infra/monitoring/grafana/dashboards/corredor-portal-sync.json — Prometheus metric name
+# "corredor_portal_sync_duration_seconds_bucket" histogram_quantile expression triggers
+# cloudflare-token rule due to length/entropy of metric name substring. Not a secret.
+111075dff36bd9e558e3ceedc3913cb56cb28027:infra/monitoring/grafana/dashboards/corredor-portal-sync.json:cloudflare-token:148
+
+# docs/api-reference/authentication.mdx — example API key placeholder in SDK docs
+# "crdr_live_abc123..." is a deliberately obfuscated example token (trailing "...") used
+# in documentation curl snippets. Not a real credential. File path moved to public-docs/.
+9dd2cdd9ec36464d6054d313f920fe10ceaa29d3:docs/api-reference/authentication.mdx:curl-auth-header:25
+9dd2cdd9ec36464d6054d313f920fe10ceaa29d3:docs/api-reference/authentication.mdx:curl-auth-header:60
