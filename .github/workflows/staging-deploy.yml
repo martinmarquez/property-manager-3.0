@@ -72,6 +72,7 @@ jobs:
       - name: Set Fly.io secrets
         run: |
           flyctl secrets set \
+            NODE_ENV="production" \
             DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
             ${STAGING_REDIS_URL:+REDIS_URL="$STAGING_REDIS_URL"} \
             --app corredor-api-staging --stage
