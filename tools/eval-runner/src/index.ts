@@ -145,9 +145,6 @@ const FEATURES: FeatureSpec[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isRunnable(f: FeatureSpec): boolean {
-  return f.evalCommand != null || f.evalConfig != null;
-}
 
 function runClassifierEval(feature: FeatureSpec): FeatureEvalResult {
   const tmpFile = path.join(os.tmpdir(), `eval-classifier-${Date.now()}.json`);
