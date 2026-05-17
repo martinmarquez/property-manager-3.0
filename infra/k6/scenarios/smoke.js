@@ -30,7 +30,7 @@ const headers = {
 
 export function setup() {
   // Verify health before running
-  const res = http.get(`${BASE_URL}/api/health`);
+  const res = http.get(`${BASE_URL}/health`);
   if (res.status !== 200) {
     throw new Error(`API health check failed: ${res.status}`);
   }
@@ -42,7 +42,7 @@ export default function (data) {
 
   // Health check
   {
-    const res = http.get(`${baseUrl}/api/health`);
+    const res = http.get(`${baseUrl}/health`);
     errorRate.add(res.status !== 200);
     check(res, { 'health: status 200': (r) => r.status === 200 });
   }
