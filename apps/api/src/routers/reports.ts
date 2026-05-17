@@ -218,12 +218,12 @@ const dataRouter = router({
         : undefined;
 
       const { rows, total } = await queryMv(db, entry.mv, tenantId, {
-        agentId,
-        dateFrom: input.dateFrom,
-        dateTo: input.dateTo,
+        ...(agentId ? { agentId } : {}),
+        ...(input.dateFrom ? { dateFrom: input.dateFrom } : {}),
+        ...(input.dateTo ? { dateTo: input.dateTo } : {}),
         limit: input.limit,
         offset: input.offset,
-        platformLevel: entry.platformLevel,
+        ...(entry.platformLevel ? { platformLevel: true } : {}),
       });
 
       const refreshedAt = rows.length > 0
@@ -300,11 +300,11 @@ const exportRouter = router({
         : undefined;
 
       const { rows } = await queryMv(db, entry.mv, tenantId, {
-        agentId,
-        dateFrom: input.dateFrom,
-        dateTo: input.dateTo,
+        ...(agentId ? { agentId } : {}),
+        ...(input.dateFrom ? { dateFrom: input.dateFrom } : {}),
+        ...(input.dateTo ? { dateTo: input.dateTo } : {}),
         limit: 10_000,
-        platformLevel: entry.platformLevel,
+        ...(entry.platformLevel ? { platformLevel: true } : {}),
       });
 
       const timestamp = new Date().toISOString().slice(0, 10);
@@ -468,7 +468,7 @@ const shareLinkRouter = router({
 
       const { rows, total } = await queryMv(db, entry.mv, decoded.tenantId, {
         limit: 500,
-        platformLevel: entry.platformLevel,
+        ...(entry.platformLevel ? { platformLevel: true } : {}),
       });
 
       return {
