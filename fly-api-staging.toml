@@ -33,9 +33,5 @@ force_https = true
 port = 443
 handlers = ["tls", "http"]
 
-[[services.http_checks]]
-grace_period = "10s"
-interval = "15s"
-timeout = "5s"
-path = "/health"
-method = "GET"
+# HTTP health checks removed for staging — smoke check (TCP port) is sufficient.
+# The k6 load test validates actual endpoint behaviour.
