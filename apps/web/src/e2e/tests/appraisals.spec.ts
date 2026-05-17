@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { AppraisalsListPageObject, AppraisalWizardPageObject } from '../pages/AppraisalsPageObject.js';
 
 // ─── Appraisals E2E — Phase G ──────────────────────────────────────────────
+// Skip against production until Appraisals ships (part of Phase G)
+test.skip(process.env.PLAYWRIGHT_PRODUCTION === 'true', 'Appraisals not yet deployed to production');
 
 test.describe('Lista de tasaciones', () => {
   test('carga la página de tasaciones con encabezado y botón "Nueva"', async ({ page }) => {

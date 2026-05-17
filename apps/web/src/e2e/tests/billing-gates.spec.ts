@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 // ─── Cross-module billing plan gates E2E — Phase G ────────────────────────
+// Skip against production until billing gates ship (part of Phase G)
+test.skip(process.env.PLAYWRIGHT_PRODUCTION === 'true', 'Billing gates not yet deployed to production');
+
 //
 // These tests verify that plan-tier gating is wired up correctly across
 // modules. The UpsellWall component renders when a feature requires a higher

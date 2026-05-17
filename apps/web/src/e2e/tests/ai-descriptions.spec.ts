@@ -327,6 +327,8 @@ test.describe('AI Descriptions — modal de generación', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AI Descriptions — gestión de borradores', () => {
+  test.skip(isProduction, 'AI descriptions not yet deployed to production — re-enable after RENA-264 ships');
+
   test('los borradores existentes se muestran en el panel de borradores', async ({ page }) => {
     // Mock with one existing draft
     await page.route('**/trpc/property.get**', async (route) => {
