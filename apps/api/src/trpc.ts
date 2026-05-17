@@ -12,6 +12,14 @@ import { eq, isNull, and } from 'drizzle-orm';
 import { apiKey as apiKeyTable } from '@corredor/db';
 import { FeatureGateError, assertFeature } from './lib/billing/assert-feature.js';
 
+// In-process API key cache: hash → key payload. 5-minute TTL.
+// Eliminates 1 DB query per request for Bearer-token authenticated clients.
+const _apiKeyCache = new Map<string, {
+  id: string; tenantId: string; createdBy: string | null;
+  scopes: unknown; expiresAt: Date | null; revokedAt: Date | null;
+  expiresAt_cache: number;
+}>();
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -114,23 +122,32 @@ const tenantMiddleware = middleware(async ({ ctx, next }) => {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API key format' });
     }
     const hash = createHash('sha256').update(rawKey).digest('hex');
-    const rows = await db
-      .select({
-        id: apiKeyTable.id,
-        tenantId: apiKeyTable.tenantId,
-        createdBy: apiKeyTable.createdBy,
-        scopes: apiKeyTable.scopes,
-        expiresAt: apiKeyTable.expiresAt,
-        revokedAt: apiKeyTable.revokedAt,
-      })
-      .from(apiKeyTable)
-      .where(and(eq(apiKeyTable.keyHash, hash), isNull(apiKeyTable.deletedAt)))
-      .limit(1);
 
-    if (rows.length === 0) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API key' });
+    let key: typeof _apiKeyCache extends Map<string, infer V> ? V : never;
+    const cachedKey = _apiKeyCache.get(hash);
+    if (cachedKey && cachedKey.expiresAt_cache > Date.now()) {
+      key = cachedKey;
+    } else {
+      _apiKeyCache.delete(hash);
+      const rows = await db
+        .select({
+          id: apiKeyTable.id,
+          tenantId: apiKeyTable.tenantId,
+          createdBy: apiKeyTable.createdBy,
+          scopes: apiKeyTable.scopes,
+          expiresAt: apiKeyTable.expiresAt,
+          revokedAt: apiKeyTable.revokedAt,
+        })
+        .from(apiKeyTable)
+        .where(and(eq(apiKeyTable.keyHash, hash), isNull(apiKeyTable.deletedAt)))
+        .limit(1);
+
+      if (rows.length === 0) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API key' });
+      }
+      key = { ...rows[0]!, expiresAt_cache: Date.now() + 5 * 60_000 };
+      _apiKeyCache.set(hash, key);
     }
-    const key = rows[0]!;
     if (key.revokedAt || (key.expiresAt && new Date(key.expiresAt) < new Date())) {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API key is revoked or expired' });
     }

@@ -32,11 +32,28 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
  * Usage (same pattern as requirePermission):
  *   await assertFeature(ctx, 'site_builder');
  */
+// In-process cache: tenantId+featureKey → hasFeature. 60-second TTL.
+// Eliminates 2 DB queries per request for the common case (feature already granted).
+const featureCache = new Map<string, { result: boolean; expiresAt: number }>();
+
+function featureCacheKey(tenantId: string, featureKey: string) {
+  return `${tenantId}:${featureKey}`;
+}
+
 export async function assertFeature(
   ctx: AuthenticatedContext,
   featureKey: string,
 ): Promise<void> {
   const { db, tenantId } = ctx;
+
+  const cacheKey = featureCacheKey(tenantId, featureKey);
+  const cached = featureCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    if (cached.result) return;
+    // Cached negative result — fall through to throw
+  } else {
+    featureCache.delete(cacheKey);
+  }
 
   const [sub] = await db
     .select({ planCode: subscription.planCode })
@@ -58,9 +75,13 @@ export async function assertFeature(
       )
       .limit(1);
 
-    if (feature) return;
+    if (feature) {
+      featureCache.set(cacheKey, { result: true, expiresAt: Date.now() + 60_000 });
+      return;
+    }
   }
 
+  featureCache.set(cacheKey, { result: false, expiresAt: Date.now() + 60_000 });
   const required = await findRequiredPlan(db, featureKey);
   const displayName = FEATURE_DISPLAY_NAMES[featureKey] ?? featureKey;
 
