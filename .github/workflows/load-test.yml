@@ -91,14 +91,16 @@ jobs:
             fi
             sleep 5
           done
-          # Pre-warm pg Pool connections and feature gate cache by hitting a real report endpoint
-          echo "Pre-warming report endpoints (pool + feature gate cache)..."
-          for slug in pipeline_conversion listing_performance agent_productivity portal_roi revenue_forecast retention_cohort zone_heatmap ai_usage_value sla_adherence billing_metrics; do
-            curl -s --max-time 30 \
+          # Pre-warm feature gate cache and pg Pool with 10 parallel fast-path requests
+          # (each hits auth + billing subscription lookup, warming all caches for subsequent requests)
+          echo "Pre-warming API caches (10 parallel requests)..."
+          for i in $(seq 1 10); do
+            curl -s --max-time 15 \
               -H "Authorization: Bearer $API_TOKEN" \
-              "$BASE_URL/trpc/reports.data.get?input=$(python3 -c "import urllib.parse; print(urllib.parse.quote('{\"slug\":\"$slug\"}')")" \
-              > /dev/null || true
+              "$BASE_URL/trpc/reports.list?input=%7B%7D" \
+              > /dev/null &
           done
+          wait
           echo "Warm-up complete."
           sleep 2
 

@@ -109,7 +109,7 @@ async function queryMv(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dataResult: any = await db.execute(
-      sql`SELECT * FROM ${sql.raw(mv)} WHERE ${where} LIMIT ${limit} OFFSET ${offset}`,
+      sql`SELECT * FROM ${sql.raw(mv)} WHERE ${where} ORDER BY 1 LIMIT ${limit} OFFSET ${offset}`,
     );
     const rows = (dataResult?.rows ?? []) as Record<string, unknown>[];
 
