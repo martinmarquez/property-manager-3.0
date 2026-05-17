@@ -211,6 +211,12 @@ const rateLimitMiddleware = middleware(async ({ ctx, next }) => {
   const { redis, c } = ctx;
   const authenticatedCtx = ctx as unknown as AuthenticatedContext;
 
+  // Skip rate limiting if Redis is not ready — fail-open so staging without
+  // Redis still serves requests. Production always has Redis provisioned.
+  if (redis.status !== 'ready') {
+    return next({ ctx });
+  }
+
   const ip =
     c.req.header('CF-Connecting-IP') ??
     c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ??
@@ -337,6 +343,11 @@ export const protectedProcedureNoTx = t.procedure
 
 const publicRateLimitMiddleware = middleware(async ({ ctx, next }) => {
   const { redis, c } = ctx;
+
+  if (redis.status !== 'ready') {
+    return next({ ctx });
+  }
+
   const ip =
     c.req.header('CF-Connecting-IP') ??
     c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ??
