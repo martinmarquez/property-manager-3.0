@@ -50,11 +50,14 @@ export async function classifyIntent(
     messages: [{ role: 'user', content: userContent }],
   });
 
-  const text = response.content[0]?.type === 'text' ? response.content[0].text : '{}';
+  const rawText = response.content[0]?.type === 'text' ? response.content[0].text : '{}';
+  const fenceMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const text = (fenceMatch ? fenceMatch[1]! : rawText).trim();
 
   try {
     const parsed = JSON.parse(text) as {
       type?: string;
+      intent?: string;
       entities_mentioned?: string[];
       action_required?: boolean;
       confidence?: number;
@@ -65,8 +68,9 @@ export async function classifyIntent(
       'market_analysis', 'general', 'action_confirm',
     ];
 
-    const type = validIntents.includes(parsed.type as IntentType)
-      ? (parsed.type as IntentType)
+    const rawType = parsed.type ?? parsed.intent;
+    const type = validIntents.includes(rawType as IntentType)
+      ? (rawType as IntentType)
       : 'general';
 
     return {

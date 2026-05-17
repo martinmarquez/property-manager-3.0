@@ -1,0 +1,72 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: production
+    app: corredor
+
+rule_files:
+  - "alerts/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Fly.io built-in Prometheus metrics endpoint
+  # Docs: https://fly.io/docs/reference/metrics/
+  - job_name: fly_api
+    scheme: https
+    metrics_path: /metrics
+    params:
+      app: ["${FLY_APP_NAME_API:-corredor-api-prod}"]
+    static_configs:
+      - targets: ["api.fly.io"]
+    bearer_token: "${FLY_TOKEN}"
+    tls_config:
+      insecure_skip_verify: false
+
+  - job_name: fly_worker
+    scheme: https
+    metrics_path: /metrics
+    params:
+      app: ["${FLY_APP_NAME_WORKER:-corredor-worker-prod}"]
+    static_configs:
+      - targets: ["api.fly.io"]
+    bearer_token: "${FLY_TOKEN}"
+    tls_config:
+      insecure_skip_verify: false
+
+  # Blackbox HTTP uptime probe — checks corredor.ar and api.corredor.ar
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://corredor.ar
+          - https://api.corredor.ar/v1/health
+          - https://app.corredor.ar
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Grafana self-monitoring
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  # Node exporter (for the VPS running this stack)
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]

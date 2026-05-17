@@ -40,6 +40,9 @@ import { BillingDunningWorker } from './workers/billing-dunning.js';
 import { BillingBnaRateWorker, type BnaRateJobData } from './workers/billing-bna-rate.js';
 import { createAppraisalNarrativeWorker } from './workers/appraisal-narrative.js';
 import { createAppraisalPdfWorker } from './workers/appraisal-pdf.js';
+import { PushSendWorker } from './workers/push-send.js';
+import { createPortalWorkers } from './workers/portal-sync.js';
+import { startMetricsServer } from './metrics.js';
 import { createQueue, QUEUE_NAMES } from '@corredor/core';
 import type { MvRefreshJobData } from '@corredor/core';
 
@@ -142,12 +145,21 @@ if (!appraisalPdfWorker) {
 // Phase G: Analytics MV refresh worker — event-driven + scheduled CONCURRENT refresh
 const mvRefreshWorker = new MvRefreshWorker(redis, databaseUrl);
 
+// Phase H: Push notification delivery worker
+const pushSendWorker = new PushSendWorker(redis, databaseUrl);
+
+// Portal sync workers — publish/update/unpublish/sync/leads + dead-letter monitor
+const portalWorkers = createPortalWorkers(redis);
+startMetricsServer();
+
 const activeQueues = ['import-csv', 'import-contacts-csv', 'doc-sign-webhook', 'analytics-digest', 'site-form-to-lead', 'site-revalidate', 'site-domain-ssl-poll', 'billing-usage-refresh', 'billing-stripe-webhook', 'billing-mp-webhook', 'billing-afip-invoice', 'billing-dunning', 'billing-bna-rate-fetch', 'analytics-mv-refresh'];
 if (docGenerateWorker) activeQueues.push('doc-generate');
 if (ragIngestWorker) activeQueues.push('rag-ingest');
 if (appraisalNarrativeWorker) activeQueues.push('appraisal-ai-narrative');
 if (appraisalPdfWorker) activeQueues.push('appraisal-pdf-generate');
 if (billingAfipPdfWorker) activeQueues.push('billing-afip-pdf');
+activeQueues.push('push-send');
+activeQueues.push('portal-publish', 'portal-update', 'portal-unpublish', 'portal-sync', 'portal-leads');
 logger.info('worker ready', { queues: activeQueues });
 
 // Register BullMQ repeatable cron jobs for scheduled MV refresh
@@ -203,6 +215,8 @@ void billingBnaRateWorker;
 void appraisalNarrativeWorker;
 void appraisalPdfWorker;
 void mvRefreshWorker;
+void pushSendWorker;
+void portalWorkers;
 
 // Health check HTTP server for Fly.io TCP checks
 import http from 'http';

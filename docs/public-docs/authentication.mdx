@@ -1,0 +1,64 @@
+---
+title: "Autenticación"
+description: "Cómo autenticarse con la API de Corredor CRM usando API keys"
+---
+
+## API Keys
+
+Todos los endpoints autenticados requieren una API key válida como Bearer token en el header `Authorization`:
+
+```
+Authorization: Bearer <api-key>
+```
+
+### Scopes disponibles
+
+Las API keys tienen permisos (scopes) que determinan qué acciones pueden realizar:
+
+| Scope               | Descripción                                       |
+|---------------------|---------------------------------------------------|
+| `properties:read`   | Leer propiedades                                  |
+| `properties:write`  | Crear y modificar propiedades                     |
+| `contacts:read`     | Leer contactos                                    |
+| `contacts:write`    | Crear y modificar contactos                       |
+| `leads:read`        | Leer leads                                        |
+| `leads:write`       | Crear y modificar leads                           |
+| `webhooks:write`    | Gestionar webhooks                                |
+| `portals:sync`      | Sincronizar publicaciones con portales            |
+
+### Crear una API key
+
+1. Andá a **Configuración → Integraciones → API** en [app.corredor.ar](https://app.corredor.ar)
+2. Hacé clic en **Nueva API key**
+3. Asigná un nombre descriptivo y seleccioná los scopes necesarios
+4. Copiá y guardá la key — no se vuelve a mostrar
+
+### Rotación de keys
+
+Si creés que tu API key fue comprometida, podés revocarla y generar una nueva desde el mismo panel. Los webhooks con la key revocada dejarán de funcionar inmediatamente.
+
+## Rate Limiting
+
+Cada respuesta incluye headers de rate limit:
+
+```
+X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 198
+X-RateLimit-Reset: 1716300000
+```
+
+| Plan            | Requests / minuto |
+|-----------------|-------------------|
+| Basico / Solo   | 60                |
+| Profesional     | 200               |
+| Agencia         | 600               |
+| Enterprise      | 2 000             |
+
+Cuando se supera el límite, la API responde con `429 Too Many Requests` y el header `Retry-After` indica cuántos segundos esperar.
+
+## Seguridad
+
+<Check>Usá siempre HTTPS para todas las llamadas a la API.</Check>
+<Check>Almacená las API keys como variables de entorno, nunca en el código.</Check>
+<Check>Asigná solo los scopes mínimos necesarios para cada integración.</Check>
+<Check>Rotá las keys periódicamente (recomendado: cada 90 días).</Check>

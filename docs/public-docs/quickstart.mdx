@@ -1,0 +1,82 @@
+---
+title: "Inicio rápido"
+description: "Realizá tu primera llamada a la API de Corredor CRM en 5 minutos"
+---
+
+## 1. Obtener tu API key
+
+1. Ingresá a [app.corredor.ar](https://app.corredor.ar)
+2. Andá a **Configuración → Integraciones → API**
+3. Generá una nueva API key con los permisos necesarios
+
+<Warning>
+Guardá tu API key en un lugar seguro. No la compartas ni la incluyas en el código fuente.
+</Warning>
+
+## 2. Realizar tu primera llamada
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.corredor.ar/v1/properties" \
+  -H "Authorization: Bearer <tu-api-key>" \
+  -H "Content-Type: application/json"
+```
+
+```typescript SDK
+import { CorredorClient } from '@corredor/sdk';
+
+const client = new CorredorClient({ apiKey: process.env.CORREDOR_API_KEY });
+
+const properties = await client.properties.list({ limit: 20 });
+console.log(properties.data);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.corredor.ar/v1/properties",
+    headers={"Authorization": "Bearer <tu-api-key>"}
+)
+print(response.json())
+```
+
+</CodeGroup>
+
+## 3. Respuesta esperada
+
+```json
+{
+  "data": [
+    {
+      "id": "prop_01J...",
+      "title": "Departamento 3 ambientes en Palermo",
+      "type": "apartment",
+      "operation": "sale",
+      "price": { "amount": 120000, "currency": "USD" },
+      "status": "active",
+      "createdAt": "2026-01-15T10:00:00Z"
+    }
+  ],
+  "nextCursor": "eyJpZCI6Ii4uLiJ9",
+  "total": 142
+}
+```
+
+## Próximos pasos
+
+<CardGroup cols={2}>
+  <Card title="Propiedades" icon="building" href="/guides/properties">
+    Creá, actualizá y gestioná propiedades
+  </Card>
+  <Card title="Portal Sync" icon="rotate" href="/guides/portal-sync">
+    Sincronizá propiedades con portales inmobiliarios
+  </Card>
+  <Card title="Webhooks" icon="bolt" href="/guides/webhooks">
+    Recibí eventos en tiempo real
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/quickstart">
+    Usá el SDK JavaScript oficial
+  </Card>
+</CardGroup>

@@ -385,7 +385,7 @@ export default function AppraisalListPage() {
             iconBg={C.warningFaint}
             value="5"
             label="pendientes"
-            valueColor={C.warning}
+            badge
           />
           <StatCard
             icon={<CheckCircle2 size={16} color={C.success} />}
@@ -492,12 +492,13 @@ export default function AppraisalListPage() {
 
 /* ─── Small shared helpers ───────────────────────────────────── */
 
-function StatCard({ icon, iconBg, value, label, valueColor = C.textPrimary }: {
+function StatCard({ icon, iconBg, value, label, valueColor = C.textPrimary, badge }: {
   icon: React.ReactNode;
   iconBg: string;
   value: string;
   label: string;
   valueColor?: string;
+  badge?: boolean;
 }) {
   return (
     <div style={{
@@ -511,11 +512,23 @@ function StatCard({ icon, iconBg, value, label, valueColor = C.textPrimary }: {
       }}>
         {icon}
       </div>
-      <div>
-        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>
-          {value}
-        </div>
-        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: C.textTertiary, marginTop: 3 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {badge ? (
+          <div style={{
+            minWidth: 32, height: 32, borderRadius: '50%',
+            background: '#DC2626', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 700,
+            padding: '0 6px',
+          }}>
+            {value}
+          </div>
+        ) : (
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 700, color: valueColor, lineHeight: 1 }}>
+            {value}
+          </div>
+        )}
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: C.textTertiary, marginTop: badge ? 0 : 3 }}>
           {label}
         </div>
       </div>

@@ -1,0 +1,41 @@
+# Fly.io configuration for Corredor API (Staging / Load Test)
+# Deploy: flyctl deploy --config fly-api-staging.toml --app corredor-api-staging
+# Secrets: flyctl secrets set --app corredor-api-staging DATABASE_URL="$STAGING_DATABASE_URL" ...
+app = "corredor-api-staging"
+primary_region = "gru"
+
+[build]
+dockerfile = "apps/api/Dockerfile"
+build-context = "."
+
+[env]
+NODE_ENV = "staging"
+PORT = "3000"
+
+[http_service]
+internal_port = 3000
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 1
+
+[[services]]
+protocol = "tcp"
+internal_port = 3000
+processes = ["app"]
+
+[[services.ports]]
+port = 80
+handlers = ["http"]
+force_https = true
+
+[[services.ports]]
+port = 443
+handlers = ["tls", "http"]
+
+[[services.http_checks]]
+grace_period = "10s"
+interval = "15s"
+timeout = "5s"
+path = "/system/health"
+method = "GET"

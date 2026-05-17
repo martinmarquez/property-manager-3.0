@@ -16,6 +16,7 @@ import { billingRouter } from './routers/billing.js';
 import { reportsRouter } from './routers/reports.js';
 import { siteRouter } from './routers/site.js';
 import { appraisalsRouter } from './routers/appraisals.js';
+import { mobileRouter } from './routers/mobile.js';
 
 /**
  * Root tRPC router.
@@ -57,6 +58,7 @@ export const appRouter = router({
   reports:             reportsRouter,
   site:                siteRouter,
   appraisals:          appraisalsRouter,
+  mobile:              mobileRouter,
 });
 
 export type AppRouter = typeof appRouter;

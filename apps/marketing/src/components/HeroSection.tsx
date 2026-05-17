@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/lib/i18n/navigation';
+import { appHref } from '@/lib/env';
 
 export function HeroSection() {
   const t = useTranslations('hero');
@@ -25,9 +26,9 @@ export function HeroSection() {
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center opacity-0 animate-fade-up delay-300">
-            <Link href="https://app.corredor.ar/register" className="btn-primary btn-lg shadow-brand">
+            <a href={appHref('/register')} className="btn-primary btn-lg shadow-brand">
               {t('cta')}
-            </Link>
+            </a>
             <Link href="/tour" className="btn-secondary btn-lg border-dark-border text-dark-text-primary hover:border-brand-400">
               {t('demo')}
             </Link>

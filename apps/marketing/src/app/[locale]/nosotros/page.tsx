@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { useTranslations } from 'next-intl';
 import { locales } from '@/lib/i18n/config';
 import { Link } from '@/lib/i18n/navigation';
+import { appHref } from '@/lib/env';
 import { Target, Zap, Shield, Heart } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -122,7 +123,7 @@ function NosotrosContent() {
           <h2 className="font-display text-display-md text-ink">¿Querés trabajar con nosotros?</h2>
           <p className="mx-auto mt-4 max-w-xl text-body-lg text-ink-secondary">Buscamos personas apasionadas por la tecnología y el real estate argentino.</p>
           <div className="mt-8">
-            <Link href="https://app.corredor.ar/careers" className="btn-primary btn-lg shadow-brand">Ver posiciones abiertas</Link>
+            <a href={appHref('/careers')} className="btn-primary btn-lg shadow-brand">Ver posiciones abiertas</a>
           </div>
         </div>
       </section>

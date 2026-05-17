@@ -51,3 +51,31 @@ jobs:
 
       - name: Build
         run: pnpm turbo build
+
+      - name: Bundle budget check (< 250 KB gzip)
+        run: |
+          set -e
+          DIST=apps/web/dist/assets
+          if [ ! -d "$DIST" ]; then
+            echo "No dist/assets found — skipping budget check"
+            exit 0
+          fi
+          # Sum only the JS files that are part of the initial render graph.
+          # index-*.js is the entry chunk; react-*.js and router-*.js are eagerly loaded.
+          ENTRY_PATTERN="^(index|react|router)-[a-f0-9]+\\.js$"
+          TOTAL_BYTES=0
+          for f in "$DIST"/*.js; do
+            base=$(basename "$f")
+            if echo "$base" | grep -qE "$ENTRY_PATTERN"; then
+              SZ=$(gzip -c "$f" | wc -c)
+              TOTAL_BYTES=$((TOTAL_BYTES + SZ))
+              echo "  $base: $(( SZ / 1024 )) KB gzip"
+            fi
+          done
+          TOTAL_KB=$((TOTAL_BYTES / 1024))
+          echo "Initial JS bundle: ${TOTAL_KB} KB gzip (budget: 250 KB)"
+          if [ "$TOTAL_BYTES" -gt $((250 * 1024)) ]; then
+            echo "❌ Bundle exceeds 250 KB gzip budget (${TOTAL_KB} KB)"
+            exit 1
+          fi
+          echo "✅ Bundle within budget"

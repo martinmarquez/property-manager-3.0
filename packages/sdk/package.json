@@ -1,22 +1,55 @@
 {
   "name": "@corredor/sdk",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Official JavaScript/TypeScript SDK for the Corredor CRM API",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "vitest run --passWithNoTests",
-    "generate": "openapi-ts"
+    "generate": "openapi-ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "corredor",
+    "crm",
+    "real-estate",
+    "argentina",
+    "inmobiliaria",
+    "sdk"
+  ],
+  "author": "Corredor CRM Engineering <api@corredor.ar>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martinmarquez/property-manager-3.0",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://docs.corredor.ar/sdk/overview",
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {},
   "devDependencies": {
     "@corredor/config": "workspace:*",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

@@ -40,6 +40,7 @@ import { createStripeWebhookRoutes } from './routes/webhooks-stripe.js';
 import { createMercadoPagoWebhookRoutes } from './routes/webhooks-mercadopago.js';
 import { createCopilotStreamRoutes } from './routes/copilot-stream.js';
 import { createV1Routes } from './routes/v1.js';
+import { createWellKnownRoutes } from './routes/well-known.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
 const db = createDb(env.DATABASE_URL);
@@ -72,6 +73,10 @@ app.use(
         'https://admin.corredor.ar',
         'http://localhost:5173', // apps/web dev
         'http://localhost:3001', // apps/admin dev
+        // Capacitor mobile app — custom scheme + optional override
+        'capacitor://localhost',
+        'ionic://localhost',
+        ...(env.CAPACITOR_ORIGIN ? [env.CAPACITOR_ORIGIN] : []),
       ];
       return allowed.includes(origin ?? '') ? origin : null;
     },
@@ -112,6 +117,13 @@ app.get('/health', async (c) => {
     healthy ? 200 : 503,
   );
 });
+
+// ── Universal Links / App Links discovery (no auth) ───────────────────────
+app.route('/.well-known', createWellKnownRoutes({
+  iosAppId: env.IOS_APP_ID,
+  androidPackage: env.ANDROID_PACKAGE,
+  androidSha256: env.ANDROID_SHA256 ?? '',
+}));
 
 // ── E-sign provider webhooks (no auth — HMAC-verified) ───────────────────
 app.route('/webhooks/esign', createEsignWebhookRoutes(redis, {

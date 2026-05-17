@@ -1,0 +1,223 @@
+apiVersion: 1
+
+# SLA Alert Rules — Criterion 13
+# Covers two SLA tiers:
+#   - Standard (99.9% uptime): ≤ 43.8 min downtime/month
+#   - Enterprise (99.95% uptime): ≤ 21.9 min downtime/month
+#
+# Probe availability is measured via blackbox_exporter HTTP checks.
+# Formula: avg_over_time(probe_success[window]) < threshold
+
+groups:
+  - orgId: 1
+    name: SLA - Standard (99.9% uptime)
+    folder: SLA Alerts
+    interval: 1m
+    rules:
+      - uid: sla-standard-5min
+        title: "SLA BREACH: Standard 99.9% — 5-minute window"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                avg_over_time(probe_success{job="blackbox_http", instance="https://api.corredor.ar/v1/health"}[5m])
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.999
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: |
+            API health probe success rate dropped below 99.9% over the last 5 minutes.
+            Current value: {{ $values.A.Value | printf "%.4f" }}
+            Affected endpoint: {{ $labels.instance }}
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Standard SLA (99.9%) is at risk — uptime below threshold"
+        labels:
+          sla_tier: standard
+          severity: warning
+          team: platform
+
+      - uid: sla-standard-1hr
+        title: "SLA BREACH: Standard 99.9% — 1-hour window"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                avg_over_time(probe_success{job="blackbox_http", instance="https://api.corredor.ar/v1/health"}[1h])
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.999
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            API uptime over the past hour is below 99.9% SLA.
+            Current value: {{ $values.A.Value | printf "%.4f" }} (target: ≥ 0.999)
+            Endpoint: {{ $labels.instance }}
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Standard SLA (99.9%) breach sustained over 1 hour"
+        labels:
+          sla_tier: standard
+          severity: critical
+          team: platform
+
+  - orgId: 1
+    name: SLA - Enterprise (99.95% uptime)
+    folder: SLA Alerts
+    interval: 1m
+    rules:
+      - uid: sla-enterprise-5min
+        title: "SLA BREACH: Enterprise 99.95% — 5-minute window"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                avg_over_time(probe_success{job="blackbox_http", instance="https://api.corredor.ar/v1/health"}[5m])
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.9995
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          description: |
+            API health probe dropped below 99.95% enterprise SLA threshold in the last 5 minutes.
+            Current value: {{ $values.A.Value | printf "%.5f" }}
+            Endpoint: {{ $labels.instance }}
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Enterprise SLA (99.95%) threshold breached"
+        labels:
+          sla_tier: enterprise
+          severity: critical
+          team: platform
+          escalate: "true"
+
+      - uid: sla-enterprise-30min
+        title: "SLA BREACH: Enterprise 99.95% — 30-minute window"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: corredor-prometheus
+            model:
+              expr: |
+                avg_over_time(probe_success{job="blackbox_http", instance="https://api.corredor.ar/v1/health"}[30m])
+              intervalMs: 60000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.9995
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: |
+            Enterprise SLA breach sustained over 30 minutes.
+            30-min availability: {{ $values.A.Value | printf "%.5f" }} (target: ≥ 0.9995)
+            Monthly budget consumed: ~{{ mul (sub 1 $values.A.Value) 43800 | printf "%.1f" }} min of 21.9 min allowance
+          runbook_url: https://github.com/martinmarquez/property-manager-3.0/blob/main/docs/runbooks/portal-outage.md
+          summary: "Enterprise SLA (99.95%) breach sustained — escalate immediately"
+        labels:
+          sla_tier: enterprise
+          severity: critical
+          team: platform
+          escalate: "true"
+          page_oncall: "true"

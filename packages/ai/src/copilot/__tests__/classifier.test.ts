@@ -107,6 +107,32 @@ describe('classifyIntent', () => {
     expect(result.type).toBe('general');
   });
 
+  it('strips markdown code fences from model response', async () => {
+    mockResponse('```json\n{"type":"property_search","entities_mentioned":["BEL-00142"],"action_required":false,"confidence":0.92}\n```');
+
+    const result = await classifyIntent(client, 'Mostrame propiedades en Belgrano');
+
+    expect(result.type).toBe('property_search');
+    expect(result.confidence).toBe(0.92);
+  });
+
+  it('strips bare markdown fences without json tag', async () => {
+    mockResponse('```\n{"type":"schedule","entities_mentioned":[],"action_required":true,"confidence":0.88}\n```');
+
+    const result = await classifyIntent(client, 'Agendame una visita');
+
+    expect(result.type).toBe('schedule');
+    expect(result.actionRequired).toBe(true);
+  });
+
+  it('reads intent field as fallback when type is missing', async () => {
+    mockResponse('{"intent":"lead_info","entities_mentioned":["María"],"action_required":false,"confidence":0.9}');
+
+    const result = await classifyIntent(client, 'Datos de María');
+
+    expect(result.type).toBe('lead_info');
+  });
+
   it('uses conversation context when provided', async () => {
     mockResponse('{"type":"property_search","entities_mentioned":[],"action_required":false,"confidence":0.85}');
 

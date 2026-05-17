@@ -79,6 +79,16 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().default('corredor-appraisals'),
   R2_PUBLIC_URL: z.string().optional(),
+
+  // Mobile — Phase H (RENA-198)
+  /** iOS app ID: "TEAMID.com.corredor.app" */
+  IOS_APP_ID: z.string().default('TEAMID.com.corredor.app'),
+  /** Android package name */
+  ANDROID_PACKAGE: z.string().default('com.corredor.app'),
+  /** SHA-256 fingerprint of Android signing certificate */
+  ANDROID_SHA256: z.string().optional(),
+  /** Capacitor mobile app origin for CORS */
+  CAPACITOR_ORIGIN: z.string().optional(),
 });
 
 function parseEnv() {

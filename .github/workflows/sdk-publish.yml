@@ -1,0 +1,67 @@
+name: Publish @corredor/sdk to npm
+
+on:
+  push:
+    tags:
+      - "sdk/v*"  # e.g. sdk/v1.0.0, sdk/v1.2.3
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no publish)"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  publish:
+    name: Build and publish SDK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # for npm provenance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck SDK
+        run: pnpm --filter @corredor/sdk typecheck
+
+      - name: Test SDK
+        run: pnpm --filter @corredor/sdk test
+
+      - name: Build SDK
+        run: pnpm --filter @corredor/sdk build
+
+      - name: Extract version from tag
+        if: github.event_name == 'push'
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#sdk/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in package.json
+        if: github.event_name == 'push'
+        run: |
+          cd packages/sdk
+          npm version "${{ steps.version.outputs.version }}" --no-git-tag-version
+
+      - name: Publish to npm
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pnpm --filter @corredor/sdk publish --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Dry run publish
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: pnpm --filter @corredor/sdk publish --dry-run --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -21,6 +21,7 @@ const C = {
   textTertiary:  '#506180',
   textDisabled:  '#3A4E6A',
   success:   '#18A659',
+  danger:    '#DC2626',
 };
 
 const F = {
@@ -343,7 +344,7 @@ export function AppShell({
         )}
         {!collapsed && item.badge && !item.disabled && (
           <span style={{
-            background: C.brand,
+            background: C.danger,
             color: 'white',
             fontSize: '0.6875rem',
             fontWeight: 600,
@@ -669,7 +670,7 @@ export function AppShell({
                   position: 'absolute', top: 5, right: 5,
                   width: 8, height: 8,
                   borderRadius: '50%',
-                  background: C.brand,
+                  background: C.danger,
                   border: `2px solid ${C.bgRaised}`,
                 }} />
               )}

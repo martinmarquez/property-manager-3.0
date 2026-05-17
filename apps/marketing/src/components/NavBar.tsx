@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/lib/i18n/navigation';
+import { appHref } from '@/lib/env';
 import { ThemeToggle } from './ThemeToggle';
 import { Menu, X } from 'lucide-react';
 
@@ -56,12 +57,12 @@ export function NavBar() {
 
         <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
-          <Link href="https://app.corredor.ar/login" className="btn-ghost text-body-sm">
+          <a href={appHref('/login')} className="btn-ghost text-body-sm">
             {t('login')}
-          </Link>
-          <Link href="https://app.corredor.ar/register" className="btn-primary btn-sm">
+          </a>
+          <a href={appHref('/register')} className="btn-primary btn-sm">
             {t('cta')}
-          </Link>
+          </a>
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
@@ -90,15 +91,15 @@ export function NavBar() {
               </Link>
             ))}
             <hr className="my-2 border-border" />
-            <Link
-              href="https://app.corredor.ar/login"
+            <a
+              href={appHref('/login')}
               className="rounded-lg px-4 py-3 text-body-md text-ink-secondary hover:bg-surface-subtle"
             >
               {t('login')}
-            </Link>
-            <Link href="https://app.corredor.ar/register" className="btn-primary mt-2">
+            </a>
+            <a href={appHref('/register')} className="btn-primary mt-2">
               {t('cta')}
-            </Link>
+            </a>
           </div>
         </div>
       )}

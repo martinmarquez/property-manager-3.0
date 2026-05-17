@@ -1,2 +1,12 @@
-// Public REST SDK — auto-generated from OpenAPI 3.1 spec in Phase H
-export {};
+export { CorredorClient } from './client.js';
+export type { CorredorClientOptions } from './client.js';
+export type {
+  Property,
+  PropertyList,
+  Contact,
+  ContactList,
+  Lead,
+  LeadList,
+  ApiError,
+  PaginatedResponse,
+} from './types.js';
