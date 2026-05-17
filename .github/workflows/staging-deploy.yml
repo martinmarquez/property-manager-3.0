@@ -54,7 +54,9 @@ jobs:
               --name corredor-redis-staging \
               --org corredor \
               --region gru \
-              --no-replicas
+              --no-replicas \
+              --plan free \
+              --enable-eviction
           fi
           REDIS_URL=$(flyctl redis status corredor-redis-staging 2>/dev/null \
             | grep -oE 'redis(s)?://[^ ]+' | head -1)
