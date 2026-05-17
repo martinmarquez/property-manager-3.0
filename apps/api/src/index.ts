@@ -104,7 +104,8 @@ app.get('/health', async (c) => {
 
   const redisStatus = redis.status === 'ready' ? 'connected' : 'disconnected';
 
-  const healthy = dbStatus === 'connected' && redisStatus === 'connected';
+  // Redis is optional for liveness; DB down is the only fatal condition.
+  const healthy = dbStatus === 'connected';
   return c.json(
     {
       status: healthy ? 'ok' : 'degraded',
