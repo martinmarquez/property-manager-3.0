@@ -50,7 +50,7 @@ export default function (data) {
   // tRPC batch: auth.me
   {
     const res = http.get(
-      `${baseUrl}/api/trpc/auth.me`,
+      `${baseUrl}/trpc/auth.me`,
       { headers },
     );
     check(res, {
@@ -62,7 +62,7 @@ export default function (data) {
   {
     const start = Date.now();
     const res = http.get(
-      `${baseUrl}/api/trpc/properties.list?input=${encodeURIComponent(JSON.stringify({ json: { page: 1, pageSize: 20 } }))}`,
+      `${baseUrl}/trpc/properties.list?input=${encodeURIComponent(JSON.stringify({ json: { page: 1, pageSize: 20 } }))}`,
       { headers },
     );
     propertySearchDuration.add(Date.now() - start);

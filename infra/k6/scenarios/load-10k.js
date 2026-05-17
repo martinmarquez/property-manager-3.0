@@ -80,7 +80,7 @@ const headers = {
 };
 
 function trpcUrl(procedure, input) {
-  return `${BASE_URL}/api/trpc/${procedure}?input=${encodeURIComponent(JSON.stringify({ json: input }))}`;
+  return `${BASE_URL}/trpc/${procedure}?input=${encodeURIComponent(JSON.stringify({ json: input }))}`;
 }
 
 // ── Scenario functions ────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ function viewPropertyDetail() {
   const id = randomIntBetween(1, 1000000).toString().padStart(8, '0');
   // Listing endpoint is unauthenticated — simulates portal/public traffic
   const res = http.get(
-    `${BASE_URL}/api/trpc/properties.getById?input=${encodeURIComponent(JSON.stringify({ json: { id: `prop_${id}` } }))}`,
+    `${BASE_URL}/trpc/properties.getById?input=${encodeURIComponent(JSON.stringify({ json: { id: `prop_${id}` } }))}`,
     { headers, tags: { name: 'property_detail' } },
   );
   totalRequests.add(1);
@@ -134,7 +134,7 @@ function viewPipeline() {
 
 function viewInbox() {
   const res = http.get(
-    `${BASE_URL}/api/trpc/inbox.threads?input=${encodeURIComponent(JSON.stringify({ json: { page: 1 } }))}`,
+    `${BASE_URL}/trpc/inbox.threads?input=${encodeURIComponent(JSON.stringify({ json: { page: 1 } }))}`,
     { headers, tags: { name: 'inbox' } },
   );
   totalRequests.add(1);
@@ -145,7 +145,7 @@ function viewInbox() {
 
 function viewReports() {
   const res = http.get(
-    `${BASE_URL}/api/trpc/analytics.summary?input=${encodeURIComponent(JSON.stringify({ json: {} }))}`,
+    `${BASE_URL}/trpc/analytics.summary?input=${encodeURIComponent(JSON.stringify({ json: {} }))}`,
     { headers, tags: { name: 'reports' } },
   );
   totalRequests.add(1);
