@@ -111,7 +111,13 @@ async function queryMv(
     return { rows, total };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('does not exist') || msg.includes('relation')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pgCode = (err as any)?.code as string | undefined;
+    // 42P01 = undefined_table, 42703 = undefined_column
+    if (
+      pgCode === '42P01' || pgCode === '42703' ||
+      msg.includes('does not exist') || msg.includes('relation')
+    ) {
       return { rows: [], total: 0 };
     }
     throw err;

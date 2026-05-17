@@ -38,7 +38,7 @@ export type Db = ReturnType<typeof createDb>;
 // Node-postgres (pooled) client — for long-running workers
 // ---------------------------------------------------------------------------
 export function createNodeDb(databaseUrl: string) {
-  const pool = new Pool({ connectionString: databaseUrl, max: 50 });
+  const pool = new Pool({ connectionString: databaseUrl, max: 10 });
   return drizzlePg(pool, { schema });
 }
 

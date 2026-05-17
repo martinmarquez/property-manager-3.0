@@ -87,6 +87,31 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Create Fly worker app if not exists
+        run: |
+          if ! flyctl apps list | grep -q "corredor-worker-staging"; then
+            flyctl apps create corredor-worker-staging --org corredor
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set Fly.io worker secrets
+        run: |
+          flyctl secrets set \
+            NODE_ENV="production" \
+            DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
+            ${STAGING_REDIS_URL:+REDIS_URL="$STAGING_REDIS_URL"} \
+            --app corredor-worker-staging --stage
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy staging worker to Fly.io
+        run: |
+          flyctl deploy --config infra/fly/worker-staging.fly.toml --local-only --wait-timeout 300 \
+            --build-arg CACHE_BUST="${{ github.sha }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Dump Fly app logs (post-deploy diagnostic)
         continue-on-error: true
         run: flyctl logs --app corredor-api-staging --no-tail 2>&1 | tail -60
@@ -186,5 +211,49 @@ jobs:
             END $$;
           REFRESH_SQL
           echo "Analytics materialized views refreshed"
+
+          # 4. Seed inbox channels + contact + conversations for 8-channel delivery test.
+          #    One channel per DB type, two webchat channels (portal + webchat variants).
+          #    All idempotent via ON CONFLICT DO NOTHING.
+          psql "$STAGING_DATABASE_URL" <<'INBOX_SQL'
+            -- Test contact for inbox conversations
+            INSERT INTO contact (id, tenant_id, kind, first_name, last_name, phones, emails)
+            VALUES (
+              'c0000000-0000-4000-8000-000000000001',
+              'a0000000-0000-4000-8000-000000000001',
+              'person',
+              'Test', 'Contact',
+              '[{"e164":"+5491112345678","primary":true}]'::jsonb,
+              '[{"address":"test@corredor-test.internal","primary":true}]'::jsonb
+            )
+            ON CONFLICT (id) DO NOTHING;
+
+            -- Inbox channels (one per channel sub-type for the 8-channel test)
+            INSERT INTO inbox_channel (id, tenant_id, type, name, status)
+            VALUES
+              ('d0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'email',     'email gmail',    'active'),
+              ('d0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'email',     'email outlook',  'active'),
+              ('d0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'email',     'email imap',     'active'),
+              ('d0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001', 'whatsapp',  'whatsapp',       'active'),
+              ('d0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001', 'sms',       'sms',            'active'),
+              ('d0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000001', 'webchat',   'portal',         'active'),
+              ('d0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000001', 'webchat',   'webchat',        'active'),
+              ('d0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000001', 'instagram', 'instagram',      'active')
+            ON CONFLICT DO NOTHING;
+
+            -- Open conversations (one per channel)
+            INSERT INTO conversation (id, tenant_id, channel_id, contact_id, status)
+            VALUES
+              ('e0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000004', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'open'),
+              ('e0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000008', 'c0000000-0000-4000-8000-000000000001', 'open')
+            ON CONFLICT (id) DO NOTHING;
+          INBOX_SQL
+          echo "Inbox channels + conversations seeded"
         env:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
