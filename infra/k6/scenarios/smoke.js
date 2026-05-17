@@ -7,6 +7,9 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 
+// Only count network errors and 5xx as http_req_failed — 4xx are expected for auth checks
+http.setResponseCallback(http.expectedStatuses({ min: 200, max: 499 }));
+
 const errorRate = new Rate('errors');
 const propertySearchDuration = new Trend('property_search_duration', true);
 
@@ -54,8 +57,10 @@ export default function (data) {
       { headers },
     );
     check(res, {
-      'auth.me: status 200 or 401': (r) => r.status === 200 || r.status === 401,
+      'auth.me: status 200, 401, or 403': (r) => r.status === 200 || r.status === 401 || r.status === 403,
     });
+    // Don't count auth errors as load-test errors — 401/403 are expected without a browser session
+    errorRate.add(res.status >= 500);
   }
 
   // Properties list (public-facing; uses tenant token)
