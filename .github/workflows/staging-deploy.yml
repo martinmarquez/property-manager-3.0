@@ -107,6 +107,7 @@ jobs:
           RAW_KEY=$(echo -n "k6-load-test" | openssl dgst -sha256 -hmac "$STAGING_DATABASE_URL" | awk '{print $2}')
           KEY_HASH=$(echo -n "$RAW_KEY" | sha256sum | awk '{print $1}')
           psql "$STAGING_DATABASE_URL" <<SQL
+            -- API key with admin scope so RBAC + requirePermission pass
             INSERT INTO api_key (id, tenant_id, created_by, key_hash, prefix, name, scopes, created_at)
             VALUES (
               'e0000000-0000-4000-8000-000000000001',
@@ -115,11 +116,39 @@ jobs:
               '$KEY_HASH',
               '${RAW_KEY:0:8}',
               'k6-load-test',
-              '["read"]'::jsonb,
+              '["admin"]'::jsonb,
               NOW()
             )
-            ON CONFLICT (id) DO UPDATE SET key_hash = '$KEY_HASH', updated_at = NOW();
+            ON CONFLICT (id) DO UPDATE SET key_hash = '$KEY_HASH', scopes = '["admin"]'::jsonb, updated_at = NOW();
+
+            -- Billing catalog: ensure plan + features exist (idempotent)
+            INSERT INTO plan (code, display_name, price_usd, billing_period, is_active, sort_order)
+            VALUES ('pro', 'Pro', 120.00, 'monthly', TRUE, 3)
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO plan_feature (plan_code, feature_key)
+            VALUES
+              ('pro', 'reports_export'),
+              ('pro', 'analytics_dashboard'),
+              ('pro', 'ai_copilot'),
+              ('pro', 'appraisals'),
+              ('pro', 'site_builder')
+            ON CONFLICT (plan_code, feature_key) DO NOTHING;
+
+            -- Subscription for load-test tenant so withFeatureGate passes
+            INSERT INTO subscription (id, tenant_id, plan_code, status, billing_provider, current_period_start, current_period_end, created_at)
+            VALUES (
+              'f0000000-0000-4000-8000-000000000001',
+              'a0000000-0000-4000-8000-000000000001',
+              'pro',
+              'active',
+              'none',
+              NOW(),
+              NOW() + INTERVAL '1 year',
+              NOW()
+            )
+            ON CONFLICT (tenant_id) DO UPDATE SET plan_code = 'pro', status = 'active', updated_at = NOW();
           SQL
-          echo "Load-test API key provisioned (deterministic — no GitHub secret write needed)"
+          echo "Load-test API key + billing seed provisioned"
         env:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
