@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { ReportsIndexPageObject, ReportViewPageObject } from '../pages/ReportsPageObject.js';
 
 // ─── Analytics / Reports E2E — Phase G ────────────────────────────────────
+// Skip against production until Analytics/Reports ships (part of Phase G)
+test.skip(process.env.PLAYWRIGHT_PRODUCTION === 'true', 'Analytics not yet deployed to production');
 
 test.describe('Índice de reportes', () => {
   test('carga la página de reportes con tarjetas de informes', async ({ page }) => {
