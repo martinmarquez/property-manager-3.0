@@ -173,8 +173,8 @@ async function trpcMutation<T = unknown>(
     );
   }
 
-  const json = (await res.json()) as { result?: { data?: { json?: T } } };
-  return json?.result?.data?.json as T;
+  const json = (await res.json()) as { result?: { data?: T } };
+  return json?.result?.data as T;
 }
 
 async function trpcQuery<T = unknown>(
@@ -195,8 +195,8 @@ async function trpcQuery<T = unknown>(
     );
   }
 
-  const json = (await res.json()) as { result?: { data?: { json?: T } } };
-  return json?.result?.data?.json as T;
+  const json = (await res.json()) as { result?: { data?: T } };
+  return json?.result?.data as T;
 }
 
 // ---------------------------------------------------------------------------
