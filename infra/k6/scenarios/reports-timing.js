@@ -199,7 +199,7 @@ export default function () {
     for (const metricKey of KPI_METRIC_KEYS) {
       const tagName = `kpi_${metricKey}`;
       const res = http.get(
-        trpcUrl('analytics.kpiTimeseries', { metricKey, days: 30 }),
+        trpcUrl('analytics.kpiTimeseries', { metric: metricKey, days: 30 }),
         { headers, tags: { name: tagName } },
       );
       totalRequests.add(1);

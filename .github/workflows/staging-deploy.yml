@@ -142,12 +142,12 @@ jobs:
               'a0000000-0000-4000-8000-000000000001',
               'pro',
               'active',
-              'none',
+              'manual',
               NOW(),
               NOW() + INTERVAL '1 year',
               NOW()
             )
-            ON CONFLICT (tenant_id) DO UPDATE SET plan_code = 'pro', status = 'active', updated_at = NOW();
+            ON CONFLICT (tenant_id) DO UPDATE SET plan_code = 'pro', status = 'active', billing_provider = 'manual', updated_at = NOW();
           SQL
           echo "Load-test API key + billing seed provisioned"
         env:
