@@ -152,5 +152,39 @@ jobs:
             ON CONFLICT (tenant_id) DO UPDATE SET plan_code = 'pro', status = 'active', billing_provider = 'manual', updated_at = NOW();
           SQL
           echo "Load-test API key + billing seed provisioned"
+
+          # 3. Refresh all analytics MVs so they reflect current table state.
+          #    MVs are created at migration time (empty tables) and never refreshed
+          #    automatically on staging. Stale/empty MVs cause slow COUNT(*) queries
+          #    under concurrent load. CONCURRENTLY requires a unique index (already present).
+          #    Ignore missing MVs (commission_owed depends on commission_split table).
+          psql "$STAGING_DATABASE_URL" <<'REFRESH_SQL'
+            DO $$
+            DECLARE
+              mv text;
+              mvs text[] := ARRAY[
+                'analytics.mv_pipeline_conversion',
+                'analytics.mv_listing_performance',
+                'analytics.mv_agent_productivity',
+                'analytics.mv_portal_roi',
+                'analytics.mv_revenue_forecast',
+                'analytics.mv_retention_cohort',
+                'analytics.mv_zone_heatmap',
+                'analytics.mv_ai_usage_value',
+                'analytics.mv_sla_adherence',
+                'analytics.mv_billing_metrics'
+              ];
+            BEGIN
+              FOREACH mv IN ARRAY mvs LOOP
+                BEGIN
+                  EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY ' || mv;
+                  RAISE NOTICE 'Refreshed %', mv;
+                EXCEPTION WHEN undefined_table THEN
+                  RAISE NOTICE 'Skipped % (does not exist)', mv;
+                END;
+              END LOOP;
+            END $$;
+          REFRESH_SQL
+          echo "Analytics materialized views refreshed"
         env:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
