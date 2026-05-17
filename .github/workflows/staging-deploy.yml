@@ -98,18 +98,30 @@ jobs:
             https://corredor-api-staging.fly.dev/health \
             --fail --silent --show-error | jq '.'
 
-      - name: Obtain load-test JWT and set secret
+      - name: Seed load-test data and provision API key
         run: |
-          TOKEN=$(curl -s -X POST https://corredor-api-staging.fly.dev/api/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"k6@corredor.ar","password":"LoadTest2026!"}' \
-            | jq -r '.token // .accessToken // .data.token')
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "WARNING: Could not obtain load-test JWT — set STAGING_LOAD_TEST_TOKEN manually"
-          else
-            echo "Load-test JWT obtained successfully"
-            gh secret set STAGING_LOAD_TEST_TOKEN --body "$TOKEN"
-            gh secret set STAGING_API_URL --body "https://corredor-api-staging.fly.dev"
-          fi
+          # 1. Seed tenant, user, and 1M properties (idempotent ON CONFLICT DO NOTHING)
+          psql "$STAGING_DATABASE_URL" -f infra/k6/seed/seed.sql
+          # 2. Generate a raw API key and insert into staging DB for the load-test user
+          RAW_KEY=$(openssl rand -hex 32)
+          KEY_HASH=$(echo -n "$RAW_KEY" | sha256sum | awk '{print $1}')
+          psql "$STAGING_DATABASE_URL" <<SQL
+            INSERT INTO api_key (id, tenant_id, created_by, key_hash, prefix, name, scopes, created_at)
+            VALUES (
+              'e0000000-0000-4000-8000-000000000001',
+              'a0000000-0000-4000-8000-000000000001',
+              'b0000000-0000-4000-8000-000000000001',
+              '$KEY_HASH',
+              '${RAW_KEY:0:8}',
+              'k6-load-test',
+              '["read"]'::jsonb,
+              NOW()
+            )
+            ON CONFLICT (id) DO UPDATE SET key_hash = '$KEY_HASH', updated_at = NOW();
+          SQL
+          gh secret set STAGING_LOAD_TEST_TOKEN --body "$RAW_KEY"
+          gh secret set STAGING_API_URL --body "https://corredor-api-staging.fly.dev"
+          echo "Load-test API key provisioned"
         env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

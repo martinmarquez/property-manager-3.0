@@ -142,7 +142,7 @@ function trpcUrl(procedure, input) {
 // ── Setup ────────────────────────────────────────────────────────────────────
 
 export function setup() {
-  const res = http.get(`${BASE_URL}/api/health`);
+  const res = http.get(`${BASE_URL}/health`);
   if (res.status !== 200) {
     throw new Error(`API health check failed: ${res.status}`);
   }

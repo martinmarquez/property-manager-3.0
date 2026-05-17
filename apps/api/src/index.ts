@@ -181,20 +181,20 @@ app.route('/api/copilot', createCopilotStreamRoutes({
 
 // ── tRPC router ────────────────────────────────────────────────────────────
 // @hono/trpc-server passes (trpcOpts, honoContext) to createContext
-app.use(
-  '/trpc/*',
-  trpcServer({
-    router: appRouter,
-    createContext: (_opts, c) => createContext({ c, db, redis }) as unknown as Record<string, unknown>,
-    onError({ error, path }) {
-      logger.error('tRPC error', {
-        path,
-        code: error.code,
-        message: error.message,
-      });
-    },
-  }),
-);
+// Mount at both /trpc/* and /api/trpc/* for compatibility with programmatic clients.
+const trpcHandler = trpcServer({
+  router: appRouter,
+  createContext: (_opts, c) => createContext({ c, db, redis }) as unknown as Record<string, unknown>,
+  onError({ error, path }) {
+    logger.error('tRPC error', {
+      path,
+      code: error.code,
+      message: error.message,
+    });
+  },
+});
+app.use('/trpc/*', trpcHandler);
+app.use('/api/trpc/*', trpcHandler);
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 const port = env.PORT;

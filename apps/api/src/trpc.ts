@@ -7,6 +7,9 @@ import { createDb, setTenantContext as setTenantCtxDb } from '@corredor/db';
 import { checkRateLimit, RateLimitPresets } from '@corredor/core';
 import { logger } from '@corredor/telemetry';
 import { getSession, refreshSession, destroySession, getSessionId, IDLE_TIMEOUT_SECONDS } from './middleware/session.js';
+import { createHash } from 'node:crypto';
+import { eq, isNull, and } from 'drizzle-orm';
+import { apiKey as apiKeyTable } from '@corredor/db';
 import { FeatureGateError, assertFeature } from './lib/billing/assert-feature.js';
 
 // ---------------------------------------------------------------------------
@@ -100,7 +103,54 @@ export const { router, middleware } = t;
 // ---------------------------------------------------------------------------
 
 const tenantMiddleware = middleware(async ({ ctx, next }) => {
-  const { sessionId, redis, requestId } = ctx;
+  const { sessionId, redis, requestId, c, db } = ctx;
+
+  // API key Bearer token auth — allows programmatic clients (e.g. k6 load tests)
+  // to authenticate without a browser session and Redis.
+  const authHeader = c.req.header('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const rawKey = authHeader.slice(7);
+    if (!rawKey || rawKey.length < 16) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API key format' });
+    }
+    const hash = createHash('sha256').update(rawKey).digest('hex');
+    const rows = await db
+      .select({
+        id: apiKeyTable.id,
+        tenantId: apiKeyTable.tenantId,
+        createdBy: apiKeyTable.createdBy,
+        scopes: apiKeyTable.scopes,
+        expiresAt: apiKeyTable.expiresAt,
+        revokedAt: apiKeyTable.revokedAt,
+      })
+      .from(apiKeyTable)
+      .where(and(eq(apiKeyTable.keyHash, hash), isNull(apiKeyTable.deletedAt)))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API key' });
+    }
+    const key = rows[0]!;
+    if (key.revokedAt || (key.expiresAt && new Date(key.expiresAt) < new Date())) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API key is revoked or expired' });
+    }
+
+    db.update(apiKeyTable).set({ lastUsedAt: new Date() }).where(eq(apiKeyTable.id, key.id))
+      .then(() => {}).catch(() => {});
+
+    logger.info('tenant context resolved via API key', { tenantId: key.tenantId, requestId });
+
+    return next({
+      ctx: {
+        ...ctx,
+        tenantId: key.tenantId,
+        userId: key.createdBy ?? key.tenantId,
+        roles: (key.scopes as string[]) ?? [],
+        sessionId: `apikey:${key.id}`,
+        queues: ctx.queues,
+      } satisfies AuthenticatedContext,
+    });
+  }
 
   if (!sessionId) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No session cookie' });
