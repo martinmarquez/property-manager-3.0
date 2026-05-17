@@ -80,7 +80,7 @@ const headers = {
 };
 
 function trpcUrl(procedure, input) {
-  return `${BASE_URL}/trpc/${procedure}?input=${encodeURIComponent(JSON.stringify({ json: input }))}`;
+  return `${BASE_URL}/trpc/${procedure}?input=${encodeURIComponent(JSON.stringify(input))}`;
 }
 
 // ── Scenario functions ────────────────────────────────────────────────────────
