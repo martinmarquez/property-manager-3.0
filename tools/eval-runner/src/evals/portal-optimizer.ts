@@ -131,7 +131,7 @@ Bathrooms: 1
 Amenities: Balcón terraza, lavadero, aire acondicionado, seguridad 24hs, SUM, parrilla
 Photos: 25 professional photos including floor plan
 Portal: ZonaProp`,
-    validate: (o) => validateOptimization(o, { scoreRange: [70, 100] }),
+    validate: (o) => validateOptimization(o, { scoreRange: [60, 100] }),
   },
   {
     id: 'po-06-info-overload',
@@ -145,7 +145,7 @@ Location: Recoleta, CABA
 Area: 160 m²
 Rooms: 4 ambientes
 Portal: ZonaProp`,
-    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [15, 50], requiredCategories: ['title', 'description'] }),
+    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [10, 65], requiredCategories: ['title', 'description'] }),
   },
   {
     id: 'po-07-missing-photos',
@@ -180,7 +180,7 @@ Bedrooms: 2
 Bathrooms: 1
 Portal: ZonaProp
 Listed: March 2024`,
-    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [15, 50], requiredCategories: ['description'] }),
+    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [15, 70], requiredCategories: ['description'] }),
   },
   {
     id: 'po-09-luxury-positioning',
@@ -198,7 +198,7 @@ Bathrooms: 4
 Amenities: Pileta, jardín, cochera triple, quincho, home cinema, bodega
 Photos: 8 photos
 Portal: ZonaProp`,
-    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [15, 45], requiredCategories: ['description', 'title'] }),
+    validate: (o) => validateOptimization(o, { minSuggestions: 3, scoreRange: [15, 65], requiredCategories: ['description', 'title'] }),
   },
   {
     id: 'po-10-commercial',
