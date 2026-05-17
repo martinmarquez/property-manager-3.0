@@ -48,7 +48,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build web bundle
-        run: pnpm --filter @corredor/web build
+        run: pnpm turbo build --filter=@corredor/web...
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
 
