@@ -213,7 +213,8 @@ const rateLimitMiddleware = middleware(async ({ ctx, next }) => {
 
   // Skip rate limiting if Redis is not ready — fail-open so staging without
   // Redis still serves requests. Production always has Redis provisioned.
-  if (redis.status !== 'ready') {
+  // Also skip for API key auth — keys are pre-authorized machine clients (e.g. k6).
+  if (redis.status !== 'ready' || authenticatedCtx.sessionId?.startsWith('apikey:')) {
     return next({ ctx });
   }
 
