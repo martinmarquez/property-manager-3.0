@@ -125,7 +125,7 @@ async function openAiDescriptionModal(page: Page) {
 // ---------------------------------------------------------------------------
 
 // Skip against production until the AI descriptions feature is deployed to prod (RENA-264)
-const isProduction = (process.env.BASE_URL ?? '').includes('corredor.app') && !process.env.BASE_URL?.includes('staging');
+const isProduction = process.env.PLAYWRIGHT_PRODUCTION === 'true';
 
 test.describe('AI Descriptions — modal de generación', () => {
   test.skip(isProduction, 'AI descriptions not yet deployed to production — re-enable after RENA-264 ships');
