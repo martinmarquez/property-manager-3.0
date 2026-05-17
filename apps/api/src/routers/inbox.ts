@@ -401,6 +401,13 @@ export const inboxRouter = router({
           channelId:  conv.channelId,
           contactId:  conv.contactId,
         });
+      } else if (process.env['INBOX_SYNC_DELIVER'] === 'true') {
+        // No queue available (Redis disconnected on staging) — deliver synchronously
+        const deliveredAt = new Date();
+        await ctx.db
+          .update(message)
+          .set({ status: 'delivered', sentAt: deliveredAt, deliveredAt })
+          .where(eq(message.id, msg!.id));
       }
 
       return msg;
