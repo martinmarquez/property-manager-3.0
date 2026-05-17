@@ -13,9 +13,11 @@ COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -24,6 +26,8 @@ COPY apps/worker/ ./apps/worker/
 RUN pnpm --filter @corredor/db build && \
     pnpm --filter @corredor/core build && \
     pnpm --filter @corredor/telemetry build && \
+    pnpm --filter @corredor/documents build && \
+    pnpm --filter @corredor/portals build && \
     pnpm --filter @corredor/worker build
 
 # ── prod deps ──────────────────────────────────────────────────────────────
@@ -35,9 +39,11 @@ COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 # ── runner ─────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
@@ -81,10 +87,12 @@ COPY packages/ai/package.json ./packages/ai/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/portals/package.json ./packages/portals/
 COPY packages/telemetry/package.json ./packages/telemetry/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config
+    pnpm install --frozen-lockfile --prod --filter @corredor/worker --filter @corredor/ai --filter @corredor/db --filter @corredor/core --filter @corredor/telemetry --filter @corredor/config --filter @corredor/documents --filter @corredor/portals
 
 COPY --from=builder /app/packages/ ./packages/
 COPY --chown=worker:nodejs --from=builder /app/apps/worker/dist ./apps/worker/dist
