@@ -194,8 +194,33 @@ jobs:
           #    MVs are created at migration time (empty tables) and never refreshed
           #    automatically on staging. Stale/empty MVs cause slow COUNT(*) queries
           #    under concurrent load. CONCURRENTLY requires a unique index (already present).
-          #    Ignore missing MVs (commission_owed depends on commission_split table).
+          #    commission_owed depends on commission_split (not yet shipped) — create stub MV.
           psql "$STAGING_DATABASE_URL" <<'REFRESH_SQL'
+            -- Ensure mv_commission_owed exists as an empty stub (commission_split not yet shipped)
+            DO $$
+            BEGIN
+              EXECUTE $q$
+                CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.mv_commission_owed AS
+                SELECT
+                  NULL::uuid AS tenant_id, NULL::uuid AS agent_id, NULL::uuid AS lead_id,
+                  NULL::uuid AS listing_id, NULL::uuid AS property_id,
+                  NULL::text AS address_street, NULL::text AS neighborhood,
+                  NULL::numeric AS amount, NULL::text AS currency, NULL::text AS status,
+                  NULL::date AS due_date, NULL::timestamptz AS paid_at,
+                  NULL::int AS days_outstanding, NULL::timestamptz AS commission_month,
+                  NOW() AS refreshed_at
+                WHERE FALSE
+              $q$;
+              BEGIN
+                EXECUTE $q$
+                  CREATE UNIQUE INDEX mv_commission_owed_pk
+                    ON analytics.mv_commission_owed (tenant_id, lead_id, agent_id)
+                $q$;
+              EXCEPTION WHEN duplicate_table THEN NULL;
+              END;
+            EXCEPTION WHEN duplicate_table THEN NULL;
+            END $$;
+
             DO $$
             DECLARE
               mv text;
