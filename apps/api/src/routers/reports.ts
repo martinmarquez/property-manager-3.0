@@ -96,15 +96,20 @@ async function queryMv(
   const where = sql.join(filters, sql` AND `);
 
   try {
+    // Use pg_class.reltuples for O(1) row estimate (exact COUNT on 1M-row MVs is too slow).
+    // reltuples is kept up-to-date by VACUUM/ANALYZE which runs after REFRESH MATERIALIZED VIEW.
+    const mvName = mv.split('.').pop() ?? mv;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const countResult: any = await db.execute(
-      sql`SELECT COUNT(*) AS total FROM ${sql.raw(mv)} WHERE ${where}`,
+      sql`SELECT GREATEST(reltuples, 0)::bigint AS total
+          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE c.relname = ${mvName}`,
     );
     const total = Number(countResult?.rows?.[0]?.total ?? 0);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dataResult: any = await db.execute(
-      sql`SELECT * FROM ${sql.raw(mv)} WHERE ${where} ORDER BY 1 LIMIT ${limit} OFFSET ${offset}`,
+      sql`SELECT * FROM ${sql.raw(mv)} WHERE ${where} LIMIT ${limit} OFFSET ${offset}`,
     );
     const rows = (dataResult?.rows ?? []) as Record<string, unknown>[];
 

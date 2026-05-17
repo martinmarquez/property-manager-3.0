@@ -404,10 +404,12 @@ export const inboxRouter = router({
       } else if (process.env['INBOX_SYNC_DELIVER'] === 'true') {
         // No queue available (Redis disconnected on staging) — deliver synchronously
         const deliveredAt = new Date();
-        await ctx.db
+        const [delivered] = await ctx.db
           .update(message)
           .set({ status: 'delivered', sentAt: deliveredAt, deliveredAt })
-          .where(eq(message.id, msg!.id));
+          .where(eq(message.id, msg!.id))
+          .returning();
+        return delivered ?? msg;
       }
 
       return msg;
