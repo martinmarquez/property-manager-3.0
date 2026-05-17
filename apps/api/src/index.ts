@@ -29,7 +29,7 @@ import { logger as honoLogger } from 'hono/logger';
 import { requestId } from 'hono/request-id';
 import { sql } from 'drizzle-orm';
 import Redis from 'ioredis';
-import { createDb } from '@corredor/db';
+import { createNodeDb } from '@corredor/db';
 import { apiSecurityHeaders } from '@corredor/core';
 import { env } from './env.js';
 import { csrfMiddleware } from './middleware/csrf.js';
@@ -43,7 +43,7 @@ import { createV1Routes } from './routes/v1.js';
 import { createWellKnownRoutes } from './routes/well-known.js';
 
 // ─── Singleton clients ────────────────────────────────────────────────────────
-const db = createDb(env.DATABASE_URL);
+const db = createNodeDb(env.DATABASE_URL);
 const redis = new Redis(env.REDIS_URL, {
   // Retry strategy: exponential backoff up to 30s
   retryStrategy: (times) => Math.min(times * 500, 30_000),
@@ -184,7 +184,8 @@ app.route('/api/copilot', createCopilotStreamRoutes({
 // Mount at both /trpc/* and /api/trpc/* for compatibility with programmatic clients.
 const trpcHandler = trpcServer({
   router: appRouter,
-  createContext: (_opts, c) => createContext({ c, db, redis }) as unknown as Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createContext: (_opts, c) => createContext({ c, db: db as any, redis }) as unknown as Record<string, unknown>,
   onError({ error, path }) {
     logger.error('tRPC error', {
       path,

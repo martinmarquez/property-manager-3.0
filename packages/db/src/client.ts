@@ -48,7 +48,7 @@ export type NodeDb = ReturnType<typeof createNodeDb>;
 // RLS context helper — call at the start of every application transaction
 // ---------------------------------------------------------------------------
 export async function setTenantContext(
-  db: Db,
+  db: Db | NodeDb | { execute: (query: unknown) => Promise<unknown> },
   tenantId: string,
   userId?: string,
 ) {
