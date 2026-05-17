@@ -43,6 +43,8 @@ const nextConfig = {
     ];
   },
 
+  turbopack: {},
+
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.resolve.alias['@opentelemetry/api'] = require.resolve(
