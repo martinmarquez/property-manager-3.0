@@ -30,7 +30,7 @@ const reportProcedureNoTx = protectedProcedureNoTx.use(withFeatureGate('reports_
 
 const MV_SLUG_REGISTRY: Record<
   string,
-  { mv: string; agentScoped: boolean }
+  { mv: string; agentScoped: boolean; platformLevel?: boolean }
 > = {
   pipeline_conversion: { mv: 'analytics.mv_pipeline_conversion', agentScoped: false },
   listing_performance: { mv: 'analytics.mv_listing_performance', agentScoped: false },
@@ -42,7 +42,8 @@ const MV_SLUG_REGISTRY: Record<
   ai_usage_value:      { mv: 'analytics.mv_ai_usage_value',      agentScoped: false },
   sla_adherence:       { mv: 'analytics.mv_sla_adherence',       agentScoped: true },
   commission_owed:     { mv: 'analytics.mv_commission_owed',     agentScoped: true },
-  billing_metrics:     { mv: 'mv_billing_metrics',               agentScoped: false },
+  // Platform-level singleton view — no tenant_id column, scoped by RBAC (admin-only)
+  billing_metrics:     { mv: 'mv_billing_metrics',               agentScoped: false, platformLevel: true },
 };
 
 const VALID_SLUGS = Object.keys(MV_SLUG_REGISTRY);
@@ -73,6 +74,7 @@ async function queryMv(
     dateTo?: string | undefined;
     limit?: number;
     offset?: number;
+    platformLevel?: boolean;
   },
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   const limit = opts.limit ?? 500;
@@ -80,9 +82,9 @@ async function queryMv(
 
   // mv is from our hardcoded MV_SLUG_REGISTRY — safe for sql.raw().
   // All user-derived values (tenantId, agentId, dateFrom) are parameterized.
-  const filters: ReturnType<typeof sql>[] = [
-    sql`tenant_id = ${tenantId}`,
-  ];
+  const filters: ReturnType<typeof sql>[] = opts.platformLevel
+    ? [sql`TRUE`]
+    : [sql`tenant_id = ${tenantId}`];
 
   if (opts.agentId) {
     filters.push(sql`agent_id = ${opts.agentId}`);
@@ -221,6 +223,7 @@ const dataRouter = router({
         dateTo: input.dateTo,
         limit: input.limit,
         offset: input.offset,
+        platformLevel: entry.platformLevel,
       });
 
       const refreshedAt = rows.length > 0
@@ -301,6 +304,7 @@ const exportRouter = router({
         dateFrom: input.dateFrom,
         dateTo: input.dateTo,
         limit: 10_000,
+        platformLevel: entry.platformLevel,
       });
 
       const timestamp = new Date().toISOString().slice(0, 10);
@@ -464,6 +468,7 @@ const shareLinkRouter = router({
 
       const { rows, total } = await queryMv(db, entry.mv, decoded.tenantId, {
         limit: 500,
+        platformLevel: entry.platformLevel,
       });
 
       return {
