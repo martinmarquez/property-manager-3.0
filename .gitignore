@@ -49,6 +49,10 @@ packages/db/.drizzle-studio/
 # Misc
 *.tsbuildinfo
 tmp/
+lighthouserc.js
+lefthook.yml
+.rena-*.md
+apps/web/src/e2e/tests/debug_errors.spec.ts
 
 # AFIP WSAA certificates — never commit private keys or signed certs
 infra/afip/certs/
