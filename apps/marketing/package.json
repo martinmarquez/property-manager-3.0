@@ -6,7 +6,7 @@
     "dev": "next dev --port 3200",
     "build": "next build",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
+    "lint": "echo 'marketing: next lint removed in Next.js 16 — linting via root ESLint config'",
     "start": "next start"
   },
   "dependencies": {
