@@ -35,5 +35,5 @@ handlers = ["tls", "http"]
 grace_period = "10s"
 interval = "15s"
 timeout = "5s"
-path = "/system/health"
+path = "/health"
 method = "GET"
