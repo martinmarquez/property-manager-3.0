@@ -26,33 +26,96 @@
     "title": "Everything you need, nothing you don't",
     "subtitle": "Each module solves a real problem in the daily operations of an Argentine real estate agency.",
     "modules": {
-      "properties": { "title": "Properties", "desc": "Complete listings with photos, floor plans, video tours, and geolocation." },
-      "contacts": { "title": "Contacts", "desc": "Unified CRM for owners, tenants, buyers, and colleagues." },
-      "pipeline": { "title": "Sales Pipeline", "desc": "Visual Kanban board to track every sale and rental opportunity." },
-      "inbox": { "title": "Unified Inbox", "desc": "WhatsApp, email, and portals in a single inbox with auto-assignment." },
-      "tasks": { "title": "Tasks", "desc": "Assign and track team tasks with deadlines and priorities." },
-      "showings": { "title": "Showings", "desc": "Schedule visits, confirm attendance, and capture feedback instantly." },
-      "contracts": { "title": "Contracts", "desc": "Generate digital contracts with built-in electronic signatures." },
-      "billing": { "title": "Billing & Expenses", "desc": "Automated rent settlements, receipts, and payment tracking." },
-      "ownerPortal": { "title": "Owner Portal", "desc": "Owners see their properties, payments, and documents online." },
-      "tenantPortal": { "title": "Tenant Portal", "desc": "Claims, payment receipts, and documents for each tenant." },
-      "analytics": { "title": "Analytics", "desc": "Real-time dashboards for sales, occupancy, and team performance." },
-      "portals": { "title": "Listing Sites", "desc": "Auto-publish to ZonaProp, Argenprop, Mercado Libre, and more." },
-      "website": { "title": "Website", "desc": "Your own property search site, SEO-optimized with your branding." },
-      "documents": { "title": "Documents", "desc": "Central repository for deeds, contracts, guarantees, and more." },
-      "copilot": { "title": "AI Copilot", "desc": "Auto-replies, lead summaries, and smart recommendations." },
-      "reports": { "title": "Reports", "desc": "Export custom PDF and Excel reports for property owners." },
-      "teams": { "title": "Teams", "desc": "Roles, permissions, and metrics per agent, branch, or franchise." },
-      "integrations": { "title": "Integrations", "desc": "Open API and connectors for Tokko, Zonaprop, Google, and WhatsApp." }
+      "properties": {
+        "title": "Properties",
+        "desc": "Complete listings with photos, floor plans, video tours, and geolocation."
+      },
+      "contacts": {
+        "title": "Contacts",
+        "desc": "Unified CRM for owners, tenants, buyers, and colleagues."
+      },
+      "pipeline": {
+        "title": "Sales Pipeline",
+        "desc": "Visual Kanban board to track every sale and rental opportunity."
+      },
+      "inbox": {
+        "title": "Unified Inbox",
+        "desc": "WhatsApp, email, and portals in a single inbox with auto-assignment."
+      },
+      "tasks": {
+        "title": "Tasks",
+        "desc": "Assign and track team tasks with deadlines and priorities."
+      },
+      "showings": {
+        "title": "Showings",
+        "desc": "Schedule visits, confirm attendance, and capture feedback instantly."
+      },
+      "contracts": {
+        "title": "Contracts",
+        "desc": "Generate digital contracts with built-in electronic signatures."
+      },
+      "billing": {
+        "title": "Billing & Expenses",
+        "desc": "Automated rent settlements, receipts, and payment tracking."
+      },
+      "ownerPortal": {
+        "title": "Owner Portal",
+        "desc": "Owners see their properties, payments, and documents online."
+      },
+      "tenantPortal": {
+        "title": "Tenant Portal",
+        "desc": "Claims, payment receipts, and documents for each tenant."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "desc": "Real-time dashboards for sales, occupancy, and team performance."
+      },
+      "portals": {
+        "title": "Listing Sites",
+        "desc": "Auto-publish to ZonaProp, Argenprop, Mercado Libre, and more."
+      },
+      "website": {
+        "title": "Website",
+        "desc": "Your own property search site, SEO-optimized with your branding."
+      },
+      "documents": {
+        "title": "Documents",
+        "desc": "Central repository for deeds, contracts, guarantees, and more."
+      },
+      "copilot": {
+        "title": "AI Copilot",
+        "desc": "Auto-replies, lead summaries, and smart recommendations."
+      },
+      "reports": {
+        "title": "Reports",
+        "desc": "Export custom PDF and Excel reports for property owners."
+      },
+      "teams": {
+        "title": "Teams",
+        "desc": "Roles, permissions, and metrics per agent, branch, or franchise."
+      },
+      "integrations": {
+        "title": "Integrations",
+        "desc": "Open API and connectors for Tokko, Zonaprop, Google, and WhatsApp."
+      }
     }
   },
   "migration": {
     "title": "Switching is easier than you think",
     "subtitle": "Move from your current system to Corredor in 3 simple steps.",
     "steps": {
-      "export": { "title": "Export your data", "desc": "Download a CSV from your current CRM or send us the file." },
-      "import": { "title": "We import everything", "desc": "Our team maps and migrates properties, contacts, and history." },
-      "work": { "title": "Start working", "desc": "Your team starts with all data ready from day one." }
+      "export": {
+        "title": "Export your data",
+        "desc": "Download a CSV from your current CRM or send us the file."
+      },
+      "import": {
+        "title": "We import everything",
+        "desc": "Our team maps and migrates properties, contacts, and history."
+      },
+      "work": {
+        "title": "Start working",
+        "desc": "Your team starts with all data ready from day one."
+      }
     },
     "cta": "Schedule free migration",
     "ctaSecondary": "See migration guide"
@@ -95,7 +158,10 @@
     "monthly": "Monthly",
     "annual": "Annual",
     "annualDiscount": "Save 20%",
-    "currency": { "ars": "ARS", "usd": "USD" },
+    "currency": {
+      "ars": "ARS",
+      "usd": "USD"
+    },
     "perMonth": "/mo",
     "bnaRate": "BNA exchange rate: {rate} ARS/USD as of {date}",
     "popular": "Most popular",
@@ -109,57 +175,91 @@
         "name": "Trial",
         "price": "0",
         "desc": "14 days to try everything, no credit card required.",
-        "features": ["All features", "Up to 50 properties", "1 user", "Email support"]
+        "features": [
+          "All features",
+          "Up to 50 properties",
+          "1 user",
+          "Email support"
+        ]
       },
       "solo": {
         "name": "Solo",
         "price": "29",
         "desc": "For independent brokers.",
-        "features": ["200 properties", "1 user", "Basic AI Copilot", "Publish to 2 portals", "Email support"]
+        "features": [
+          "200 properties",
+          "1 user",
+          "Basic AI Copilot",
+          "Publish to 2 portals",
+          "Email support"
+        ]
       },
       "agency": {
         "name": "Agency",
         "price": "79",
         "desc": "For teams of up to 10 people.",
-        "features": ["Unlimited properties", "Up to 10 users", "Advanced AI Copilot", "All listing sites", "Owner portal", "Tenant portal", "Priority support"]
+        "features": [
+          "Unlimited properties",
+          "Up to 10 users",
+          "Advanced AI Copilot",
+          "All listing sites",
+          "Owner portal",
+          "Tenant portal",
+          "Priority support"
+        ]
       },
       "pro": {
         "name": "Pro",
         "price": "149",
         "desc": "For agencies with multiple branches.",
-        "features": ["Everything in Agency", "Unlimited users", "Multi-branch", "Full API", "Custom reports", "Dedicated account manager", "99.9% SLA"]
+        "features": [
+          "Everything in Agency",
+          "Unlimited users",
+          "Multi-branch",
+          "Full API",
+          "Custom reports",
+          "Dedicated account manager",
+          "99.9% SLA"
+        ]
       },
       "enterprise": {
         "name": "Enterprise",
         "price": "custom",
         "desc": "For franchises and large-scale operations.",
-        "features": ["Everything in Pro", "SSO / SAML", "Advanced audit", "On-premise deployment", "Custom integrations", "24/7 support"]
+        "features": [
+          "Everything in Pro",
+          "SSO / SAML",
+          "Advanced audit",
+          "On-premise deployment",
+          "Custom integrations",
+          "24/7 support"
+        ]
       }
     },
     "faq": {
       "title": "Frequently asked questions",
-      "items": [
-        {
+      "items": {
+        "cancel": {
           "q": "Can I change plans at any time?",
           "a": "Yes, you can upgrade or downgrade whenever you want. Changes are prorated on your next invoice."
         },
-        {
+        "payment": {
           "q": "What happens when the free trial ends?",
           "a": "Your account switches to read-only mode. You don't lose any data — just pick a plan to keep going."
         },
-        {
+        "migrate": {
           "q": "Do you accept payments in Argentine pesos?",
           "a": "Yes, you can pay with a credit or debit card in ARS, or via bank transfer. We also accept USD for companies that prefer dollar invoicing."
         },
-        {
+        "support": {
           "q": "Is data migration included?",
           "a": "Yes, for Agency, Pro, and Enterprise plans we include free assisted migration. For the Solo plan, we offer self-import tools."
         },
-        {
+        "trial": {
           "q": "Are there discounts for real estate associations?",
           "a": "Yes, we offer special pricing for professional associations and real estate chambers. Contact us for details."
         }
-      ]
+      }
     },
     "compare": {
       "title": "Compare plans",
@@ -167,6 +267,24 @@
         "core": "Core features",
         "ai": "AI & automation",
         "support": "Support"
+      }
+    },
+    "month": "mo",
+    "custom": "Custom",
+    "comparison": {
+      "title": "Compare plans",
+      "feature": "Feature",
+      "features": {
+        "properties": "Property management",
+        "leads": "Lead limit",
+        "pipeline": "Sales pipeline",
+        "inbox": "Unified inbox",
+        "copilot": "AI Copilot",
+        "ownerPortal": "Owner portal",
+        "billing": "Billing & settlements",
+        "api": "Full API",
+        "sla": "99.9% SLA",
+        "migration": "Assisted migration"
       }
     }
   },
@@ -185,11 +303,31 @@
     "team": {
       "title": "The team",
       "members": [
-        { "name": "Martín Márquez", "role": "CEO & Co-founder", "initials": "MM" },
-        { "name": "Sofía Delgado", "role": "CTO & Co-founder", "initials": "SD" },
-        { "name": "Federico Ruiz", "role": "Head of Product", "initials": "FR" },
-        { "name": "Valentina Herrera", "role": "Head of Design", "initials": "VH" },
-        { "name": "Nicolás Paz", "role": "Head of Sales", "initials": "NP" }
+        {
+          "name": "Martín Márquez",
+          "role": "CEO & Co-founder",
+          "initials": "MM"
+        },
+        {
+          "name": "Sofía Delgado",
+          "role": "CTO & Co-founder",
+          "initials": "SD"
+        },
+        {
+          "name": "Federico Ruiz",
+          "role": "Head of Product",
+          "initials": "FR"
+        },
+        {
+          "name": "Valentina Herrera",
+          "role": "Head of Design",
+          "initials": "VH"
+        },
+        {
+          "name": "Nicolás Paz",
+          "role": "Head of Sales",
+          "initials": "NP"
+        }
       ]
     }
   },
@@ -248,29 +386,63 @@
       "properties": {
         "title": "Property Management",
         "desc": "Complete listings with HD photos, floor plans, video tours, and precise geolocation. Auto-publish to top Argentine listing sites.",
-        "features": ["HD photos & video tours", "Map geolocation", "Multi-portal publishing", "Change history"]
+        "features": [
+          "HD photos & video tours",
+          "Map geolocation",
+          "Multi-portal publishing",
+          "Change history"
+        ],
+        "description": "Complete listings with HD photos, floor plans, video tours, and precise geolocation. Auto-publish to top Argentine listing sites."
       },
       "pipeline": {
         "title": "Sales Pipeline",
         "desc": "Visual Kanban board to track every opportunity from first contact to close. Never lose a lead again.",
-        "features": ["Drag & drop Kanban", "Auto follow-ups", "Inactivity alerts", "Conversion metrics"]
+        "features": [
+          "Drag & drop Kanban",
+          "Auto follow-ups",
+          "Inactivity alerts",
+          "Conversion metrics"
+        ],
+        "description": "Visual Kanban board to track every opportunity from first contact to close. Never lose a lead again."
       },
       "inbox": {
         "title": "Unified Inbox",
         "desc": "WhatsApp, email, listing sites — all in one inbox. Auto-assignment to the right agent with AI-suggested replies.",
-        "features": ["WhatsApp Business API", "Integrated email", "Auto-assignment", "AI replies"]
+        "features": [
+          "WhatsApp Business API",
+          "Integrated email",
+          "Auto-assignment",
+          "AI replies"
+        ],
+        "description": "WhatsApp, email, listing sites — all in one inbox. Auto-assignment to the right agent with AI-suggested replies."
       },
       "copilot": {
         "title": "AI Copilot",
         "desc": "Your smart assistant that answers inquiries, generates property descriptions, and summarizes conversations automatically.",
-        "features": ["Auto-responses", "Text generation", "Lead summaries", "Recommendations"]
+        "features": [
+          "Auto-responses",
+          "Text generation",
+          "Lead summaries",
+          "Recommendations"
+        ],
+        "description": "Your smart assistant that answers inquiries, generates property descriptions, and summarizes conversations automatically."
       },
       "billing": {
         "title": "Billing & Settlements",
         "desc": "Automate rental settlements, generate receipts, and track payments with banking integration.",
-        "features": ["Auto settlements", "Digital receipts", "Payment tracking", "Bank integration"]
+        "features": [
+          "Auto settlements",
+          "Digital receipts",
+          "Payment tracking",
+          "Bank integration"
+        ],
+        "description": "Automate rental settlements, generate receipts, and track payments with banking integration."
       }
     },
-    "cta": "Start free"
+    "cta": {
+      "title": "Ready to transform your agency?",
+      "subtitle": "Try Corredor free for 14 days. No credit card required.",
+      "primary": "Start free"
+    }
   }
 }
